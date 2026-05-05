@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getAllLessonDays, getLessonByDay } from "@/lib/content";
 import QuizSection from "@/components/Quiz";
 import CompleteButton from "@/components/CompleteButton";
+import SectionTracker from "@/components/SectionTracker";
 import MermaidInit from "./MermaidInit";
 
 export async function generateStaticParams() {
@@ -53,6 +54,7 @@ export default async function LessonPage({
         className="lesson-content"
         dangerouslySetInnerHTML={{ __html: lesson.html }}
       />
+      <SectionTracker day={fm.day} />
       {lesson.quiz && <QuizSection quiz={lesson.quiz} />}
       <div className="lesson-complete">
         <CompleteButton day={fm.day} />

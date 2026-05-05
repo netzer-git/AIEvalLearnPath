@@ -142,35 +142,12 @@
   margin-top: 1rem;
 }
 
+/* Hide the duplicate H1 in the body — the page header already shows it. */
+.lesson-content > h1 { display: none; }
+
+/* H2 styling now lives inside <summary>; see .lesson-section-summary h2 */
 .lesson-content h2 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  margin-top: 3rem;
-  margin-bottom: 0.75rem;
-  padding-top: 1.5rem;
   scroll-margin-top: 5rem;
-  border-top: 1px solid var(--border);
-  position: relative;
-}
-.lesson-content h2::before {
-  content: "";
-  position: absolute;
-  top: -1px;
-  left: 0;
-  width: 2.5rem;
-  height: 1px;
-  background: var(--accent-mint);
-}
-.lesson-content > h2:first-of-type,
-.lesson-content > h2:first-child {
-  border-top: 0;
-  padding-top: 0;
-  margin-top: 1.5rem;
-}
-.lesson-content > h2:first-of-type::before,
-.lesson-content > h2:first-child::before {
-  display: none;
 }
 
 .lesson-content h3 {
@@ -347,6 +324,121 @@
   border: 0;
   border-top: 1px solid var(--border);
   margin: 2rem 0;
+}
+
+/* ============================================================ */
+/*  Collapsable sections — each H2 + content is wrapped in     */
+/*  <details class="lesson-section"> by rehypeWrapSections.    */
+/*  Native collapse via <summary>; per-section completion via  */
+/*  the .section-check button (wired by SectionTracker).       */
+/* ============================================================ */
+
+.lesson-content > details.lesson-section {
+  margin-top: 2.25rem;
+  border-top: 1px solid var(--border);
+  position: relative;
+  padding-top: 0;
+}
+.lesson-content > details.lesson-section::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 2.5rem;
+  height: 1px;
+  background: var(--accent-mint);
+}
+.lesson-content > details.lesson-section:first-of-type {
+  margin-top: 1rem;
+  border-top: 0;
+}
+.lesson-content > details.lesson-section:first-of-type::before {
+  display: none;
+}
+
+.lesson-section-summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 1.25rem 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  user-select: none;
+}
+.lesson-section-summary::-webkit-details-marker { display: none; }
+.lesson-section-summary::marker { content: ""; }
+
+/* Chevron — rotates on open. */
+.lesson-section-summary::before {
+  content: "▸";
+  display: inline-block;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  width: 0.85rem;
+  transition: transform 0.15s ease;
+}
+.lesson-section[open] > .lesson-section-summary::before {
+  transform: rotate(90deg);
+}
+
+.lesson-section-summary h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  scroll-margin-top: 5rem;
+  /* Override the (now no-op) base h2 rules above */
+  border-top: 0;
+  padding-top: 0;
+}
+.lesson-section-summary h2::before { display: none; }
+
+/* Section completion check (placeholder rendered by markdown.ts;
+   wired by SectionTracker). */
+.section-check {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+.section-check:hover {
+  border-color: var(--accent-mint);
+}
+.section-check[data-completed="true"] {
+  background: var(--accent-mint);
+  border-color: var(--accent-mint);
+  color: oklch(0.16 0 0);
+}
+.section-check[data-completed="true"]::after {
+  content: "✓";
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+/* Section content sits directly inside <details>. Add subtle bottom
+   padding so the next section's top border has breathing room. */
+.lesson-section[open] > :not(summary):last-child {
+  padding-bottom: 0.5rem;
+}
+
+/* Done section: muted heading, mint chevron, but body still readable. */
+.lesson-section--done > .lesson-section-summary h2 {
+  color: var(--muted-foreground);
+}
+.lesson-section--done > .lesson-section-summary::before {
+  color: var(--accent-mint);
 }
 
 /* ============================================================ */
