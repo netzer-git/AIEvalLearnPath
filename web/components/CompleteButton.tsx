@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from "react";
 
 type Status =
-  | { kind: "loading" }
   | { kind: "incomplete" }
   | { kind: "complete"; completedAt: string; readingSeconds: number };
 
@@ -22,7 +21,12 @@ function formatDate(iso: string): string {
 }
 
 export default function CompleteButton({ day }: { day: number }) {
-  const [status, setStatus] = useState<Status>({ kind: "loading" });
+  // Default to "incomplete" so the SSR'd HTML ships the actual button.
+  // The useEffect below upgrades to "complete" if the lesson is already
+  // marked complete server-side. Brief flicker on already-completed
+  // lessons (~hydration latency) is fine — far better than the user
+  // seeing only a "…" loading ellipsis if hydration stalls.
+  const [status, setStatus] = useState<Status>({ kind: "incomplete" });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,7 +52,9 @@ export default function CompleteButton({ day }: { day: number }) {
         }
       })
       .catch(() => {
-        if (!cancelled) setStatus({ kind: "incomplete" });
+        // Stay in the incomplete state on fetch error — better UX than
+        // hiding the button. The user can still attempt to complete;
+        // the POST will surface any persistent failure inline.
       });
     return () => {
       cancelled = true;
@@ -106,10 +112,6 @@ export default function CompleteButton({ day }: { day: number }) {
     }
   }
 
-  if (status.kind === "loading") {
-    return <div className="complete-strip complete-strip--loading">…</div>;
-  }
-
   if (status.kind === "complete") {
     return (
       <div className="complete-strip complete-strip--done">
@@ -132,7 +134,7 @@ export default function CompleteButton({ day }: { day: number }) {
         onClick={handleComplete}
         disabled={submitting}
       >
-        {submitting ? "Saving…" : "Mark complete"}
+        {submitting ? "Saving…" : "Complete"}
       </button>
       {error && <span className="complete-error">{error}</span>}
     </div>
