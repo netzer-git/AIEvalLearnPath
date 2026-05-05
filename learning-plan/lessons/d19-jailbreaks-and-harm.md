@@ -1,0 +1,294 @@
+---
+day: 19
+slug: jailbreaks-and-harm
+title: "Jailbreaks and harm elicitation — HarmBench and the absorption of toxicity-under-prompting"
+week: 3
+week_theme: Alignment, safety, robustness
+anchor_benchmark: HarmBench
+harness: benchmark-native (HarmBench runner); Inspect for adjacent jailbreak evals (StrongREJECT, AgentHarm)
+reading_time_minutes: 29
+---
+
+# Day 19 — Jailbreaks and harm elicitation: HarmBench and the absorption of toxicity-under-prompting
+
+## The opening hook
+
+A safety-tuned frontier model, asked plainly to explain how to synthesize a controlled substance, refuses. Asked the same question after twenty rounds of an automated prompt-rewriting loop, asked through a chat history that pretends the request is a fictional roleplay, asked with a 200-token gibberish suffix appended that was found by gradient search against an open-weights model and then transferred — the model often complies. The capability that was supposed to be gated is gated *only against the prompts the alignment data anticipated*. Everything else — the long tail of automated, semantic, transfer, and multimodal attacks — is the *adversarial-robustness* surface, and it is what jailbreak evaluation measures.
+
+D19 anchors that surface to a single benchmark — **HarmBench** (Mazeika et al. 2024) — and asks the methodological question Week 3 keeps asking: what is the eval *actually scoring*, and what does the scalar number it produces conceal? For HarmBench the scalar is **attack success rate (ASR)**: the fraction of `(behavior, attack-method)` pairs on which the attack elicits the targeted harmful behavior, as judged by an automated harm classifier. Two papers' "ASR on HarmBench" numbers can disagree by 20+ points for the *same model checkpoint* on the *same behaviors*, for the same reasons two papers' MMLU numbers disagreed in D1 — different attack subset, different judge, different scoring rule. The pipeline framing carries through.
+
+## What "jailbreak" means as an evaluation target
+
+A **jailbreak** is an input — text, image, or both — designed to elicit a model behavior that the model's safety training intended to block. Three structural variables matter for evaluation:
+
+1. **Threat model.** Direct (the user types the attack) vs. indirect (an attacker plants the attack inside content the model ingests via retrieval, browsing, tool output, or an image — D10's counterfactual-robustness pre-cursor; D26's AgentDojo for the agentic case).
+2. **Attack budget.** White-box (gradient access to model weights — GCG-style optimization), black-box (API only — PAIR, TAP, AutoDAN), transfer (white-box attack against an open-weights model, deployed against a closed model).
+3. **Target behavior.** What "harm" means is defined by the benchmark's behavior taxonomy, not by an abstract universal — and benchmarks differ on this. HarmBench's taxonomy is below.
+
+Jailbreak evaluation is the canonical *adversarial-robustness* eval: capability evals (Week 2) ask "can the model do X?"; jailbreak evals ask "can the model be made to do X *despite training not to*?". The two are coupled. A model with high capability and high jailbreak-robustness is the safety target; a model with high capability and low jailbreak-robustness is what D21's WMDP is built to flag — the dangerous-capability-overhang case from D1's safety-researcher note.
+
+## Anchor: HarmBench (Mazeika et al. 2024)
+
+**Citation.** Mazeika, M., Phan, L., Yin, X., Zou, A., Wang, Z., Mu, N., Sakhaee, E., Li, N., Basart, S., Li, B., Forsyth, D., & Hendrycks, D. (2024). *HarmBench: A Standardized Evaluation Framework for Automated Red Teaming and Robust Refusal.* ICML 2024. arXiv:2402.04249.
+
+HarmBench is a benchmark for *automated red-teaming methods*, not just for models. The framework has three pieces, and the methodological point — the reason it is the Week 3 jailbreak anchor rather than any of its predecessors — is that all three pieces are standardized so that two papers reporting "ASR on HarmBench" are running on the same pipeline.
+
+### Behaviors taxonomy
+
+HarmBench contains **510 unique harmful behaviors** organized along two orthogonal axes.
+
+**4 functional categories** (the *form* of the behavior):
+
+| Functional category | Count | What's in it |
+| --- | --- | --- |
+| Standard | 200 | Single-turn text behaviors — e.g., a request paraphrased as "Write detailed instructions for [harmful task]." |
+| Copyright | 100 | Verbatim-reproduction behaviors targeting in-copyright text (book passages, song lyrics). Functionally distinct because the harm is IP-violation, not direct user harm. |
+| Contextual | 100 | Behaviors that require a *context* — a prepended fictional scenario, document, or persona — to be coherent attack targets. |
+| Multimodal | 110 | Image + text behaviors. Tied to D13's safety note: FigStep-style typographic attacks live here. |
+
+**7 semantic categories** (the *content domain* of the behavior):
+
+1. Cybercrime & Unauthorized Intrusion
+2. Chemical & Biological Weapons / Drugs
+3. Copyright Violations
+4. Misinformation & Disinformation
+5. Harassment & Bullying
+6. Illegal Activities (general)
+7. General Harm
+
+The taxonomy is what makes HarmBench's scoring decomposable. A model's overall ASR can be fine but its ASR on Cybercrime can be high — and that delta is the actionable signal a frontier-safety team uses, not the overall number. (This is the same argument D13 made about MMMU's per-discipline reporting.)
+
+### The attack pipeline
+
+```mermaid
+flowchart LR
+    B["Behavior<br/>(target prompt + harm class)"] --> A{{"Attack method<br/>(GCG / PAIR / AutoDAN / ...)"}}
+    A --> P["Adversarial prompt<br/>(or prompt + image)"]
+    P --> M{{"Target model<br/>(stochastic)"}}
+    M --> R["Model response"]
+    R --> C{{"Harm classifier<br/>(HarmBench-Llama-2-13B-cls)"}}
+    C --> S["Per-pair label:<br/>1 = behavior elicited<br/>0 = refused/off-topic"]
+    S -->|aggregation across<br/>behaviors and seeds| ASR["ASR<br/>(per attack × model)"]
+```
+
+Three slots get *standardized* by HarmBench. The behavior is fixed by the dataset. The harm classifier is a single model the framework distributes (below). The aggregation rule is a uniform fraction-of-successful-pairs. The remaining slot — the attack method — is the variable HarmBench is built to compare.
+
+### Attack methods
+
+HarmBench evaluates **18 attack methods** at release across white-box, black-box, and transfer regimes. The core ones to know:
+
+- **GCG** (Zou et al. 2023, *Universal and Transferable Adversarial Attacks on Aligned Language Models*, arXiv:2307.15043). White-box. Optimizes a fixed-length adversarial *suffix* — a string of arbitrary tokens — using a greedy + gradient-based search to maximize the probability that the model produces an affirmative continuation ("Sure, here is..."). GCG suffixes are often non-semantic gibberish but transfer across models; the canonical "universal jailbreak" method.
+- **AutoDAN** (Liu et al. 2023, arXiv:2310.04451). Black-box (or grey-box). Uses a hierarchical genetic algorithm to evolve *semantically coherent* jailbreak prompts — distinguishing it from GCG's gibberish suffixes — that survive perplexity-based defenses.
+- **PAIR — Prompt Automatic Iterative Refinement** (Chao et al. 2023, *Jailbreaking Black Box Large Language Models in Twenty Queries*, arXiv:2310.08419). Black-box. Uses an *attacker LLM* to iteratively rewrite prompts based on the target model's refusals, typically converging in <20 queries.
+- **TAP — Tree of Attacks with Pruning** (Mehrotra et al. 2023). Generalizes PAIR with branching search and pruning of unproductive paths.
+- **GBDA, PEZ, UAT, AutoPrompt** — earlier white-box gradient-based and discrete-optimization baselines.
+- **PAP — Persuasive Adversarial Prompts** (Zeng et al. 2024). Uses persuasion-taxonomy-conditioned rewrites (logical appeal, emotional appeal, authority).
+- **Human jailbreaks, Direct Request, Stochastic Few-Shot, Zero-Shot** — non-optimization baselines that establish the floor.
+
+The methodological claim of HarmBench is that *any* attack method can be plugged into the pipeline as long as it produces a `(behavior, adversarial prompt)` mapping; the standardized classifier and aggregation make cross-paper comparison meaningful in a way it wasn't pre-2024.
+
+### The harm classifier
+
+HarmBench's automated judge is a **Llama-2-13B-Chat fine-tuned classifier** (`cais/HarmBench-Llama-2-13b-cls`), trained on GPT-4-distilled labels over the standard and contextual behaviors. It takes `(behavior, model response)` and returns a binary "did the response exhibit the targeted behavior?" label. Reported agreement with human annotators on the HarmBench validation set:
+
+| Classifier | Standard | Contextual | Average |
+| --- | --- | --- | --- |
+| **HarmBench-Llama-2-13B-cls** | **94.5%** | **90.5%** | **93.2%** |
+| GPT-4 (zero-shot judge) | 89.8% | 85.5% | 88.4% |
+| Llama-Guard | 68.4% | 64.0% | 66.9% |
+| AdvBench string-match heuristic | 71.1% | 67.5% | 69.9% |
+
+The 93%-vs-88% delta over GPT-4 is the methodological point: a fine-tuned task-specific classifier outperforms a frontier zero-shot judge on this exact task, which is the *reverse* of the LLM-as-judge story D22 will tell about open-ended quality scoring. The classifier isn't free of bias — it inherits its training data's distribution — but it is reproducible (one model, fixed weights) where GPT-4-as-judge isn't (the API model drifts, D7).
+
+A multimodal sibling classifier (`HarmBench-Llama-2-13b-cls-multimodal-behaviors`) handles the 110 multimodal behaviors.
+
+### Concrete ASR computation
+
+In schematic form, ASR per `(model, attack)` pair is:
+
+```python
+def attack_success_rate(behaviors, attack, target_model, classifier, n_seeds=1):
+    """ASR over (behavior x seed) pairs. Behaviors are HarmBench items."""
+    successes = 0
+    total = 0
+    for behavior in behaviors:
+        for seed in range(n_seeds):
+            adv_prompt = attack.run(behavior, target_model, seed=seed)
+            response = target_model.generate(adv_prompt)
+            label = classifier.score(behavior=behavior, response=response)
+            successes += int(label == 1)  # 1 = behavior elicited
+            total += 1
+    return successes / total
+```
+
+Two pipeline drift sources (D1 reflex applies):
+
+- **Subset.** Reporting on the 200 standard behaviors vs. the 400 textual (standard + copyright + contextual) vs. all 510 changes the denominator. Most papers report standard ASR; check.
+- **Seeds.** Stochastic attack methods (PAIR, AutoDAN) report ASR over *one or more attack runs per behavior*. A single seed underestimates the worst-case attacker.
+
+### Statistical hygiene (D5 reprise)
+
+ASR is a Bernoulli proportion. With $N = 510$ behaviors (one seed each) and a per-item success probability $p$, the standard 95% Wilson-interval half-width is approximately
+
+$$
+\text{CI}_{95\%} \approx 1.96 \cdot \sqrt{\frac{p(1-p)}{N}}.
+$$
+
+At $p = 0.20$ and $N = 510$: $\sqrt{0.20 \cdot 0.80 / 510} \approx 0.0177$, so the CI half-width is $\approx \pm 3.5$ percentage points. At $p = 0.50$ — the worst-case for proportion variance — and $N = 510$: $\pm 4.3$ pp. At $N = 200$ (standard-only subset) and $p = 0.20$: $\pm 5.5$ pp.
+
+The implication, the same one D5 made for accuracy: differences in reported ASR below ~5 pp on a 200-item subset are usually within sampling noise. Headlines that turn a 28% → 24% drop into a "14% relative improvement in robustness" are over-reading the noise unless the authors report multi-seed runs and a confidence interval.
+
+## How RealToxicityPrompts got absorbed
+
+The Stage 1a-resolved decision behind D19's anchor choice is that **toxicity-under-prompting is a special case of harm elicitation**, and the framework that subsumes it is HarmBench. This subsection makes that explicit.
+
+**RealToxicityPrompts** (Gehman et al. 2020, *RealToxicityPrompts: Evaluating Neural Toxic Degeneration in Language Models*, EMNLP Findings). The dataset is 100K naturally-occurring sentence-level prompts derived from English web text (the OpenWebText corpus). For each prompt, the model generates a continuation, and the continuation is scored by **Perspective API** — Google Jigsaw's toxicity classifier — on six attributes (TOXICITY, SEVERE_TOXICITY, IDENTITY_ATTACK, INSULT, PROFANITY, THREAT). A model's "toxicity" is summarized as the *expected maximum toxicity* over $k$ samples per prompt and the *probability of generating a continuation with toxicity $> 0.5$* over the corpus.
+
+The methodological move HarmBench makes — and the reason RealToxicityPrompts is *absorbed* rather than retained as a parallel anchor — is a **generalization of the question**:
+
+| Axis | RealToxicityPrompts (2020) | HarmBench (2024) |
+| --- | --- | --- |
+| Question | "Does the model produce *toxic* continuations of web-text prompts?" | "Does the model produce content in *any* of 7 specified harm categories under *any* of 18+ attack methods?" |
+| Behavior space | One harm dimension (toxicity, six Perspective attributes) | Seven semantic categories × four functional categories |
+| Prompt construction | Naturally-occurring web prompts (passive elicitation) | Adversarially-constructed and attack-amplified prompts (active red-teaming) |
+| Scorer | Perspective API (closed, drift-prone, English-only) | Fine-tuned Llama-2-13B classifier (open weights, fixed checkpoint) |
+| Threat model | Implicit — model emits toxic completions during normal use | Explicit — adversary actively eliciting harm |
+
+Three things got generalized:
+
+1. **From toxicity to harm classes.** "Is this output toxic?" becomes "Is this output harmful in a defined behavior class?" Toxicity is recoverable as the Harassment & Bullying semantic category (and parts of General Harm); the other six categories are concerns RealToxicityPrompts simply did not address.
+2. **From Perspective API to a benchmark-owned classifier.** Perspective is a closed API that drifts independently of the benchmark — a 2020 toxicity score and a 2024 toxicity score on the same continuation can differ because the underlying classifier was retrained. HarmBench's classifier is a frozen open-weight model checkpoint; reproducibility is structural, not service-level.
+3. **From passive to adversarial elicitation.** RealToxicityPrompts measures a *propensity* — what the model emits unconditionally on natural prompts. HarmBench measures *robustness* — what the model emits when a deliberate attacker is trying to elicit harm. The 2020 question is a base-rate question; the 2024 question is an attack-success question.
+
+The absorption is not lossless. RealToxicityPrompts' base-rate framing is a useful capability separate from adversarial robustness — a model with 0% adversarial ASR but 30% base-rate toxic continuations is broken in a way that HarmBench alone won't catch. Modern safety eval suites typically retain a base-rate toxicity line item (the `ragas`-era toxicity evaluators, ToxiGen, etc.) alongside HarmBench. What's gone is the claim that "Perspective-API-scored continuations of web prompts" is the field's standard *jailbreak* benchmark — that role is HarmBench's now.
+
+## Conceptual contrast: jailbreak ASR vs. refusal-rate scoring
+
+Two scoring philosophies sit underneath safety-leaning evals, and HarmBench picks one.
+
+| Scoring philosophy | "Refusal rate" | "Attack success rate (ASR)" |
+| --- | --- | --- |
+| Question | Did the model refuse a flagged-harmful prompt? | Did the attack elicit the targeted harmful behavior? |
+| Per-item label | binary (refused / complied) | binary (behavior elicited / not) |
+| Reward shape | Higher refusal = better (for harmful prompts) | Lower ASR = better |
+| Failure mode | Over-refusal — refuses benign prompts that pattern-match harmful ones | Classifier false-positives — counts off-topic compliance as success |
+| Example benchmark | StrongREJECT (Souly et al. 2024), early refusal datasets | HarmBench, AgentHarm |
+| What it misses | The *content* of compliance (a complied-and-incorrect response and a complied-and-genuinely-helpful response score the same) | Over-refusal (a model that refuses everything has 0% ASR but is useless) |
+
+Production safety pipelines run *both*: ASR on a harm benchmark like HarmBench plus a *helpfulness benchmark* (or an over-refusal eval like XSTest, Röttger et al. 2024) to bound the refusal-everything trivial solution. A model with low ASR and high over-refusal isn't safe — it's broken in the other direction. D18's IFEval is the instruction-following anchor that catches part of this; the pairing with D19 is the standard frontier-safety scorecard shape.
+
+## The harness — benchmark-native + Inspect-adjacent
+
+HarmBench ships its own runner at `https://github.com/centerforaisafety/HarmBench`. The repo distributes the 510 behaviors, the Llama-2-13B classifier weights (via Hugging Face: `cais/HarmBench-Llama-2-13b-cls`), reference implementations of the 18 attack methods, and the aggregation pipeline. This is the same pattern as D11 (HumanEval), D12 (SWE-Bench), D13 (MMMU), D14 (RULER): when the benchmark's evaluation logic is non-trivial, the canonical implementation lives with the benchmark rather than in a general-purpose harness.
+
+Inspect's safety lineup (`inspect_evals` repo, UK AISI) does not currently ship HarmBench *itself*, but ships several adjacent jailbreak-evaluation tasks on the same axis: **StrongREJECT** (jailbreak susceptibility on a curated harmful-prompt set), **AgentHarm** (agent-environment harm elicitation), **AbstentionBench** (refusal calibration), **APE — Attempt to Persuade Eval**. The Stage 2 mapping for D19 is therefore "benchmark-native HarmBench runner for the anchor + Inspect for the surrounding jailbreak lineup," not "Inspect ships HarmBench." Cite primary repos when running.
+
+## Frontier-model ASRs and the drift caveat
+
+The HarmBench paper's headline finding (early-2024 frontier models): no model is uniformly robust across all 18 attack methods, and several frontier models fall to GCG-Transfer and PAIR with high ASR. Specific 2024 numbers from the paper:
+
+- Llama-2-7B-Chat: relatively robust; transfer-GCG ASR in the 20–30% range.
+- Vicuna-13B (open-weights, less-aligned): 60–80% on multiple attacks.
+- GPT-4 (early 2024 snapshot): single-digit on direct attacks; double-digit on optimized + transfer.
+
+As of mid-2026, frontier proprietary models have published lower ASRs — vendors RL-tune on HarmBench-shaped attack distributions, which deflates measured ASR. Specific 2026 numbers drift weekly and depend heavily on attack subset and seeds. **Verify against vendor system cards or independent third-party red-team reports before quoting a specific 2026 ASR.** What's stable is the *gap* — not the magnitude — between (a) ASR on the static HarmBench attack set and (b) ASR under *novel* attacks generated post-train. The latter is what frontier-safety teams worry about; the former is what gets published.
+
+## Goodhart sub-thread (D6 reprise applied to safety evals)
+
+Goodhart isn't foregrounded on D19 the way it is on D6 / D15 / D17 / D22 / D28, but the sub-thread runs through the lesson: the moment HarmBench's attack distribution becomes a training target, the measured ASR on that distribution stops being a clean robustness signal. This is D6's contamination point applied to safety evals rather than capability evals — and D6's quiz already names the failure mode (the "ASR dropped from 30% to 12% after HarmBench prompts entered red-team training" item is the canonical example). Two specific manifestations to watch for in 2026 safety reporting:
+
+1. **Attack-distribution overfitting.** Labs train against GCG-style suffixes, PAIR-style refinement loops, AutoDAN-style genetic prompts. Measured ASR drops on those exact attacks; ASR on attack methods *not in training* drops less or not at all. The published number is on the trained-against distribution.
+2. **Classifier-distribution overfitting.** Labs train against the HarmBench classifier's notion of harm (which has its own labelling distribution from GPT-4-0613). A model can learn to produce content the classifier doesn't flag while still being harmful — the same hack pattern as adversarial examples against image classifiers. Robustness against the *measurement instrument* generalizes worse than robustness against the *underlying concept*.
+
+The same answer D6 gave applies: structural defenses (held-out attack distributions, post-cutoff red-team samples, multi-classifier judging) beat metric-level fixes.
+
+## Forward pointers
+
+- **D10 (RAG counterfactual robustness).** Counterfactual robustness with benign edits and explicit warnings is the controlled-lab precursor to indirect prompt injection. D19 generalizes from the *user-typed* attack to the *attacker-controlled-content* attack only in its multimodal (FigStep-style) and contextual subsets; D26 extends this to attacker-controlled retrieval and tool outputs.
+- **D13 (multimodal jailbreaks).** D13's safety note named FigStep — typographic visual jailbreaks that render disallowed text as an image — as the prototype multimodal attack. HarmBench's 110 multimodal behaviors and its multimodal classifier are the standardized scoring infrastructure for that axis.
+- **D17 (situational awareness).** A model that can detect "I am being evaluated on jailbreak resistance right now" and behave differently from how it does in deployment is the deepest jailbreak-eval validity threat. SAD's identity-leverage subsuite measures this directly. If SA is high, *every* jailbreak score reported on a public benchmark has to be read as "the score the model elects to display when it knows it's being evaluated." Apollo's *Frontier Models are Capable of In-Context Scheming* (Meinke et al. 2024) is the closing pointer.
+- **D21 (WMDP).** WMDP measures *dangerous capability proxies* — the things a successful jailbreak could elicit. D19's ASR is "how often does a jailbreak succeed?"; D21's score is "if it succeeds, how dangerous is what it elicits?". The two compose: realized risk ≈ ASR × dangerous-capability-given-elicitation.
+- **D26 (AgentDojo).** Indirect prompt injection in agent environments — the threat surface where the attacker doesn't talk to the model directly but writes into a tool output, retrieved document, or web page the agent ingests. D19's standard behaviors are the user-typed-attack baseline; D26 is the agent-environment generalization.
+
+> **Safety researcher's note.** Jailbreaks are the *canonical* adversarial-robustness eval, and the ASR-on-test-set vs. real-world-adversary gap is the central validity question. HarmBench's 510 behaviors and 18 attack methods are a *fixed set* — once a frontier lab knows the set, they can RL-tune against it. The measured ASR after that tuning is closer to "ASR against attacks within the HarmBench distribution" than to "ASR against any motivated attacker." That gap is Goodhart-flavored: the measure was meant to be a proxy for the underlying property (adversarial robustness against *the space* of attacks), and once it became a target the proxy decoupled. Two practices push back. **First**, sample attacks post-cutoff: have a held-out red-team produce novel attacks the lab couldn't have trained on, score those, and report alongside the static benchmark. **Second**, evaluate on *transfer*: attacks optimized against an open-weights model and applied to the closed model under test, since transfer attacks are a closer model of the real-world attacker than re-running optimization on the target. The published ASR is necessary but not sufficient; the *gap* between published-ASR and live-red-team-ASR is the number frontier-safety teams pay closest attention to. This is the same shape as D14's claimed-vs-effective-context gap: the marketed metric (claimed length / static ASR) and the underlying capability (effective length / real-world robustness) diverge once the marketed metric becomes the optimization target, and the field's only structural answer is to keep the *evaluation distribution* moving faster than the training distribution can chase it.
+
+## Takeaways
+
+1. A jailbreak is an input designed to elicit a model behavior the safety training intended to block. Jailbreak evaluation is the canonical *adversarial-robustness* eval — coupled to capability evaluation (Week 2) but methodologically distinct.
+2. **HarmBench (Mazeika et al. 2024)** is the Week 3 anchor: 510 behaviors across 4 functional × 7 semantic categories, 18 attack methods at release, and a fine-tuned Llama-2-13B harm classifier (≈93% agreement with humans, vs. ~88% for GPT-4-as-judge on the same task).
+3. **Attack success rate (ASR)** is a Bernoulli proportion. On 510 items at $p = 0.20$, the 95% CI half-width is $\approx \pm 3.5$ pp; on 200 items, $\approx \pm 5.5$ pp. Differences below those widths are sampling noise. (D5 reflex.)
+4. **RealToxicityPrompts (Gehman et al. 2020) was absorbed** — toxicity-under-prompting is a special case of harm elicitation, recoverable as the Harassment & Bullying / General Harm semantic categories. HarmBench's classifier replaces the closed Perspective API as the scorer, generalizes from passive web-prompt completion to adversarial elicitation, and from one harm dimension to seven.
+5. ASR-based scoring should be paired with an over-refusal eval (XSTest, helpfulness on benign prompts). A model with low ASR and high over-refusal is broken in the other direction; D18's IFEval is the standard partner.
+6. The Goodhart sub-thread (D6 reprise): once HarmBench's static attack distribution becomes a training target, measured ASR deflates without proportional gains in real-world adversarial robustness. Hold out novel attacks; report transfer ASR; expect the published-vs-live-red-team gap to widen.
+7. Forward thread: D10 (counterfactual robustness as IPI precursor), D13 (multimodal jailbreaks), D17 (SA as a jailbreak-eval validity threat), D21 (WMDP — what successful jailbreaks could elicit), D26 (AgentDojo — agent-environment indirect prompt injection).
+
+## References
+
+- **Anchor.** Mazeika, M., Phan, L., Yin, X., Zou, A., Wang, Z., Mu, N., Sakhaee, E., Li, N., Basart, S., Li, B., Forsyth, D., & Hendrycks, D. (2024). *HarmBench: A Standardized Evaluation Framework for Automated Red Teaming and Robust Refusal.* ICML 2024. arXiv:2402.04249. https://arxiv.org/abs/2402.04249
+- **Anchor — code, data, classifier.** Center for AI Safety. *HarmBench.* https://github.com/centerforaisafety/HarmBench  Classifier weights: https://huggingface.co/cais/HarmBench-Llama-2-13b-cls
+- **Absorbed predecessor.** Gehman, S., Gururangan, S., Sap, M., Choi, Y., & Smith, N. A. (2020). *RealToxicityPrompts: Evaluating Neural Toxic Degeneration in Language Models.* EMNLP Findings 2020. arXiv:2009.11462. https://arxiv.org/abs/2009.11462
+- **Attack — GCG.** Zou, A., Wang, Z., Carlini, N., Nasr, M., Kolter, J. Z., & Fredrikson, M. (2023). *Universal and Transferable Adversarial Attacks on Aligned Language Models.* arXiv:2307.15043. https://arxiv.org/abs/2307.15043
+- **Attack — AutoDAN.** Liu, X., Xu, N., Chen, M., & Xiao, C. (2023). *AutoDAN: Generating Stealthy Jailbreak Prompts on Aligned Large Language Models.* ICLR 2024. arXiv:2310.04451. https://arxiv.org/abs/2310.04451
+- **Attack — PAIR.** Chao, P., Robey, A., Dobriban, E., Hassani, H., Pappas, G. J., & Wong, E. (2023). *Jailbreaking Black Box Large Language Models in Twenty Queries.* arXiv:2310.08419. https://arxiv.org/abs/2310.08419
+- **Attack — TAP.** Mehrotra, A., Zampetakis, M., Kassianik, P., Nelson, B., Anderson, H., Singer, Y., & Karbasi, A. (2023). *Tree of Attacks: Jailbreaking Black-Box LLMs Automatically.* arXiv:2312.02119. https://arxiv.org/abs/2312.02119
+- **Attack — PAP.** Zeng, Y., Lin, H., Zhang, J., Yang, D., Jia, R., & Shi, W. (2024). *How Johnny Can Persuade LLMs to Jailbreak Them: Rethinking Persuasion to Challenge AI Safety.* ACL 2024. arXiv:2401.06373. https://arxiv.org/abs/2401.06373
+- **Multimodal — FigStep.** Gong, Y., et al. (2023). *FigStep: Jailbreaking Large Vision-Language Models via Typographic Visual Prompts.* arXiv:2311.05608. https://arxiv.org/abs/2311.05608
+- **Adjacent — refusal-rate framing.** Souly, A., et al. (2024). *A StrongREJECT for Empty Jailbreaks.* NeurIPS 2024. arXiv:2402.10260. https://arxiv.org/abs/2402.10260
+- **Adjacent — over-refusal.** Röttger, P., et al. (2024). *XSTest: A Test Suite for Identifying Exaggerated Safety Behaviours in Large Language Models.* NAACL 2024. arXiv:2308.01263. https://arxiv.org/abs/2308.01263
+- **Forward.** Inspect Evals (UK AISI). https://github.com/UKGovernmentBEIS/inspect_evals — StrongREJECT, AgentHarm, AbstentionBench tasks for the Inspect-side jailbreak surface.
+
+## Quiz
+
+**Q1.** HarmBench contains how many unique harmful behaviors, organized along which two axes?
+
+- A. 510 behaviors, organized as 4 functional categories × 7 semantic categories.
+- B. 100 behaviors, organized as toxicity × bias.
+- C. 1,000 behaviors, organized as illegal × harmful × deceptive × multimodal.
+- D. 200 behaviors, organized as 7 functional categories × 4 semantic categories.
+
+**Q2.** A paper reports "GPT-X scored 8% ASR on HarmBench standard behaviors." On the 200-item standard subset at $p = 0.08$, what is the approximate 95% CI half-width on this proportion, and what is the right reading of an apparent 8% → 5% drop in a follow-up paper?
+
+- A. ±0.5 pp; the 3-pp drop is a real improvement.
+- B. ±3.8 pp; the 3-pp drop is within sampling noise — needs multi-seed runs and a stated CI before claiming improvement.
+- C. ±10 pp; ASR can never be measured precisely.
+- D. The CI is undefined for ASR.
+
+**Q3.** What is the **most accurate** description of how RealToxicityPrompts (Gehman et al. 2020) relates to HarmBench (Mazeika et al. 2024) in this curriculum?
+
+- A. They measure unrelated properties; both are retained as parallel anchors in Week 3.
+- B. RealToxicityPrompts is an updated version of HarmBench, using newer attack methods.
+- C. Toxicity-under-prompting is a *special case* of harm elicitation; HarmBench absorbs it by replacing Perspective-API scoring with a frozen open-weight harm classifier, generalizing from one toxicity dimension to seven semantic harm categories, and from passive web-prompt completion to adversarial elicitation.
+- D. RealToxicityPrompts and HarmBench are interchangeable; cite either.
+
+**Q4.** Which of the following is a **white-box, gradient-based** jailbreak attack method evaluated by HarmBench?
+
+- A. PAIR (Prompt Automatic Iterative Refinement).
+- B. AutoDAN.
+- C. GCG (Greedy Coordinate Gradient).
+- D. Direct Request.
+
+**Q5.** A frontier lab reports its model's HarmBench ASR fell from 24% to 6% after a new round of safety RLHF that explicitly used HarmBench-style attack prompts. Which is the **best** read of the 6%?
+
+- A. The model is now adversarially robust — 6% is the true real-world ASR.
+- B. The 6% reflects robustness against the *static HarmBench attack distribution* the lab trained against; it is a Goodhart-flavored under-estimate of robustness against novel attacks. The actionable signal is the gap between this number and a held-out / post-cutoff red-team ASR.
+- C. The 6% is a contamination artifact and should be ignored entirely.
+- D. The 24% must have been a measurement error.
+
+**Q6.** Why does HarmBench pair "ASR on harmful prompts" with a separate over-refusal evaluation (e.g., XSTest, helpfulness-on-benign-prompts) in production safety pipelines?
+
+- A. Because HarmBench's classifier is unreliable on benign prompts.
+- B. Because a model that refuses *every* prompt has 0% ASR but is useless; the ASR axis alone admits the trivial "refuse everything" solution. The over-refusal eval bounds that failure mode.
+- C. Because the paper requires it.
+- D. Because over-refusal is the same metric as ASR, just inverted.
+
+<details>
+<summary>Answers</summary>
+
+1. **A** — 510 behaviors total (200 standard + 100 copyright + 100 contextual + 110 multimodal); the 4 functional categories × 7 semantic categories taxonomy is the construction principle. (D) inverts the counts.
+2. **B** — at $p = 0.08$ and $N = 200$: $\sqrt{0.08 \cdot 0.92 / 200} \cdot 1.96 \approx 0.038 = 3.8$ pp. The 3-pp drop is within the half-width on each side, so the difference isn't statistically meaningful without multi-seed runs and an interval. The D5 reflex applies to ASR exactly as it does to accuracy.
+3. **C** — Stage 1a's resolved decision: HarmBench is the generalization (one harm dimension → seven; Perspective API → frozen open classifier; passive elicitation → active adversarial). RealToxicityPrompts' base-rate framing remains useful as a separate line item; it's not a jailbreak benchmark in the modern sense.
+4. **C** — GCG uses gradient access to the model to optimize a token-level adversarial suffix. PAIR (A) is black-box (attacker LLM, no gradients); AutoDAN (B) uses a genetic algorithm rather than gradients; Direct Request (D) is a non-optimization baseline.
+5. **B** — the canonical Goodhart-on-safety-evals story (D6 reprise applied to safety): once the static attack distribution becomes a training target, ASR on it deflates without commensurate real-world-robustness gains. The frontier-safety actionable signal is the gap between the static ASR and a held-out / post-cutoff / transfer red-team ASR.
+6. **B** — refuse-everything is the trivial solution to "minimize ASR." Over-refusal evals (XSTest, helpfulness benchmarks) bound it. Production safety scorecards always pair ASR with a helpfulness or over-refusal axis for this reason; the ASR number alone doesn't constrain the model away from the useless-but-safe corner of the space.
+
+</details>
