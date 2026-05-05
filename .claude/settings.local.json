@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:arxiv.org)",
+      "WebSearch",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:aclanthology.org)",
+      "WebFetch(domain:crfm.stanford.edu)",
+      "WebFetch(domain:nlp.cs.washington.edu)",
+      "WebFetch(domain:allenai.org)",
+      "WebFetch(domain:datasets-benchmarks-proceedings.neurips.cc)",
+      "WebFetch(domain:openai.com)",
+      "WebFetch(domain:epoch.ai)",
+      "WebFetch(domain:situational-awareness-dataset.org)",
+      "WebFetch(domain:openreview.net)",
+      "WebFetch(domain:www.lesswrong.com)"
+    ]
+  }
+}
