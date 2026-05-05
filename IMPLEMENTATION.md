@@ -11,31 +11,31 @@ Running plan-of-record. Tick items as they're completed. Detailed plan in `C:\Us
 - [x] `LICENSE` — MIT
 - [x] `learning-plan/.gitkeep`
 - [x] `web/.gitkeep`
-- [ ] Initial commit
+- [x] Initial commit (`ade3f7e`)
 
 ## Stage 1 — Curriculum content
 
 ### 1a. Topic + benchmark grid — REVIEW GATE
-- [ ] Draft `learning-plan/overview.md` (28-row table + week themes)
-- [ ] Iterate with user — swap topics/benchmarks
-- [ ] Approved
+- [x] Draft `learning-plan/overview.md` (28-row table + week themes)
+- [x] Iterate with user — swap topics/benchmarks
+- [x] Approved
 
 ### 1b. Sample lesson — REVIEW GATE
-- [ ] Draft `learning-plan/lessons/d01-*.md` (full lesson, locks the format)
-- [ ] Iterate with user — depth/tone/length
-- [ ] Approved
+- [x] Draft `learning-plan/lessons/d01-*.md` (full lesson, locks the format)
+- [x] Iterate with user — depth/tone/length
+- [x] Approved
 
 ### 1c. Bulk lesson generation
-- [ ] Lessons d02–d07 (Week 1 finish)
-- [ ] Lessons d08–d14 (Week 2)
-- [ ] Lessons d15–d21 (Week 3)
-- [ ] Lessons d22–d28 (Week 4)
-- [ ] Final consistency pass across all 28
+- [x] Lessons d02–d07 (Week 1 finish) — drafted via parallel validator-drafter agents; awaiting review
+- [x] Lessons d08–d14 (Week 2) — drafted via parallel validator-drafter agents; awaiting review
+- [x] Lessons d15–d21 (Week 3) — drafted via parallel validator-drafter agents; awaiting review
+- [x] Lessons d22–d28 (Week 4) — drafted via parallel validator-drafter agents; awaiting review
+- [x] Final consistency pass across all 28 — audit clean (1 Must-fix on calibration-thread chain in d05; +1 sibling found in d23 during verification; both fixed)
 
 ## Stage 2 — Web app
 
 - [ ] Bootstrap `web/`: `create-next-app`, Tailwind, shadcn/ui
-- [ ] Markdown pipeline + content loader (gray-matter, remark, rehype-katex, rehype-pretty-code)
+- [ ] Markdown pipeline + content loader (gray-matter, remark, rehype-katex, rehype-pretty-code, rehype-mermaid)
 - [ ] Render lesson 1 end-to-end at `/lesson/1`
 - [ ] SQLite layer (`better-sqlite3`) + migrations
 - [ ] API routes: `/api/progress`, `/api/auth`
