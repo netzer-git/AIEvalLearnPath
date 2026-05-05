@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { markdownToHtml } from "./markdown";
+import { parseAndStripQuiz, type Quiz } from "./quiz";
 
 const LESSONS_DIR = path.resolve(process.cwd(), "..", "learning-plan", "lessons");
 
@@ -20,6 +21,7 @@ export type LessonFrontmatter = {
 export type Lesson = {
   frontmatter: LessonFrontmatter;
   html: string;
+  quiz: Quiz | null;
 };
 
 export type LessonSummary = Pick<
@@ -64,6 +66,7 @@ export async function getLessonByDay(day: number): Promise<Lesson | null> {
   if (!file) return null;
   const raw = await fs.readFile(path.join(LESSONS_DIR, file), "utf-8");
   const { data, content } = matter(raw);
-  const html = await markdownToHtml(content);
-  return { frontmatter: data as LessonFrontmatter, html };
+  const { bodyMarkdown, quiz } = parseAndStripQuiz(content);
+  const html = await markdownToHtml(bodyMarkdown);
+  return { frontmatter: data as LessonFrontmatter, html, quiz };
 }

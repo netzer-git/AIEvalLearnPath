@@ -1,45 +1,91 @@
 import Link from "next/link";
 import { getAllLessonSummaries } from "@/lib/content";
+import { loadProgress } from "@/lib/progress";
+
+// Re-fetch progress on every request so completion state is always fresh.
+// Safe for a single-user app; revisit if multi-user / multi-host.
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const lessons = await getAllLessonSummaries();
+  const [lessons, progress] = await Promise.all([
+    getAllLessonSummaries(),
+    loadProgress(),
+  ]);
   const weeks = [1, 2, 3, 4] as const;
+  const completedDays = new Set(
+    Object.keys(progress.lessons).map((k) => Number.parseInt(k, 10)),
+  );
+  const completedCount = completedDays.size;
+
+  // Average reading time across completed lessons (only counts where >0)
+  const completedTimes = Object.values(progress.lessons)
+    .map((l) => l.reading_seconds)
+    .filter((s) => s > 0);
+  const avgMinutes =
+    completedTimes.length > 0
+      ? Math.round(completedTimes.reduce((a, b) => a + b, 0) / completedTimes.length / 60)
+      : null;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-      <header className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          AIEvalLearnPath
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+      <header className="dashboard-header">
+        <h1 className="dashboard-title">AIEvalLearnPath</h1>
+        <p className="dashboard-subtitle">
           A 28-lesson curriculum on LLM evaluation. ~30 min/day.
         </p>
+        <div className="dashboard-progress">
+          <span className="dashboard-progress-count">
+            <strong>{completedCount}</strong> / 28 completed
+          </span>
+          {avgMinutes != null && (
+            <span className="dashboard-progress-avg">
+              avg {avgMinutes} min / lesson
+            </span>
+          )}
+        </div>
       </header>
-      <div className="space-y-8">
+      <div className="dashboard-weeks">
         {weeks.map((w) => {
           const wk = lessons.filter((l) => l.week === w);
           if (wk.length === 0) return null;
           const theme = wk[0].week_theme;
+          const wkComplete = wk.filter((l) => completedDays.has(l.day)).length;
           return (
-            <section key={w}>
-              <h2 className="mb-3 text-xs uppercase tracking-wide text-muted-foreground">
-                Week {w} &middot; {theme}
-              </h2>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
-                {wk.map((l) => (
-                  <Link
-                    key={l.day}
-                    href={`/lesson/${l.day}`}
-                    className="group rounded-md border border-border bg-card p-3 transition-colors hover:bg-accent"
-                  >
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Day {l.day}
-                    </p>
-                    <p className="mt-1 line-clamp-2 text-sm font-medium leading-snug">
-                      {l.anchor_benchmark}
-                    </p>
-                  </Link>
-                ))}
+            <section key={w} className="dashboard-week">
+              <header className="dashboard-week-header">
+                <span className="dashboard-week-label">Week {w}</span>
+                <span className="dashboard-week-theme">{theme}</span>
+                <span className="dashboard-week-count">
+                  {wkComplete} / {wk.length}
+                </span>
+              </header>
+              <div className="dashboard-tiles">
+                {wk.map((l) => {
+                  const done = completedDays.has(l.day);
+                  return (
+                    <Link
+                      key={l.day}
+                      href={`/lesson/${l.day}`}
+                      className={
+                        done
+                          ? "dashboard-tile dashboard-tile--done"
+                          : "dashboard-tile"
+                      }
+                      aria-label={`Day ${l.day}: ${l.title}`}
+                    >
+                      <div className="dashboard-tile-head">
+                        <span className="dashboard-tile-day">Day {l.day}</span>
+                        {done && (
+                          <span className="dashboard-tile-check" aria-hidden>
+                            ✓
+                          </span>
+                        )}
+                      </div>
+                      <p className="dashboard-tile-topic">{l.title}</p>
+                      <p className="dashboard-tile-anchor">{l.anchor_benchmark}</p>
+                    </Link>
+                  );
+                })}
               </div>
             </section>
           );

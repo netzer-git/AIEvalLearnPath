@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getAllLessonDays, getLessonByDay } from "@/lib/content";
+import QuizSection from "@/components/Quiz";
+import CompleteButton from "@/components/CompleteButton";
 import MermaidInit from "./MermaidInit";
 
 export async function generateStaticParams() {
@@ -31,18 +33,19 @@ export default async function LessonPage({
       >
         &larr; Dashboard
       </Link>
-      <header className="mb-8 border-b border-border pb-6">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+      <header className="lesson-header">
+        <p className="lesson-eyebrow">
           Week {fm.week} &middot; {fm.week_theme}
         </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-          Day {fm.day}: {fm.title}
+        <h1 className="lesson-title">
+          <span className="lesson-day">Day {fm.day}</span>
+          <span className="lesson-title-text">{fm.title}</span>
         </h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Anchor: <span className="text-foreground">{fm.anchor_benchmark}</span>
-          <span className="mx-2">&middot;</span>
-          Harness: {fm.harness}
-          <span className="mx-2">&middot;</span>
+        <p className="lesson-meta">
+          <span className="lesson-meta-anchor">{fm.anchor_benchmark}</span>
+          <span className="lesson-meta-sep">&middot;</span>
+          {fm.harness}
+          <span className="lesson-meta-sep">&middot;</span>
           {fm.reading_time_minutes} min
         </p>
       </header>
@@ -50,22 +53,20 @@ export default async function LessonPage({
         className="lesson-content"
         dangerouslySetInnerHTML={{ __html: lesson.html }}
       />
-      <nav className="mt-12 flex items-center justify-between border-t border-border pt-6">
+      {lesson.quiz && <QuizSection quiz={lesson.quiz} />}
+      <div className="lesson-complete">
+        <CompleteButton day={fm.day} />
+      </div>
+      <nav className="lesson-nav">
         {prevDay ? (
-          <Link
-            href={`/lesson/${prevDay}`}
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
+          <Link href={`/lesson/${prevDay}`} className="lesson-nav-prev">
             &larr; Day {prevDay}
           </Link>
         ) : (
           <span />
         )}
         {nextDay ? (
-          <Link
-            href={`/lesson/${nextDay}`}
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
+          <Link href={`/lesson/${nextDay}`} className="lesson-nav-next">
             Day {nextDay} &rarr;
           </Link>
         ) : (

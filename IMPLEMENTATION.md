@@ -37,12 +37,12 @@ Running plan-of-record. Tick items as they're completed. Detailed plan in `C:\Us
 - [x] Bootstrap `web/`: `create-next-app` (Next.js 16 + React 19 + Tailwind v4 + ESLint + TS + Turbopack) and `shadcn@latest init` with defaults
 - [x] Markdown pipeline + content loader (gray-matter, remark, remark-gfm, remark-math, rehype-raw, rehype-katex, rehype-pretty-code, custom mermaid-pre transformer in lieu of rehype-mermaid)
 - [x] Render lesson 1 end-to-end at `/lesson/1` (and all 28 via SSG)
-- [ ] SQLite layer (`better-sqlite3`) + migrations
-- [ ] API routes: `/api/progress`, `/api/auth`
-- [ ] Dashboard 4×7 grid wired to DB
-- [ ] Quiz component (interactive, scored, persisted)
-- [ ] Progress page (overall %, per-week %, streak, attempts table)
-- [ ] Auth (passcode + iron-session middleware)
+- [x] Storage layer (JSON-backed `web/data/progress.json`; per-host single-user; gitignored). Swap to `better-sqlite3` when going through the Cloudflare Tunnel for multi-device sync.
+- [x] API routes: `GET /api/progress`, `POST /api/progress/lesson/[day]`. Auth deferred (Phase H gate).
+- [x] Dashboard 4×7 grid wired to storage — completion state painted, mint accent on done tiles, per-week and overall counters, avg-min-per-lesson reading-time aggregate. Tiles show day + topic + anchor benchmark.
+- [x] Quiz component — per-question revealable answer (native `<details>`), markdown-rendered stems / options / explanations, parsed from each lesson's `<details>` answer block. Interactive scoring deferred (current quiz is reveal-only per stage 2 phase B/D ask).
+- [ ] Progress page (overall %, per-week %, streak, attempts table) — superseded by the dashboard's inline completion state per user direction (game-tile model).
+- [ ] Auth (passcode + iron-session middleware) — gated to Phase H (Cloudflare Tunnel exposure).
 - [ ] PWA manifest + service worker
 - [ ] Polish: theme toggle, transitions, a11y, 404/error states
 - [ ] Keyboard shortcuts (j/k/m/1-4)

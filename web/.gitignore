@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local progress store (per-host single-user JSON)
+/data/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
