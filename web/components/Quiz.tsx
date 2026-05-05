@@ -1,7 +1,27 @@
 import { markdownToHtml } from "@/lib/markdown";
 import type { Quiz, QuizQuestion } from "@/lib/quiz";
 
-async function renderInlineMarkdown(md: string): Promise<string> {
+/**
+ * Strip a single wrapping <p>…</p> if it's the only top-level element.
+ * remark-rehype wraps every paragraph in <p>, but stems and options are
+ * inline content rendered inside <span> — and a <p> nested inside a <span>
+ * gets hoisted out by the HTML parser, destroying the flex layout.
+ */
+function stripWrappingP(html: string): string {
+  const trimmed = html.trim();
+  if (trimmed.startsWith("<p>") && trimmed.endsWith("</p>")) {
+    const inner = trimmed.slice(3, -4);
+    if (!/<p[\s>]/i.test(inner)) return inner;
+  }
+  return trimmed;
+}
+
+async function renderInline(md: string): Promise<string> {
+  return stripWrappingP(await markdownToHtml(md));
+}
+
+async function renderBlock(md: string): Promise<string> {
+  // Multi-paragraph allowed (used for explanations inside a <div>).
   return await markdownToHtml(md);
 }
 
@@ -12,14 +32,14 @@ async function renderQuestion(q: QuizQuestion): Promise<{
   answerLetter: string;
   explanationHtml: string;
 }> {
-  const stemHtml = await renderInlineMarkdown(q.stem);
+  const stemHtml = await renderInline(q.stem);
   const options = await Promise.all(
     q.options.map(async (opt) => ({
       letter: opt.letter,
-      html: await renderInlineMarkdown(opt.text),
+      html: await renderInline(opt.text),
     })),
   );
-  const explanationHtml = await renderInlineMarkdown(q.explanation);
+  const explanationHtml = await renderBlock(q.explanation);
   return {
     number: q.number,
     stemHtml,
