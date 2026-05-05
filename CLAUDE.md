@@ -42,7 +42,7 @@ There is no Node project, no test runner, no linter. Don't fabricate `npm`/`pnpm
 
 ## Web app stack (locked unless user changes it)
 
-When Stage 2 starts: Next.js 15 (App Router) + TypeScript, Tailwind, shadcn/ui, `better-sqlite3` (SQLite files gitignored — progress is per-host), `iron-session` cookie auth (single passcode), markdown pipeline `gray-matter` + `remark` + `rehype-katex` + `rehype-pretty-code` + `rehype-mermaid`, mobile-first PWA, exposed via Cloudflare Tunnel. Keyboard shortcuts: `j`/`k` (next/prev), `m` (mark complete), `1`–`4` (quiz answer).
+Stage 2 stack (in progress as of Phase A): Next.js 16 (App Router) + React 19 + TypeScript, Tailwind v4, shadcn/ui, `better-sqlite3` (SQLite files gitignored — progress is per-host), `iron-session` cookie auth (single passcode), markdown pipeline `gray-matter` + `remark` + `rehype-katex` + `rehype-pretty-code` + `rehype-mermaid`, mobile-first PWA, exposed via Cloudflare Tunnel (public URL + passcode). Keyboard shortcuts: `j`/`k` (next/prev), `m` (mark complete), `1`–`4` (quiz answer). **Next.js 16 has breaking changes from older training data** — `web/AGENTS.md` directs you to `web/node_modules/next/dist/docs/` for current conventions.
 
 ## Host notes
 

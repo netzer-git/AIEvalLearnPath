@@ -36,7 +36,7 @@ If a user request would jump a stage, surface that and ask before proceeding.
 
 `web/` is intentionally empty (just `.gitkeep`) until Stage 2 begins. When Stage 2 starts, the planned stack — locked unless the user explicitly changes it — is:
 
-- Next.js 15 (App Router) + TypeScript, Tailwind CSS, shadcn/ui
+- Next.js 16 (App Router) + React 19 + TypeScript, Tailwind CSS v4, shadcn/ui. **Note**: `web/AGENTS.md` (created by `create-next-app`) warns Next.js 16 has breaking changes from older training data — read `web/node_modules/next/dist/docs/` before writing App Router code.
 - `better-sqlite3` for progress + quiz scores; SQLite files are gitignored (progress is per-host)
 - `iron-session` cookie auth, single passcode
 - Markdown pipeline: `gray-matter` + `remark` + `rehype-katex` + `rehype-pretty-code` + `rehype-mermaid` (added so lesson diagrams like the D1 pipeline flowchart render)

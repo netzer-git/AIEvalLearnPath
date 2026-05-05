@@ -34,7 +34,7 @@ Running plan-of-record. Tick items as they're completed. Detailed plan in `C:\Us
 
 ## Stage 2 — Web app
 
-- [ ] Bootstrap `web/`: `create-next-app`, Tailwind, shadcn/ui
+- [x] Bootstrap `web/`: `create-next-app` (Next.js 16 + React 19 + Tailwind v4 + ESLint + TS + Turbopack) and `shadcn@latest init` with defaults
 - [ ] Markdown pipeline + content loader (gray-matter, remark, rehype-katex, rehype-pretty-code, rehype-mermaid)
 - [ ] Render lesson 1 end-to-end at `/lesson/1`
 - [ ] SQLite layer (`better-sqlite3`) + migrations

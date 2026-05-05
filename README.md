@@ -39,7 +39,7 @@ The exact 28-row topic+benchmark mapping lives in `learning-plan/overview.md` on
 
 How to run the app will be filled in once Stage 2 begins. Planned stack:
 
-- **Framework**: Next.js 15 (App Router) + TypeScript
+- **Framework**: Next.js 16 (App Router) + React 19 + TypeScript
 - **UI**: Tailwind CSS + shadcn/ui, mobile-first, dark mode, PWA-installable
 - **Storage**: SQLite (`better-sqlite3`) for completion + quiz scores, synced across devices
 - **Auth**: single passcode (iron-session cookie)
