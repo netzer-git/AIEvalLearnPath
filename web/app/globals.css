@@ -128,3 +128,201 @@
     @apply font-sans;
   }
 }
+
+/* Lesson content typography. Plain CSS (not @tailwindcss/typography) to
+   keep the markdown rendering predictable across KaTeX, mermaid, and
+   rehype-pretty-code output. */
+.lesson-content {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--foreground);
+}
+
+.lesson-content > * + * {
+  margin-top: 1rem;
+}
+
+.lesson-content h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  scroll-margin-top: 5rem;
+}
+
+.lesson-content h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+  scroll-margin-top: 5rem;
+}
+
+.lesson-content h4 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.lesson-content p {
+  margin-top: 1rem;
+}
+
+.lesson-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lesson-content a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.lesson-content strong {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.lesson-content ul,
+.lesson-content ol {
+  padding-left: 1.5rem;
+  margin-top: 1rem;
+}
+.lesson-content ul { list-style: disc; }
+.lesson-content ol { list-style: decimal; }
+.lesson-content li {
+  margin-top: 0.35rem;
+}
+.lesson-content li > ul,
+.lesson-content li > ol {
+  margin-top: 0.35rem;
+}
+
+.lesson-content blockquote {
+  border-left: 3px solid var(--border);
+  padding: 0.5rem 1rem;
+  margin: 1.25rem 0;
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--muted), transparent 60%);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.lesson-content blockquote > :first-child { margin-top: 0; }
+.lesson-content blockquote > :last-child  { margin-bottom: 0; }
+.lesson-content blockquote strong { color: var(--foreground); }
+
+/* Inline code (rehype-pretty-code uses spans for these too) */
+.lesson-content :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--muted);
+  color: var(--foreground);
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* Fenced code blocks (rehype-pretty-code output) */
+.lesson-content figure[data-rehype-pretty-code-figure],
+.lesson-content pre {
+  margin: 1.25rem 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  background: oklch(0.18 0 0);
+}
+.lesson-content pre {
+  padding: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+.lesson-content pre > code {
+  display: grid;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-family: var(--font-mono);
+}
+.lesson-content [data-line] {
+  padding: 0 1rem;
+  margin: 0 -1rem;
+  border-left: 2px solid transparent;
+}
+.lesson-content [data-line-numbers] [data-line]::before {
+  content: counter(line);
+  counter-increment: line;
+  display: inline-block;
+  width: 2rem;
+  margin-right: 1rem;
+  text-align: right;
+  color: var(--muted-foreground);
+}
+
+/* Tables */
+.lesson-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-size: 0.9rem;
+  display: block;
+  overflow-x: auto;
+}
+.lesson-content thead th {
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  background: var(--muted);
+}
+.lesson-content tbody td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+}
+.lesson-content tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Mermaid containers */
+.lesson-content pre.mermaid {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  overflow: visible;
+  display: flex;
+  justify-content: center;
+}
+.lesson-content pre.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* KaTeX block math (inline math is fine by default) */
+.lesson-content .katex-display {
+  margin: 1rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* <details> blocks (used for quiz answers) */
+.lesson-content details {
+  margin: 1.25rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--muted), transparent 50%);
+}
+.lesson-content details summary {
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+.lesson-content details[open] summary {
+  margin-bottom: 0.5rem;
+}
+
+.lesson-content hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}

@@ -35,8 +35,8 @@ Running plan-of-record. Tick items as they're completed. Detailed plan in `C:\Us
 ## Stage 2 — Web app
 
 - [x] Bootstrap `web/`: `create-next-app` (Next.js 16 + React 19 + Tailwind v4 + ESLint + TS + Turbopack) and `shadcn@latest init` with defaults
-- [ ] Markdown pipeline + content loader (gray-matter, remark, rehype-katex, rehype-pretty-code, rehype-mermaid)
-- [ ] Render lesson 1 end-to-end at `/lesson/1`
+- [x] Markdown pipeline + content loader (gray-matter, remark, remark-gfm, remark-math, rehype-raw, rehype-katex, rehype-pretty-code, custom mermaid-pre transformer in lieu of rehype-mermaid)
+- [x] Render lesson 1 end-to-end at `/lesson/1` (and all 28 via SSG)
 - [ ] SQLite layer (`better-sqlite3`) + migrations
 - [ ] API routes: `/api/progress`, `/api/auth`
 - [ ] Dashboard 4×7 grid wired to DB
