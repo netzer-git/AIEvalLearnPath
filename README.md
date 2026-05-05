@@ -1,4 +1,4 @@
-# LLM Evals — 28-day curriculum + companion web app
+# AIEvalLearnPath — 28-day curriculum + companion web app
 
 A self-paced 4-week / 28-lesson curriculum on LLM benchmarks and evaluation, plus a small mobile-friendly web app to follow it.
 
