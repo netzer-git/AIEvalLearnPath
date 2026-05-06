@@ -327,6 +327,86 @@
 }
 
 /* ============================================================ */
+/*  Login screen                                                */
+/* ============================================================ */
+
+.login-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+}
+.login-form {
+  width: 100%;
+  max-width: 22rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 2rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+.login-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--foreground);
+}
+.login-subtitle {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+}
+.login-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-mint);
+}
+.login-input {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.85rem;
+  color: var(--foreground);
+  font-size: 1rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.login-input:focus {
+  border-color: var(--accent-mint);
+}
+.login-button {
+  margin-top: 0.5rem;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--accent-mint);
+  color: oklch(0.16 0 0);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: 0;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.05s ease;
+}
+.login-button:hover { filter: brightness(1.05); }
+.login-button:active { transform: translateY(1px); }
+.login-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.login-error {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--destructive);
+}
+
+/* ============================================================ */
 /*  Collapsable sections — each H2 + content is wrapped in     */
 /*  <details class="lesson-section"> by rehypeWrapSections.    */
 /*  Native collapse via <summary>; per-section completion via  */
@@ -715,6 +795,31 @@
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--border);
+}
+.dashboard-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.logout-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.logout-button:hover {
+  color: var(--foreground);
+  border-color: var(--foreground);
+}
+.logout-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .dashboard-title {
   font-size: 2rem;

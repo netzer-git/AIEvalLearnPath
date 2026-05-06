@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getAllLessonSummaries } from "@/lib/content";
 import { loadProgress } from "@/lib/progress";
+import { isAuthEnabled } from "@/lib/session";
+import LogoutButton from "@/components/LogoutButton";
 
 // Re-fetch progress on every request so completion state is always fresh.
 // Safe for a single-user app; revisit if multi-user / multi-host.
@@ -29,7 +31,10 @@ export default async function Home() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
       <header className="dashboard-header">
-        <h1 className="dashboard-title">AIEvalLearnPath</h1>
+        <div className="dashboard-header-row">
+          <h1 className="dashboard-title">AIEvalLearnPath</h1>
+          {isAuthEnabled() && <LogoutButton />}
+        </div>
         <p className="dashboard-subtitle">
           A 28-lesson curriculum on LLM evaluation. ~30 min/day.
         </p>

@@ -42,10 +42,10 @@ Running plan-of-record. Tick items as they're completed. Detailed plan in `C:\Us
 - [x] Dashboard 4×7 grid wired to storage — completion state painted, mint accent on done tiles, per-week and overall counters, avg-min-per-lesson reading-time aggregate. Tiles show day + topic + anchor benchmark.
 - [x] Quiz component — per-question revealable answer (native `<details>`), markdown-rendered stems / options / explanations, parsed from each lesson's `<details>` answer block. Interactive scoring deferred (current quiz is reveal-only per stage 2 phase B/D ask).
 - [ ] Progress page (overall %, per-week %, streak, attempts table) — superseded by the dashboard's inline completion state per user direction (game-tile model).
-- [ ] Auth (passcode + iron-session middleware) — gated to Phase H (Cloudflare Tunnel exposure).
-- [ ] PWA manifest + service worker
+- [x] Auth (passcode + iron-session middleware) — opt-in via env vars. Set `SESSION_PASSWORD` (≥32 char secret) + `APP_PASSCODE` in `web/.env.local` to enable; leave unset for open-access localhost dev. Login form at `/login`, middleware at `web/middleware.ts` redirects unauthed app routes to login and returns 401 JSON for unauthed API routes.
+- [x] PWA manifest + service worker — `app/manifest.ts` (display: standalone, mint theme color, /icon.svg), apple-touch + iOS standalone meta tags in layout, `public/sw.js` hand-rolled service worker (cache-first for assets, network-first with cache fallback for HTML + /api/*), prod-only registration via `components/RegisterSW.tsx`.
 - [ ] Polish: theme toggle, transitions, a11y, 404/error states
-- [ ] Keyboard shortcuts (j/k/m/1-4)
+- [x] Keyboard shortcuts: `j` next lesson, `k` prev lesson, `m` click Complete (`components/LessonShortcuts.tsx`). `1`–`4` quiz answers deferred — quiz is reveal-only per the locked Phase D/E spec, no interactive scoring yet.
 - [ ] Cloudflare Tunnel setup doc
 - [ ] Windows "run on login" task for `npm start` + `cloudflared`
 - [ ] End-to-end smoke test on phone (via tunnel) + desktop
