@@ -791,6 +791,8 @@
   transition: border-color 0.15s ease, background-color 0.15s ease,
     transform 0.05s ease;
   min-height: 7.25rem;
+  overflow: hidden;
+  min-width: 0;
 }
 .dashboard-tile:hover {
   border-color: var(--accent-mint-border);
@@ -852,6 +854,9 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
 }
 .dashboard-tile-anchor {
   margin-top: auto;
@@ -860,6 +865,9 @@
   font-weight: 500;
   color: var(--accent-mint);
   font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .dashboard-tile--done .dashboard-tile-anchor {
   color: color-mix(in oklch, var(--accent-mint), var(--foreground) 30%);
