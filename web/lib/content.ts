@@ -27,7 +27,25 @@ export type Lesson = {
 export type LessonSummary = Pick<
   LessonFrontmatter,
   "day" | "slug" | "title" | "week" | "week_theme" | "anchor_benchmark" | "reading_time_minutes"
->;
+> & {
+  /**
+   * Count of collapsable lesson sections (H2s in the body, excluding
+   * `## Quiz` which is stripped before rendering). Drives the
+   * "M / N sections" indicator on the dashboard tile.
+   */
+  section_count: number;
+};
+
+/**
+ * Count of H2 sections that the lesson body actually renders, excluding
+ * `## Quiz` (which `parseAndStripQuiz` removes before markdown→HTML).
+ * Cheap regex over the raw markdown — no need to round-trip through
+ * the full unified pipeline for a count.
+ */
+function countLessonSections(rawBody: string): number {
+  const matches = rawBody.match(/^## (?!Quiz\s*$).+$/gm);
+  return matches ? matches.length : 0;
+}
 
 async function listLessonFiles(): Promise<string[]> {
   const entries = await fs.readdir(LESSONS_DIR);
@@ -44,7 +62,7 @@ export async function getAllLessonSummaries(): Promise<LessonSummary[]> {
   const summaries: LessonSummary[] = [];
   for (const file of files) {
     const raw = await fs.readFile(path.join(LESSONS_DIR, file), "utf-8");
-    const { data } = matter(raw);
+    const { data, content } = matter(raw);
     const fm = data as LessonFrontmatter;
     summaries.push({
       day: fm.day,
@@ -54,6 +72,7 @@ export async function getAllLessonSummaries(): Promise<LessonSummary[]> {
       week_theme: fm.week_theme,
       anchor_benchmark: fm.anchor_benchmark,
       reading_time_minutes: fm.reading_time_minutes,
+      section_count: countLessonSections(content),
     });
   }
   return summaries;

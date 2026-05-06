@@ -633,7 +633,18 @@
 .lesson-complete {
   margin-top: 2rem;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+.section-progress {
+  font-size: 0.825rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.section-progress--full {
+  color: var(--accent-mint);
+  font-weight: 500;
 }
 .complete-strip {
   display: inline-flex;
@@ -811,6 +822,25 @@
   font-size: 0.95rem;
   font-weight: 700;
   line-height: 1;
+}
+.dashboard-tile-progress {
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-mint);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  background: var(--accent-mint-soft);
+  border: 1px solid var(--accent-mint-border);
+  border-radius: 9999px;
+  padding: 0.05rem 0.4rem;
+  line-height: 1;
+}
+.dashboard-tile--inprogress {
+  border-color: color-mix(in oklch, var(--accent-mint-border), transparent 50%);
+}
+.dashboard-tile--inprogress:hover {
+  border-color: var(--accent-mint-border);
+  background: color-mix(in oklch, var(--card), var(--accent-mint-soft) 25%);
 }
 .dashboard-tile-topic {
   margin-top: 0.4rem;

@@ -64,6 +64,13 @@ export default function SectionTracker({ day }: { day: number }) {
           // Optimistic UI
           btn.dataset.completed = String(newState);
           section.classList.toggle("lesson-section--done", newState);
+          // Notify SectionProgress (and any other listeners) so the
+          // "M / N sections" counter updates instantly.
+          document.dispatchEvent(
+            new CustomEvent("section-toggle", {
+              detail: { slug, completed: newState },
+            }),
+          );
 
           try {
             const res = await fetch(
@@ -79,6 +86,11 @@ export default function SectionTracker({ day }: { day: number }) {
             // Revert optimistic change
             btn.dataset.completed = String(wasComplete);
             section.classList.toggle("lesson-section--done", wasComplete);
+            document.dispatchEvent(
+              new CustomEvent("section-toggle", {
+                detail: { slug, completed: wasComplete },
+              }),
+            );
           }
         };
 

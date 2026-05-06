@@ -62,27 +62,44 @@ export default async function Home() {
               <div className="dashboard-tiles">
                 {wk.map((l) => {
                   const done = completedDays.has(l.day);
+                  const dayKey = String(l.day);
+                  const sectionsDone = Object.keys(
+                    progress.sections[dayKey] ?? {},
+                  ).length;
+                  const sectionsTotal = l.section_count;
+                  const inProgress =
+                    !done && sectionsDone > 0 && sectionsTotal > 0;
+                  const tileClass = done
+                    ? "dashboard-tile dashboard-tile--done"
+                    : inProgress
+                      ? "dashboard-tile dashboard-tile--inprogress"
+                      : "dashboard-tile";
                   return (
                     <Link
                       key={l.day}
                       href={`/lesson/${l.day}`}
-                      className={
-                        done
-                          ? "dashboard-tile dashboard-tile--done"
-                          : "dashboard-tile"
-                      }
+                      className={tileClass}
                       aria-label={`Day ${l.day}: ${l.title}`}
                     >
                       <div className="dashboard-tile-head">
                         <span className="dashboard-tile-day">Day {l.day}</span>
-                        {done && (
+                        {done ? (
                           <span className="dashboard-tile-check" aria-hidden>
                             ✓
                           </span>
-                        )}
+                        ) : inProgress ? (
+                          <span
+                            className="dashboard-tile-progress"
+                            aria-label={`${sectionsDone} of ${sectionsTotal} sections done`}
+                          >
+                            {sectionsDone}/{sectionsTotal}
+                          </span>
+                        ) : null}
                       </div>
                       <p className="dashboard-tile-topic">{l.title}</p>
-                      <p className="dashboard-tile-anchor">{l.anchor_benchmark}</p>
+                      <p className="dashboard-tile-anchor">
+                        {l.anchor_benchmark}
+                      </p>
                     </Link>
                   );
                 })}
