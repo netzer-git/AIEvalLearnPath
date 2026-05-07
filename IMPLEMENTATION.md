@@ -46,6 +46,6 @@ Running plan-of-record. Tick items as they're completed. Detailed plan in `C:\Us
 - [x] PWA manifest + service worker — `app/manifest.ts` (display: standalone, mint theme color, /icon.svg), apple-touch + iOS standalone meta tags in layout, `public/sw.js` hand-rolled service worker (cache-first for assets, network-first with cache fallback for HTML + /api/*), prod-only registration via `components/RegisterSW.tsx`.
 - [ ] Polish: theme toggle, transitions, a11y, 404/error states
 - [x] Keyboard shortcuts: `j` next lesson, `k` prev lesson, `m` click Complete (`components/LessonShortcuts.tsx`). `1`–`4` quiz answers deferred — quiz is reveal-only per the locked Phase D/E spec, no interactive scoring yet.
-- [ ] Cloudflare Tunnel setup doc
-- [ ] Windows "run on login" task for `npm start` + `cloudflared`
-- [ ] End-to-end smoke test on phone (via tunnel) + desktop
+- [x] Cloudflare Tunnel setup doc — `web/DEPLOYMENT.md` (quick-tunnel flow + named-tunnel upgrade path)
+- [x] Windows "run on login" task for `npm start` + `cloudflared` — `web/scripts/start-deployment.ps1` + `stop-deployment.ps1`; `schtasks` one-liner in `DEPLOYMENT.md` (user runs once to register)
+- [ ] End-to-end smoke test on phone (via tunnel) + desktop — desktop validated end-to-end (auth gate, login flow, lesson render over public URL); phone test is user's call
