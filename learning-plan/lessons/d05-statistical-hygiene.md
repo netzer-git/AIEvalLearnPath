@@ -202,38 +202,38 @@ When you write one, treat reporting a single point estimate as a defect — anal
 
 **Q2.** Two models report MMLU scores of 85.1 and 85.5 on the full 14,042-item test set. Which conclusion is best supported?
 
-- A. The 0.4-point gap is statistically significant; model B is better.
+- A. The 0.4-point gap is statistically significant under a paired bootstrap and headlines a real win for B.
 - B. The 0.4-point gap is within the ±0.4-to-±0.6-point sampling-noise envelope; the gap is plausibly noise.
-- C. The two models are identical.
-- D. You need at least 100,000 items to distinguish them under any test.
+- C. The two models are statistically identical because their headline scores agree to one decimal digit.
+- D. You need at least 100,000 items to distinguish a sub-1-point gap under any reasonable Wilson test.
 
 **Q3.** Two models are evaluated on the same 1,000-item scenario. Their marginal 95% CIs overlap. Which test is most appropriate to determine whether one model is significantly better?
 
-- A. Conclude "no significant difference" from the marginal-CI overlap.
-- B. Run an unpaired t-test on the two accuracies.
+- A. Conclude that there is no significant difference because the two marginal Wilson CIs visibly overlap.
+- B. Run an unpaired Welch t-test on the two reported accuracies and check the p-value against $\alpha = 0.05$.
 - C. Compute per-item differences $d_i$ and bootstrap a CI on the mean of $d$ (paired bootstrap).
-- D. Re-run both models on a different test set and compare again.
+- D. Re-run both models on a freshly drawn 1,000-item subsample and compare the new bootstrapped accuracies.
 
 **Q4.** HELM's signature methodological contribution is best described as:
 
-- A. A new prompt template that fixes acc-vs-acc_norm bias.
-- B. The scenario × metric matrix — every model evaluated on every (scenario, metric) cell where applicable.
-- C. A faster Python harness that replaces lm-evaluation-harness.
-- D. A leaderboard that ranks models on a single mean-accuracy number.
+- A. A new few-shot prompt template that fixes the acc-versus-acc_norm calibration bias on MCQ tasks.
+- B. The scenario × metric matrix: every model evaluated on every applicable (scenario, metric) cell.
+- C. A drop-in replacement for lm-evaluation-harness with faster GPU batching and lower memory footprint.
+- D. A live leaderboard that ranks models on a single mean accuracy averaged across all core scenarios.
 
 **Q5.** Which of these metrics is **not** part of HELM's canonical 7-metric core (per Liang et al. 2022)?
 
-- A. Accuracy
-- B. Calibration
-- C. Cost-per-token
-- D. Toxicity
+- A. Accuracy (exact-match score on the scenario's primary task)
+- B. Calibration (Expected Calibration Error against per-item correctness)
+- C. Cost-per-token (USD spent per output token at vendor list price)
+- D. Toxicity (rate of harmful generations flagged by a classifier)
 
 **Q6.** You read a safety-eval report claiming "refusal rate improved from 87.3% to 89.1% on n=200 borderline prompts." What is the right reflex?
 
-- A. Believe the 1.8-point improvement; safety evals are usually rigorous.
-- B. Compute the rough Wilson CI: at $n = 200$ near $p = 0.88$, the CI is around ±4.5 points; the claimed improvement is well inside the noise floor and may not be a real effect.
-- C. The improvement is significant because the model version changed.
-- D. You need an LLM-judge to score safety evals, so the report is invalid.
+- A. Believe the 1.8-point improvement; safety evaluations from major labs are usually statistically rigorous and adequately powered.
+- B. Compute the Wilson CI: at $n = 200$ near $p = 0.88$ it spans roughly ±4.5 points, so the 1.8-point delta is inside the noise floor.
+- C. The improvement is significant because the model version changed and the prompt set was held fixed across both evaluation runs.
+- D. Reject the report because safety evals require an LLM-judge harness rather than a hard-coded refusal-rate classifier.
 
 <details>
 <summary>Answers</summary>

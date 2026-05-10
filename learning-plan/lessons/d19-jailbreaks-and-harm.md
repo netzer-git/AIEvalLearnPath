@@ -248,38 +248,38 @@ The same answer D6 gave applies: structural defenses (held-out attack distributi
 
 **Q2.** A paper reports "GPT-X scored 8% ASR on HarmBench standard behaviors." On the 200-item standard subset at $p = 0.08$, what is the approximate 95% CI half-width on this proportion, and what is the right reading of an apparent 8% → 5% drop in a follow-up paper?
 
-- A. ±0.5 pp; the 3-pp drop is a real improvement.
-- B. ±3.8 pp; the 3-pp drop is within sampling noise — needs multi-seed runs and a stated CI before claiming improvement.
-- C. ±10 pp; ASR can never be measured precisely.
-- D. The CI is undefined for ASR.
+- A. ±0.5 pp on a Bernoulli proportion at this $N$; the 3-pp follow-up drop is a real robustness improvement over the prior paper.
+- B. ±3.8 pp; the 3-pp drop is within sampling noise without multi-seed runs and a stated CI.
+- C. ±10 pp; at $N = 200$ the Wilson half-width is too large to ever distinguish a 3-pp drop from sampling noise.
+- D. The CI is undefined for ASR because it is a ratio of two random quantities, not a single binomial proportion.
 
 **Q3.** What is the **most accurate** description of how RealToxicityPrompts (Gehman et al. 2020) relates to HarmBench (Mazeika et al. 2024) in this curriculum?
 
-- A. They measure unrelated properties; both are retained as parallel anchors in Week 3.
-- B. RealToxicityPrompts is an updated version of HarmBench, using newer attack methods.
-- C. Toxicity-under-prompting is a *special case* of harm elicitation; HarmBench absorbs it by replacing Perspective-API scoring with a frozen open-weight harm classifier, generalizing from one toxicity dimension to seven semantic harm categories, and from passive web-prompt completion to adversarial elicitation.
-- D. RealToxicityPrompts and HarmBench are interchangeable; cite either.
+- A. They measure unrelated properties; both are retained as parallel anchors throughout Week 3 of this curriculum.
+- B. RealToxicityPrompts is an updated version of HarmBench that adds modern attack methods like GCG and PAIR.
+- C. Toxicity-under-prompting is a special case of harm elicitation; HarmBench absorbs it under a frozen open-weight classifier with adversarial elicitation.
+- D. The two are scoring-equivalent — cite either, since Perspective API and the HarmBench classifier produce comparable labels.
 
 **Q4.** Which of the following is a **white-box, gradient-based** jailbreak attack method evaluated by HarmBench?
 
 - A. PAIR (Prompt Automatic Iterative Refinement).
-- B. AutoDAN.
+- B. AutoDAN's hierarchical genetic-algorithm prompt evolution.
 - C. GCG (Greedy Coordinate Gradient).
-- D. Direct Request.
+- D. Direct Request, the non-optimization baseline.
 
 **Q5.** A frontier lab reports its model's HarmBench ASR fell from 24% to 6% after a new round of safety RLHF that explicitly used HarmBench-style attack prompts. Which is the **best** read of the 6%?
 
-- A. The model is now adversarially robust — 6% is the true real-world ASR.
-- B. The 6% reflects robustness against the *static HarmBench attack distribution* the lab trained against; it is a Goodhart-flavored under-estimate of robustness against novel attacks. The actionable signal is the gap between this number and a held-out / post-cutoff red-team ASR.
-- C. The 6% is a contamination artifact and should be ignored entirely.
-- D. The 24% must have been a measurement error.
+- A. The model is now genuinely adversarially robust — 6% is essentially the true real-world ASR across all attacker populations.
+- B. The 6% reflects robustness on the static HarmBench distribution the lab trained on; the gap with a post-cutoff red-team ASR is the actionable signal.
+- C. The 6% is a contamination artifact from training-set leakage of HarmBench prompts and should be discarded entirely.
+- D. The 24% was a measurement error caused by classifier drift between the two HarmBench evaluation runs.
 
 **Q6.** Why does HarmBench pair "ASR on harmful prompts" with a separate over-refusal evaluation (e.g., XSTest, helpfulness-on-benign-prompts) in production safety pipelines?
 
-- A. Because HarmBench's classifier is unreliable on benign prompts.
-- B. Because a model that refuses *every* prompt has 0% ASR but is useless; the ASR axis alone admits the trivial "refuse everything" solution. The over-refusal eval bounds that failure mode.
-- C. Because the paper requires it.
-- D. Because over-refusal is the same metric as ASR, just inverted.
+- A. Because the HarmBench classifier is unreliable on benign prompts and produces a high false-positive rate on safe completions.
+- B. A model that refuses every prompt has 0% ASR but is useless; the over-refusal eval bounds that trivial solution.
+- C. Because the original HarmBench paper requires both axes for compliance with the framework's reporting standard.
+- D. Because over-refusal is the same metric as ASR just inverted, so reporting both gives the standard error of the mean.
 
 <details>
 <summary>Answers</summary>

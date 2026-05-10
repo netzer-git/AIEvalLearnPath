@@ -235,17 +235,17 @@ The story this lesson tells ends with verifiers picking the best of $N$ samples.
 
 **Q1.** Wei et al. (2022) reported that PaLM 540B scores roughly 18% with direct prompting and 57% with 8-shot chain-of-thought on GSM8K. Which of the following best explains *why* CoT produces such a large gap on this specific benchmark?
 
-- A. CoT prompts let the model condition on a different system message that is closer to GSM8K's training distribution.
-- B. Multi-step arithmetic requires carrying intermediate state across operations, and generating intermediate tokens uses the KV cache as scratch space; the single forward pass at the answer position can't carry that state otherwise.
-- C. CoT raises the temperature, which empirically helps on math.
-- D. CoT bypasses the model's safety filter, which suppresses numerical answers under direct prompting.
+- A. CoT prompts implicitly switch the model into a different system-message regime whose token distribution is closer to GSM8K's grade-school solution traces, raising the likelihood of the gold answer.
+- B. Multi-step arithmetic needs intermediate state, and generating CoT tokens uses the KV cache as scratch space that a single forward pass at the answer position cannot carry.
+- C. CoT exemplars internally raise the decoding temperature for the answer span, which empirically helps on math by widening the search over plausible numerical completions.
+- D. CoT bypasses an instruction-tuning safety layer that suppresses standalone numerical answers under direct prompting, letting the model emit final integers it would otherwise refuse.
 
 **Q2.** A model produces the answer `\frac{2}{4}` to a MATH problem whose gold answer is `\boxed{\frac{1}{2}}`. A naive string-match scorer marks this incorrect. Which scorer behavior is the *standard* fix used in modern math evaluators?
 
-- A. Apply BLEU to the LaTeX strings and threshold at 0.8.
-- B. Extract the contents of the last `\boxed{...}`, normalize the LaTeX (whitespace, fraction commands), then compare via symbolic simplification or numeric tolerance.
-- C. Re-run the model with self-consistency until it produces an exact-match string.
-- D. Use an LLM-as-judge (e.g., GPT-4) to decide equivalence on every item.
+- A. Apply token-level BLEU between the predicted and gold LaTeX strings and accept any score above an empirically tuned threshold of 0.8.
+- B. Extract the last `\boxed{...}`, normalize the LaTeX, and compare via symbolic simplification or numeric tolerance.
+- C. Re-sample the model under self-consistency at higher temperature until at least one of the $k$ chains exact-matches the gold LaTeX byte-for-byte.
+- D. Route every item to an LLM-as-judge such as GPT-4 with a calibrated equivalence rubric, averaging the verdict across two independent passes.
 
 **Q3.** A solution to a MATH problem has step scores under a process reward model of $[0.95, 0.91, 0.12, 0.94, 0.93]$ and a final answer that *matches* the gold answer. An outcome reward model scores it $0.97$. Under the standard PRM aggregation $\min_t r_t$, what is the PRM score for this solution, and which model is more likely to demote it in best-of-$N$ ranking?
 
@@ -256,24 +256,24 @@ The story this lesson tells ends with verifiers picking the best of $N$ samples.
 
 **Q4.** Why is GSM8K above ~95% considered to be at or past its useful ranking ceiling, even though the test set has 1,319 items?
 
-- A. The 95% confidence interval at $p \approx 0.97$ on 1,319 items is roughly $\pm 0.9$ points, and label-noise audits suggest mislabeling rates exceed frontier-model error rates — most of the remaining gap is the test set's mistakes, not the models'.
-- B. GSM8K can only be evaluated with self-consistency, which is too expensive for frontier comparisons.
-- C. The harness only supports models with fewer than 70B parameters on GSM8K.
-- D. GSM8K's exact-match scoring breaks for any model that has been instruction-tuned.
+- A. The 95% CI at $p \approx 0.97$ on 1,319 items is roughly $\pm 0.9$ points, and label-noise audits suggest mislabeling rates exceed frontier-model error rates.
+- B. GSM8K can only be reliably evaluated under maj@40 self-consistency, and the $40\times$ sampling cost makes head-to-head frontier comparisons economically infeasible at scale.
+- C. The lm-evaluation-harness GSM8K task is hard-coded for models below 70B parameters because of a context-window assumption baked into its 8-shot prompt template.
+- D. GSM8K's post-`####` exact-match rule systematically breaks for instruction-tuned models, which emit boxed LaTeX answers that the integer-extractor cannot parse.
 
 **Q5.** Which of the following is the **clearest** reason process supervision (PRM) outperforms outcome supervision (ORM) at best-of-$N$ selection on hard math problems?
 
-- A. PRMs are larger models than ORMs by construction.
-- B. Outcome supervision rewards solutions that reach the right answer through wrong reasoning (right-answer-wrong-reasoning false positives), and these false positives are most common on hard problems with small answer spaces; PRMs penalize the wrong steps directly.
-- C. PRMs use reinforcement learning while ORMs use supervised learning.
-- D. PRM800K is larger than the GSM8K verifier dataset, so PRMs simply have more training data.
+- A. PRMs are larger models than ORMs by construction, since per-step scoring requires more parameters than scoring a whole solution at once.
+- B. Outcome supervision rewards right-answer-wrong-reasoning false positives, which dominate on hard problems with small answer spaces; PRMs penalize the wrong steps directly.
+- C. PRMs are trained with on-policy reinforcement learning against a held-out math validator, while ORMs use supervised learning on a single binary outcome label per solution.
+- D. PRM800K is roughly an order of magnitude larger than the GSM8K verifier dataset, so PRMs simply have more training data and broader coverage of solution patterns.
 
 **Q6.** The "Safety researcher's note" argues that PRM-style training is *also* a Goodhart pressure on chain-of-thought transparency. What is the precise concern?
 
-- A. PRMs eventually saturate and stop improving model accuracy.
-- B. Optimizing for human-rated step legibility makes the model produce reasoning that *looks* legible whether or not it reflects the model's actual computation, so the legibility signal becomes the target rather than a faithful proxy for the underlying reasoning.
-- C. PRM training requires more annotators than ORM training, which is a logistical concern.
-- D. Process supervision can only be applied to mathematical domains.
+- A. PRMs eventually saturate at the human annotator's accuracy ceiling and stop yielding best-of-$N$ improvements once the verifier's calibration matches the labeler's.
+- B. Optimizing for human-rated step legibility makes the model produce reasoning that *looks* legible regardless of whether it reflects the actual computation, so the proxy becomes the target.
+- C. PRM training requires roughly an order of magnitude more annotators than ORM training, which creates a labor-supply bottleneck for scaling step-level reward datasets.
+- D. Process supervision can only be applied to mathematical and code domains where step correctness is mechanically checkable, which limits transfer to open-ended reasoning tasks.
 
 <details>
 <summary>Answers</summary>

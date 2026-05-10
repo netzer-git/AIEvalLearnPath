@@ -262,24 +262,24 @@ Specific TruthfulQA scores have drifted considerably since 2022. The original-pa
 
 **Q1.** A 2026 model card reports a TruthfulQA MC2 score of 0.79 and an FActScore of 0.51 on long-form rare-entity biographies. Which of the following is the **best** reading?
 
-- A. The model is more truthful than factual; the two numbers are inconsistent.
-- B. TruthfulQA grades per-item truthfulness on a curated misconception distribution; FActScore grades per-atomic-claim factual precision on long-form generations against a knowledge source. The two numbers measure different things on different distributions, and the gap is informative — the model is well-tuned for the kinds of items TruthfulQA targets but worse at per-claim factual precision in the wild.
-- C. The model has been contaminated on TruthfulQA but not on FActScore.
-- D. The model is using selective prediction.
+- A. The numbers are inconsistent and indicate the model card is reporting a contaminated TruthfulQA evaluation alongside a clean held-out FActScore split that was never used during instruction-tuning.
+- B. The benchmarks measure different axes — per-item truthfulness on a misconception distribution vs. per-claim factual precision on long-form text — and the gap is the load-bearing safety signal.
+- C. The model has been contaminated on TruthfulQA but not on FActScore, since the 817 TruthfulQA items are widely indexed online while FActScore's Wikipedia-grounded biography prompts remain effectively unindexed.
+- D. The model is running selective prediction at inference time, abstaining on low-confidence biography prompts to inflate the FActScore number relative to the unfiltered TruthfulQA baseline.
 
 **Q2.** Why does TruthfulQA's MC2 format make the abstention-as-refusal-policy exploit *harder to detect* than the generation format does?
 
-- A. MC2 uses log-likelihood scoring; generation uses an LLM judge.
-- B. MC2 has no slot for "I don't know" — every item gets a score from the model's distribution over labelled-true / labelled-false reference answers, so the model cannot abstain. But the reference set treats some refusal-shaped strings as labelled-true, so probability mass on those strings still scores. The exploit moves from explicit refusal (visible on generation) to mass-on-refusal-strings (invisible on the headline number).
-- C. MC2 doesn't grade truthfulness, only informativeness.
-- D. MC2 is too small to be statistically significant.
+- A. MC2 uses pure log-likelihood scoring while the generation format invokes a fine-tuned GPT-judge that systematically rewards verbose hedging on contested-fact items.
+- B. MC2 has no abstention slot, but the reference set labels some refusal-shaped strings as truthful, so probability mass on those strings still scores invisibly to the headline number.
+- C. MC2 grades only informativeness, not truthfulness; the truthfulness axis is recovered post-hoc by re-running the generation pipeline with a separate calibrated judge prompt.
+- D. MC2's 817-item bank is too small for statistical significance once stratified across the 38 misconception categories the original Lin et al. paper enumerated.
 
 **Q3.** In the selective-prediction framework (Geifman & El-Yaniv 2017), the **selective risk** at threshold $\tau$ is:
 
-- A. The probability that the model abstains.
-- B. $\Pr[f(x) \neq y]$ regardless of $\tau$.
+- A. The probability that the model abstains, equal to $1 - \text{coverage}(\tau)$ integrated against the input distribution.
+- B. $\Pr[f(x) \neq y]$ — the unconditional error rate, identical to selective risk in the limit $\tau \to 0$ where coverage equals one.
 - C. $\Pr[f(x) \neq y \mid g(x) \geq \tau]$ — the error rate among items the model chose to answer.
-- D. The expected calibration error.
+- D. The expected calibration error from D2, repurposed as a per-threshold reliability statistic on the answered subset.
 
 **Q4.** Which of the following is **not** a way FActScore differs from TruthfulQA?
 
@@ -290,17 +290,17 @@ Specific TruthfulQA scores have drifted considerably since 2022. The original-pa
 
 **Q5.** A frontier lab claims its new model "improves TruthfulQA from 0.74 to 0.81" with no other reported numbers. From this lesson, the right reflex is to:
 
-- A. Trust the 7-point gain as evidence of improved truth-tracking.
-- B. Demand the truthfulness × informativeness joint distribution (or the risk–coverage curve) and an FActScore on long-form generations, since a TruthfulQA gain alone is consistent with more aggressive refusal on contested items rather than improved truth-tracking.
-- C. Conclude the model has been contaminated on TruthfulQA.
-- D. Conclude the model is using HaluEval as a runtime filter.
+- A. Trust the 7-point gain as direct evidence of improved truth-tracking on the curated misconception distribution the benchmark was originally designed around.
+- B. Demand the truthfulness × informativeness joint and an FActScore number, since a TruthfulQA gain alone is consistent with more aggressive refusal on contested items.
+- C. Conclude the model has been contaminated on TruthfulQA, since gains above 0.80 on MC2 historically correlate with the dataset's wide indexing on the open web.
+- D. Conclude the model is running HaluEval as a runtime filter to reject hallucinated outputs before they reach the TruthfulQA scoring pipeline.
 
 **Q6.** Day 6 (contamination) and Day 15 (TruthfulQA) both foreground Goodhart's Law. The **mechanism** is:
 
-- A. The same in both cases — the test items leak into the training distribution.
-- B. Different. D6 is *data-leakage* Goodhart: the test items leak into the training set so the score measures memorization. D15 is *incentive-structure* Goodhart: the benchmark's reference set treats refusal-shaped strings as truthful, so optimizing the score selects for refusal rather than truth-tracking. Same Law, different mechanisms.
-- C. The same in both cases — the model saturates the benchmark.
-- D. Different — D6 is about pretraining, D15 is about RLHF, but both reduce to the same training-signal corruption.
+- A. The same in both cases — the test items leak into the training distribution, so the headline score reflects training-set recall rather than the underlying capability the benchmark was authored to probe.
+- B. Different mechanisms. D6 is data-leakage Goodhart — items in training make the score measure memorization. D15 is incentive-structure Goodhart — the reference set rewards refusal-shaped strings.
+- C. The same in both cases — the model saturates the benchmark, ceiling effects collapse the dynamic range, and further capability gains stop being visible above the noise floor of the per-item scoring.
+- D. Different — D6 is about pretraining-set leakage and D15 is about RLHF reward shaping, but both reduce to the same underlying training-signal corruption pathway Geifman & El-Yaniv 2017 formalize.
 
 <details>
 <summary>Answers</summary>

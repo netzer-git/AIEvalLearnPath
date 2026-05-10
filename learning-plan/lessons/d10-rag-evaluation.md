@@ -189,31 +189,31 @@ A separate Meta benchmark also released in 2024 — *CRAG: Comprehensive RAG Ben
 
 **Q2.** A RAG system answers "Apollo 11 landed in 1969" while the retrieved context says it landed in 1971 (a counterfactual edit). Under the RAGAS faithfulness definition from the original paper, this answer scores:
 
-- A. High, because the answer is factually correct.
-- B. High, because the answer addresses the question.
-- C. Low, because the claim "Apollo 11 landed in 1969" is not entailed by a context that says 1971.
-- D. Low, because the answer hedges.
+- A. High, because faithfulness is computed against gold answers, and 1969 matches the ground-truth string.
+- B. High, because answer-relevance similarity to the question dominates the composite faithfulness score.
+- C. Low, because the claim is not entailed by the retrieved context.
+- D. Low, because the hedge "(the retrieved passage's date is incorrect)" inflates the ungrounded-claim count.
 
 **Q3.** RGB's *counterfactual robustness* testbed is constructed how?
 
-- A. By scraping naturally occurring misinformation from social media.
-- B. By taking model-known facts and surgically editing the answer-bearing span in retrieved passages, then warning the model that retrieved content may contain errors.
-- C. By translating English passages into Chinese and back to introduce errors.
-- D. By using passages from the model's pre-training cutoff onwards only.
+- A. By scraping naturally occurring misinformation from social media corpora and dating it to the post-training period.
+- B. By editing answer-bearing spans in retrieved passages and warning the model that errors may be present.
+- C. By translating English passages into Chinese and back, then sampling perturbations from the round-trip noise.
+- D. By restricting passages to dates after the model's pre-training cutoff so retrieved facts post-date parametric memory.
 
 **Q4.** Which is the **most accurate** statement about the relationship between RGB and RAGAS?
 
-- A. RAGAS replaces RGB; RGB is deprecated.
-- B. RGB measures behavioral response to perturbed retrieval; RAGAS scores trace-level surface quality. They are complementary primitives.
-- C. RGB and RAGAS measure the same thing; pick one.
-- D. RAGAS is a strict subset of RGB.
+- A. RAGAS replaces RGB as the AAAI 2024 paper deprecates the four-testbed framing in favor of trace-level scoring.
+- B. RGB perturbs retrieval and measures behavior; RAGAS scores trace quality. The two are complementary.
+- C. RGB and RAGAS measure the same retrieval-quality construct; pick whichever has stronger LLM judges.
+- D. RAGAS is a strict subset of RGB, covering only noise robustness and negative rejection but not the other two dimensions.
 
 **Q5.** RGB-counterfactual robustness is a forward pointer to which later lesson in this curriculum, and why?
 
-- A. D22 (LLM-as-judge), because the judge model is the source of counterfactual edits.
-- B. D26 (indirect prompt injection / AgentDojo), because the same primitive — perturb retrieved content, measure model behavior — generalizes from benign warned edits to attacker-controlled tool outputs without warnings.
-- C. D14 (RULER), because counterfactuals are a long-context phenomenon.
-- D. D11 (HumanEval), because counterfactual code is the analogue.
+- A. D22 (LLM-as-judge), because the judge LLM is the source of counterfactual edits in the RGB construction pipeline.
+- B. D26 (AgentDojo / indirect prompt injection): the perturb-context primitive extends from warned edits to unannounced attacker-controlled retrieval.
+- C. D14 (RULER), because counterfactual passages are a long-context phenomenon that require 100k-token windows to reproduce.
+- D. D11 (HumanEval), because counterfactual code patches are the direct analogue of counterfactual passages in the RGB design.
 
 **Q6.** The original RAGAS paper (Es et al. 2024) defines exactly which metrics?
 

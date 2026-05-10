@@ -288,45 +288,45 @@ Three immediate consequences:
 
 **Q1.** RewardBench's headline metric is:
 
-- A. Cross-entropy of the RM's score distribution against a held-out reference.
-- B. Pair-comparison accuracy: for each (prompt, chosen, rejected) trio, the RM is correct iff $r_\phi(x, y_c) > r_\phi(x, y_r)$. Random baseline is 50%; per-category accuracies are unweighted-averaged for the headline.
-- C. KL divergence between the RM and a gold reward model.
-- D. ECE on a held-out preference set.
+- A. Cross-entropy of the RM's score distribution against a held-out reference reward sampled from a larger ensemble.
+- B. Pair-comparison accuracy: $r_\phi(x,y_c) > r_\phi(x,y_r)$ on each trio, unweighted-averaged across the four core categories; random baseline 50%.
+- C. KL divergence between the RM's induced preference distribution and a frozen gold reward model on a held-out set.
+- D. Expected Calibration Error (ECE) over BT-confidence bins on a held-out preference set, reported as a single scalar.
 
 **Q2.** RewardBench's four core categories — and their approximate sizes — are:
 
-- A. Knowledge / Reasoning / Coding / Safety; ~1,000 each.
+- A. Knowledge / Reasoning / Coding / Safety, with ~1,000 trios each, drawn from MMLU and HumanEvalPack splits.
 - B. Chat (358), Chat Hard (456), Safety (740), Reasoning (1,431); ~2,625 trios in the four-category core.
-- C. Helpfulness / Harmlessness / Honesty / Hedge; ~3,000 trios total.
-- D. Single-turn / Multi-turn / Tool-use / Long-context; counts not specified.
+- C. Helpfulness, Harmlessness, Honesty, and Hedge across ~3,000 trios sourced from Anthropic HH-RLHF only.
+- D. Single-turn, Multi-turn, Tool-use, and Long-context, with per-category trio counts not publicly specified.
 
 **Q3.** Best-of-$N$ sampling against a reward model $r_\phi$ exhibits the **reward-model overoptimization** phenomenon (Gao et al. 2023). The mechanism, in calibration terms, is:
 
-- A. BoN cannot exceed the policy's per-prompt maximum, so it is bounded above and cannot overoptimize.
-- B. BoN is an order statistic over the RM's score distribution; if the RM's upper score tail is miscalibrated — concentrated on artifact features (length, formatting, hedging) rather than the true property — larger $N$ amplifies the gap between proxy reward (RM score) and gold reward (true property), so proxy reward grows monotonically while gold reward peaks and then falls.
-- C. BoN is unrelated to RM calibration; the phenomenon is a property of the policy, not the RM.
-- D. The phenomenon only appears for DPO models, not classifier-trained RMs.
+- A. BoN cannot exceed the policy's per-prompt maximum, so the procedure is bounded above and cannot exhibit overoptimization.
+- B. BoN is an order statistic over the RM's upper score tail; miscalibration there amplifies the proxy-vs-gold gap as $N$ grows.
+- C. The phenomenon is unrelated to RM calibration; it stems entirely from the policy's sampling temperature and KL-to-reference budget.
+- D. It only appears for DPO-style implicit-reward models, since the log-ratio reward is unbounded; classifier-trained RMs are immune.
 
-**Q4.** A reward model has 80% accuracy on RewardBench-Chat-Hard, with the high-confidence (BT-confidence > 0.9) bin showing 65% empirical accuracy. The reliability diagram bar in that bin sits clearly **below** the diagonal. The most accurate single-sentence reading is:
+**Q4.** A reward model has 80% accuracy on RewardBench-Chat-Hard, with the high-confidence (BT-confidence > 0.9) bin showing 65% empirical accuracy. The reliability-diagram bar in that bin sits clearly **below** the diagonal. The most accurate single-sentence reading is:
 
-- A. The RM is well-calibrated; the headline accuracy is what matters.
-- B. The RM is overconfident on Chat-Hard's high-confidence items: it claims certainty it does not have, which is exactly the failure mode that BoN amplifies and that downstream RLHF will exploit. ECE in that bin is roughly $|0.9 - 0.65| = 0.25$, reported alongside the headline accuracy as load-bearing diagnostic.
-- C. The RM is underconfident; the score should be raised by temperature scaling.
-- D. The result is a sampling artifact and should be ignored.
+- A. The RM is well-calibrated globally; only the headline accuracy is deployment-relevant for an RLHF training stack.
+- B. The RM is overconfident on Chat-Hard high-confidence items; the bin gap $|0.9-0.65|=0.25$ is the BoN-toxic failure mode.
+- C. The RM is underconfident; raising the high-confidence bin via Platt or temperature scaling will land it on the diagonal.
+- D. This is a bin-partition artifact; without bootstrap CIs over equal-frequency bins the per-bin gap should be ignored entirely.
 
 **Q5.** Sharma et al. 2023 report that Anthropic's Claude 2 preference model prefers sycophantic responses over baseline truthful responses approximately 95% of the time. In the D24 framing, the implication for RM evaluation is:
 
-- A. Sycophancy is a property of the policy, not the RM, so RM evaluation cannot detect it.
-- B. The PM is well-calibrated on the property it was trained to track (rater preference) and miscalibrated on the property safety reviewers want optimized (truthfulness). Optimizing the policy against this PM imports the miscalibration into the policy by construction; RM evaluation that does not explicitly probe the truthfulness vs. rater-preference gap will not surface the failure before deployment. This is the canonical Goodhart-on-RLHF case.
-- C. Sycophancy is an emergent property of large models and cannot be measured at the PM level.
-- D. The 95% figure is specific to Claude 2 and does not generalize.
+- A. Sycophancy is a policy-level emergent property; RM evaluation has no access to the trained PM's internal preferences and so cannot detect it.
+- B. The PM is calibrated on rater preference but miscalibrated on truthfulness; optimizing against it imports the gap into the policy — the canonical Goodhart-on-RLHF case.
+- C. Sycophancy emerges only at frontier scale and so cannot be measured at the PM level for preference models below roughly 70B parameters.
+- D. The 95% figure is a Claude-2-specific artifact of the constitutional-AI loop and does not generalize to standard RLHF preference-model stacks.
 
 **Q6.** Why is **D24 the closure** of the calibration thread (D2 → D15 → D20 → D24) rather than a way-station to a later lesson?
 
-- A. The curriculum schedule does not allow further calibration content.
-- B. By D24, every learned scorer in the modern alignment pipeline — softmax over MC options (D2), self-rated $P(\text{IK})$ / abstention (D15), the LM's own answer under pushback (D20), and the reward model that drives RLHF (D24) — has been brought under the same diagnostic (reliability diagrams + ECE + selective-prediction analysis), with the operationally-most-consequential scorer (the RM) handled at the end. The thread has structurally closed: no further class of learned scorer remains unaddressed.
-- C. Calibration only matters for the RM; the prior reprises were preliminary.
-- D. RewardBench is the most recent benchmark, so it is necessarily the closing lesson.
+- A. The 28-lesson curriculum schedule does not allocate further space for calibration content beyond the Week 4 frontier-methods block.
+- B. Every learned scorer in the alignment pipeline (D2 softmax, D15 abstention, D20 pushback, D24 RM) is now under the same ECE + reliability diagnostic; no further class remains.
+- C. Calibration matters only for the reward model; D2, D15, and D20 reprises were preliminary scaffolding for the eventual RM case.
+- D. RewardBench is chronologically the most recent anchor benchmark in the curriculum, so it must by construction be the closing lesson of the thread.
 
 <details>
 <summary>Answers</summary>

@@ -222,17 +222,17 @@ Most modern capability evals deliberately pick tasks with checkable answers (GSM
 
 **Q3.** TriviaQA's `rc.nocontext` configuration is the standard subset for evaluating modern LLMs. What does the `nocontext` part change?
 
-- A. It removes the questions, leaving only the evidence documents.
-- B. It removes the evidence documents, forcing closed-book evaluation against the model's parametric knowledge.
-- C. It removes the gold answers, requiring an LLM judge.
-- D. It removes the alias lists, requiring strict EM against a single canonical answer.
+- A. It strips the questions and replaces them with cloze-style fill-ins drawn from the evidence document spans, recasting the task as span prediction.
+- B. It removes the evidence documents, forcing closed-book evaluation against parametric knowledge.
+- C. It removes the gold answers and requires an LLM-as-judge to verify free-form predictions against the retrieved Wikipedia evidence.
+- D. It removes the alias lists, forcing strict exact match against the single Wikipedia-canonical answer string per question.
 
 **Q4.** BERTScore improves on BLEU primarily because:
 
-- A. It computes corpus-level statistics rather than per-sentence.
-- B. It replaces hard $n$-gram matching with soft cosine similarity over contextual embeddings, partially handling paraphrase.
-- C. It removes the need for any reference at all.
-- D. It is symmetric in precision and recall, while BLEU is precision-only.
+- A. It aggregates corpus-level rather than per-sentence statistics, which stabilizes the geometric mean of $n$-gram precisions on short outputs.
+- B. It replaces hard $n$-gram matching with cosine similarity over contextual embeddings, handling paraphrase.
+- C. It removes the need for a reference by scoring the candidate against a fluency model fine-tuned on web text.
+- D. It is symmetric in precision and recall — unlike BLEU, which is precision-only and bolts on a separate brevity penalty for length.
 
 **Q5.** A team reports a 4-point BLEU improvement on a translation system. Which of the following is **least** supported by Reiter (2018)'s structured review?
 
@@ -243,10 +243,10 @@ Most modern capability evals deliberately pick tasks with checkable answers (GSM
 
 **Q6.** You're evaluating a long-form summarization system. Your team is choosing between ROUGE-L, BERTScore, and an LLM-as-judge setup. Which framing matches modern practice on this curriculum's terms?
 
-- A. ROUGE-L is the gold standard; the alternatives add cost without correlating better with humans.
-- B. LLM-as-judge is strictly dominant; ROUGE-L and BERTScore should not be reported.
-- C. ROUGE-L gives a cheap reproducible baseline; BERTScore adds paraphrase tolerance; LLM-as-judge correlates best with humans on long-form output but costs more, is less reproducible, and brings its own biases (D22). Report what your task and budget admit.
-- D. Reward-model scoring (D24) is the only legitimate option for long-form generation.
+- A. ROUGE-L's longest-common-subsequence formulation remains the gold standard for summarization; embedding- and judge-based alternatives add compute without measurably improving human correlation.
+- B. LLM-as-judge is strictly dominant on long-form outputs; ROUGE-L and BERTScore are obsolete and should not appear in modern summarization papers.
+- C. Each metric trades cost, reproducibility, and human-correlation differently — report the simplest sufficient one your task and budget admit.
+- D. Reward-model scoring (D24) is the only defensible option for long-form generation, since $n$-gram and embedding metrics provably fail to track human preference.
 
 <details>
 <summary>Answers</summary>
@@ -256,6 +256,6 @@ Most modern capability evals deliberately pick tasks with checkable answers (GSM
 3. **B** — `nocontext` strips the evidence documents so the model must answer from its parameters; this is how lm-evaluation-harness's `triviaqa` task is configured by default.
 4. **B** — soft contextual-embedding similarity is the core idea; A and D are false (BERTScore is per-sentence and reports P/R/F1), and C is wrong (BERTScore needs a reference).
 5. **D** — Reiter's review is precisely an argument *against* assuming BLEU deltas equate to quality gains, especially at sentence level or with single references. A, B, and C all match the review's conclusions.
-6. **C** — the lesson's "where each metric earns its keep" framing. B and D overclaim; A misreads the literature.
+6. **C** — the lesson's "where each metric earns its keep" framing: ROUGE-L is the cheap reproducible baseline, BERTScore adds paraphrase tolerance, LLM-as-judge correlates best with humans on long-form but costs more and brings its own biases (D22). A, B, and D each overclaim a single metric.
 
 </details>

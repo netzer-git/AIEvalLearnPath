@@ -188,17 +188,17 @@ Three immediate consequences:
 
 **Q1.** On a HellaSwag run, the same model reports `acc = 0.57` and `acc_norm = 0.76`. The 19-point gap is best explained by:
 
-- A. The model was retrained between the two computations.
-- B. HellaSwag's options have highly variable lengths, so unnormalized summed log-likelihoods penalize the longer (often correct) options.
-- C. `acc_norm` uses a different test split than `acc`.
-- D. `acc_norm` includes few-shot examples in the score; `acc` does not.
+- A. The model was retrained with a different decoding objective between the two harness computations.
+- B. HellaSwag's options vary in length, so summed log-likelihoods penalize the longer correct ones.
+- C. `acc_norm` is computed on a different held-out split than `acc`, which inflates its number.
+- D. `acc_norm` includes the few-shot in-context examples in the score; `acc` excludes them.
 
 **Q2.** Why does `lm-evaluation-harness` normalize by **byte length** rather than **token count**?
 
-- A. Byte length is faster to compute.
-- B. Token count would inflate scores for byte-pair-encoded tokenizers.
-- C. Byte length is tokenizer-agnostic, so models with different tokenizations of the same string get comparable denominators.
-- D. Byte length is required by HellaSwag's official scoring rule.
+- A. Byte length is faster to compute on the modern GPU tokenizer pipelines used by the harness.
+- B. Token count would inflate the scores of byte-pair-encoded tokenizers with very large vocabularies.
+- C. Byte length is tokenizer-agnostic, so different tokenizations of a string share a denominator.
+- D. Byte length is required by HellaSwag's ACL 2019 official scoring rule for sentence completion.
 
 **Q3.** A model on a 4-way MC task has accuracy 0.80 and average confidence 0.95. The reliability-diagram bar for the high-confidence bin lies clearly **below** the diagonal. The model is best described as:
 
@@ -216,17 +216,17 @@ Three immediate consequences:
 
 **Q5.** Kadavath et al. 2022 (*Language Models (Mostly) Know What They Know*) primarily argues that:
 
-- A. Smaller language models are better calibrated than larger ones.
-- B. Language models cannot be trained to self-evaluate.
-- C. Sufficiently large language models are well-calibrated on MC and T/F formats and can be trained to produce a self-rated $P(\text{True})$ that tracks correctness.
-- D. Calibration is a property of the dataset, not the model.
+- A. Smaller language models are better calibrated than their larger and more capable counterparts after RLHF.
+- B. Language models cannot reliably be trained to self-evaluate without external supervised feedback.
+- C. Large LMs are well-calibrated on MC and T/F formats and can produce a self-rated $P(\text{True})$ that tracks correctness.
+- D. Calibration is a property of the evaluation dataset and prompt format, not the underlying model.
 
 **Q6.** A safety-leaning practitioner is choosing between two 7B models for a tool that must abstain when unsure. Both score `acc_norm = 0.78` on HellaSwag. Model A has ECE = 0.03; Model B has ECE = 0.12 (10 bins, both). Which is the better choice **for the abstention use case**, and why?
 
-- A. Model B, because higher ECE means more confident answers.
-- B. Model A, because abstention requires confidence to track correctness, and lower ECE means it does.
-- C. Either — accuracy is what matters; ECE is cosmetic.
-- D. Model B, because higher ECE indicates better separation between classes.
+- A. Model B, because higher ECE means the model produces more confident and decisive answers.
+- B. Model A, because abstention needs confidence to track correctness, and lower ECE delivers that.
+- C. Either is fine — only top-1 accuracy matters for downstream pipelines; ECE is cosmetic.
+- D. Model B, because higher ECE indicates better class-separation in the softmax output.
 
 <details>
 <summary>Answers</summary>

@@ -254,24 +254,24 @@ Two Goodhart-flavored pressures worth naming:
 
 **Q1.** What is the structural difference between OSWorld's action surface and a D26-style web agent's action surface?
 
-- A. OSWorld uses log-likelihood scoring; web agents use generative scoring.
-- B. OSWorld restricts the agent to a single application at a time; web agents can use multiple tabs.
-- C. The web agent operates inside one browser tab (DOM + click/type/nav); the OSWorld agent operates the whole OS — any installed application, the file system, the clipboard, the terminal, and dialog boxes are all part of the action surface, and side effects are real and persistent.
-- D. OSWorld is multilingual; web-agent benchmarks are English-only.
+- A. OSWorld uses log-likelihood scoring on the action distribution while D26 web agents are graded by generative free-form output matching.
+- B. OSWorld restricts the agent to a single foreground application per step, while D26 web agents can drive several browser tabs in parallel within one episode.
+- C. The web agent acts inside one browser tab; the OS agent drives the whole OS — file system, clipboard, terminal, and dialog boxes are all part of the action surface, and side effects persist.
+- D. OSWorld evaluates across English, Mandarin, and Japanese desktop locales while D26 web-agent benchmarks were released English-only by construction.
 
 **Q2.** Which of the following best characterizes OSWorld's scoring methodology?
 
-- A. An LLM-judge compares the agent's chain-of-thought to a reference trajectory.
-- B. Each of the 369 tasks ships with a deterministic post-condition Python script that inspects VM state (file contents, application state, etc.) and returns a binary success signal — execution-based grading, no judge.
-- C. The agent's screenshots are compared pixel-by-pixel to reference screenshots.
-- D. Human annotators rate each trajectory on a 5-point Likert scale.
+- A. An LLM-judge prompted with the OSWorld rubric compares the agent's emitted chain-of-thought against a reference trajectory and returns a 0–1 score.
+- B. Each of the 369 tasks ships with a deterministic post-condition Python script that inspects VM state and returns a binary success signal — execution-based grading, no judge.
+- C. The agent's terminal screenshots are compared pixel-by-pixel to reference screenshots and graded by SSIM with a fixed 0.95 acceptance threshold.
+- D. Crowd annotators rate each completed trajectory on a five-point Likert scale and the median rating is reported as the per-task score.
 
 **Q3.** OSWorld's release-time paper reports which baseline numbers?
 
 - A. GPT-4V at 12.24% success vs. 72.36% best-human-baseline on the 369-task benchmark.
-- B. GPT-4 at 56% vs. 88% best-human-baseline.
-- C. Claude 3.5 at 30.6% vs. 74.5% best-human-baseline.
-- D. The paper does not report a human baseline.
+- B. GPT-4 (text-only) at 56.1% vs. 88.4% best-human-baseline on the same 369-task suite.
+- C. Claude 3.5 Sonnet at 30.6% vs. 74.5% best-human-baseline averaged over five random seeds.
+- D. The paper reports only model numbers; OSWorld did not collect a human baseline at release.
 
 **Q4.** Which of the following is **not** a cross-application indirect-PI channel that becomes available in the OS-agent setting beyond what D26 web agents face?
 
@@ -282,17 +282,17 @@ Two Goodhart-flavored pressures worth naming:
 
 **Q5.** A frontier OS-agent system card reports "Model X scored 78% on OSWorld-Verified." What is the right reflex under this lesson's framing?
 
-- A. Treat the number as authoritative; OSWorld is fully reproducible.
-- B. The number is meaningful only paired with: (i) the observation modality used (screenshot / a11y / SoM can swing scores 5–15 points), (ii) the agent scaffold (planner, retry, grounding) since the scaffold is part of the system under test, (iii) the contamination caveat (tasks are public since April 2024), and (iv) a separate safety probe (OS-Harm or equivalent) since OSWorld is a capability benchmark, not a safety benchmark.
-- C. 78% > 72.36% human baseline, so the agent is strictly better than humans at OS use.
-- D. The number must be wrong because the original OSWorld paper reported only ~12% for GPT-4V.
+- A. Treat the number as authoritative; OSWorld's VM-snapshot harness is fully deterministic and reproducible across vendors and runs.
+- B. Treat it as conditional on observation modality, scaffold choice, contamination status, and a separate safety probe — OSWorld measures capability, not safety.
+- C. 78% exceeds the 72.36% best-human baseline, so the agent is strictly better than humans across the OSWorld task distribution and adjacent OS-use settings.
+- D. The number must be wrong because the original OSWorld paper reported only ~12% for GPT-4V at release in early 2024 on the same evaluation harness.
 
 **Q6.** Why does the indirect-prompt-injection threat model widen between D26 (web agents) and D27 (OS agents)?
 
-- A. OS agents have access to more languages.
-- B. The OS agent's prompt is the *union of every observation* across the trajectory, and any application that can write to that union — by writing a file, by changing the clipboard, by raising a dialog, by sending an email, by emitting terminal output — can inject. The web agent had one such channel (retrieved page content); the OS agent has the whole installed application graph, and the model does not distinguish "the user told me X" from "an email body I rendered says X."
+- A. OS agents support more natural-language locales than web agents do, and indirect-prompt-injection severity scales linearly with the vocabulary size of the deployed tokenizer.
+- B. The OS agent's context is the union of all observations, so files, clipboard, dialogs, mail, and terminal output are all injection channels; the web agent had only one such channel.
 - C. Web agents are sandboxed; OS agents are not. (This is true but not the structural reason for the widened indirect-PI surface.)
-- D. OS agents use a different tokenizer.
+- D. OS agents use a different multimodal tokenizer with a longer context window, which admits substantially more attacker-written tokens per turn into the prompt context.
 
 <details>
 <summary>Answers</summary>

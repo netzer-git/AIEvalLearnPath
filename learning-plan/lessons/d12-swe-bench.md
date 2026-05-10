@@ -203,45 +203,45 @@ The harness emits a per-instance `resolved` boolean and a leaderboard-ready aggr
 
 **Q1.** What does it mean for a SWE-Bench instance to be "resolved" by a model?
 
-- A. The model's patch matches the maintainer's gold patch byte-for-byte.
-- B. An LLM judge rates the model's patch as "correct."
-- C. After applying the model's patch, every `FAIL_TO_PASS` test passes and every `PASS_TO_PASS` test still passes, in a Docker container running the repo's actual test suite.
-- D. The model's patch compiles without warnings.
+- A. The model's diff matches the maintainer's gold patch byte-for-byte after both are normalized for whitespace, line endings, and `import` ordering.
+- B. An LLM judge scores the model's patch as semantically equivalent to the held-out gold patch under a chain-of-thought correctness rubric.
+- C. Both the `FAIL_TO_PASS` and `PASS_TO_PASS` test sets pass when the harness runs them against the patched repo.
+- D. The model's patch compiles cleanly, type-checks under `mypy --strict`, and produces no warnings from `ruff` or the project's lint config.
 
 **Q2.** SWE-Bench differs from HumanEval primarily in:
 
-- A. The programming language: SWE-Bench is multi-language, HumanEval is Python-only.
-- B. The unit of work and the test visibility: SWE-Bench tests multi-file patches against tests hidden at submission time, while HumanEval tests function bodies against tests visible to the prompt.
-- C. SWE-Bench uses an LLM judge while HumanEval uses execution.
-- D. SWE-Bench is multiple-choice while HumanEval is free-form.
+- A. Programming-language coverage: SWE-Bench spans Python, Rust, TypeScript, and Go via per-language Docker images, while HumanEval is restricted to Python prompts.
+- B. Unit of work and test visibility — repo-scale patches with hidden tests vs. function bodies with visible tests.
+- C. Scoring backend: SWE-Bench passes each candidate patch through an LLM-judge rubric, while HumanEval's `pass@k` runs the generated function against unit tests.
+- D. Output format: SWE-Bench frames each instance as a four-option multiple-choice item over candidate diffs, while HumanEval is open-ended free-form synthesis.
 
 **Q3.** What is the primary distinction between SWE-Bench (original) and SWE-Bench Verified?
 
-- A. Verified uses a stronger LLM judge.
-- B. Verified is a 500-instance human-curated subset filtered by 93 annotators against issue-clarity, test-clarity, and environment-reproducibility criteria; the original 2,294-instance set was unfiltered.
-- C. Verified runs in Docker, the original ran in bare metal.
-- D. Verified replaces unit tests with property-based tests.
+- A. Verified replaces the original's unit-test runner with a stronger LLM judge trained on maintainer-authored gold patches.
+- B. Verified is a 500-instance human-curated subset; the original 2,294-instance set was unfiltered.
+- C. Verified runs each instance inside the SWE-Bench Docker harness, while the original benchmark required bare-metal execution against a system Python install.
+- D. Verified swaps the original's pytest-based unit tests for a property-based testing framework using Hypothesis to widen coverage.
 
 **Q4.** Why is the `PASS_TO_PASS` test set required, in addition to `FAIL_TO_PASS`?
 
 - A. To check that the model's patch doesn't break unrelated, previously-passing functionality.
-- B. To increase the harness's runtime and make benchmarking more thorough.
-- C. To give the model partial credit when it can't pass `FAIL_TO_PASS`.
-- D. To validate the model's patch syntactically.
+- B. To extend the harness's runtime budget so per-instance Docker image builds get longer warm-up windows.
+- C. To award the model partial credit on instances where it can fix the bug but only on a subset of the new tests.
+- D. To validate the unified diff syntactically and confirm it applies cleanly to the repo at `base_commit` before any tests run.
 
 **Q5.** What is the central methodological idea of SWE-Agent (Yang et al. 2024)?
 
-- A. Replace the test runner with a learned reward model.
-- B. Generate patches via constrained decoding against the AST.
-- C. The Agent-Computer Interface (ACI): the design of the tool surface the agent acts through (file viewer, search, edit, run, submit) materially affects eval performance — interface design is part of the system under test.
-- D. Train a custom verifier model on SWE-Bench gold patches and use it to filter candidate patches.
+- A. Replace the per-instance pytest runner with a learned reward model trained on the SWE-Bench Verified gold-patch corpus, then score patches against that head.
+- B. Generate the candidate patch via constrained decoding against the repository's tree-sitter AST so syntactic validity is guaranteed by construction.
+- C. The Agent-Computer Interface (ACI): the agent's tool surface — file viewer, search, edit, run, submit — is part of the system under test.
+- D. Train a custom verifier model on SWE-Bench gold patches and use it to filter and re-rank candidate patches before submission to the harness.
 
 **Q6.** A 2026 system card reports "82% Resolved on SWE-Bench Verified" with no further details. Which critique is **most precise** given Week 1 + Week 2 framing?
 
-- A. The score should be reported on the original 2,294-instance SWE-Bench, not Verified.
-- B. The score should use `acc_norm` instead of `acc`.
-- C. At ~82% on a 500-instance benchmark with public-since-2023 instances, three things are unstated and load-bearing: the agent scaffold (the system being measured includes it), the test of statistical significance vs. peers (per-model 95% CI is roughly ±3.4 points at p ≈ 0.82), and the contamination posture of the model's training corpus relative to the upstream Python repos.
-- D. SWE-Bench is multiple-choice and shouldn't be reported as a percentage.
+- A. The score should be reported on the original 2,294-instance SWE-Bench, since Verified's 500-instance curation discards pass-rate signal that aggregate leaderboards still need.
+- B. The score should use `acc_norm` rather than raw accuracy because SWE-Bench's `FAIL_TO_PASS` and `PASS_TO_PASS` test sets are unbalanced in length per instance.
+- C. At ~82% on a 500-instance public-since-2023 benchmark, three load-bearing facts are unstated: the agent scaffold, the per-model 95% CI (≈ ±3.4 points), and the contamination posture.
+- D. SWE-Bench is a multiple-choice task over candidate diffs and percentages aren't a meaningful unit; the report should instead cite letter-grade resolution rates.
 
 <details>
 <summary>Answers</summary>

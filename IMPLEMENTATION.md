@@ -49,3 +49,12 @@ Running plan-of-record. Tick items as they're completed. Detailed plan in `C:\Us
 - [x] Cloudflare Tunnel setup doc — `web/DEPLOYMENT.md` (quick-tunnel flow + named-tunnel upgrade path)
 - [x] Windows "run on login" task for `npm start` + `cloudflared` — `web/scripts/start-deployment.ps1` + `stop-deployment.ps1`; `schtasks` one-liner in `DEPLOYMENT.md` (user runs once to register)
 - [ ] End-to-end smoke test on phone (via tunnel) + desktop — desktop validated end-to-end (auth gate, login flow, lesson render over public URL); phone test is user's call
+
+## Stage 2.5 — Improvements (curriculum + web app)
+
+Coordinated change set; user-defined sequencing. See `/memories/session/plan.md` for full plan and locked decisions.
+
+- [x] **(1) Quiz length-bias audit + rewrites** — added `web/scripts/audit-quiz-lengths.mjs` (mirrors `parseAndStripQuiz` shape, flags questions where correct option ≥1.4× distractor mean). Baseline: 143/168 questions flagged (85.1%), 150/168 correct-is-longest (89.3%). Per-day rewrites dispatched to 28 parallel subagents (one per day) — tightened correct options, lengthened distractors with plausible-but-wrong technical detail. Final: 0/168 flagged, 60/168 correct-is-longest (35.7% — close to the 25% random baseline). All 168 answer letters preserved; production parser (`web/lib/quiz.ts` `parseAndStripQuiz`) still extracts every quiz.
+- [ ] **(3) + (5) Spaced-recall warm-up + weekly review** — shared sampler (`web/lib/quiz-pool.ts`), Quiz component variants, warm-up injection on D2+, `/review/[week]` route, weekly progress schema extension.
+- [ ] **(2) Per-section "mark as read" collapse** — extend `rehypeWrapSections` in `web/lib/markdown.ts`, wire bottom button via `web/components/SectionTracker.tsx`, default-collapse completed sections on hydration.
+- [ ] **(4) Post-complete "Back to lesson index" nav** — outline-button link from `web/components/CompleteButton.tsx` completed branch.

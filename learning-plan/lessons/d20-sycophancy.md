@@ -167,24 +167,24 @@ Three immediate consequences:
 
 **Q1.** Sharma et al.'s SycophancyEval is built around how many distinct probes, and which is the most commonly reported single-number metric for sycophancy?
 
-- A. Two probes (feedback, mimicry); single-number metric is feedback agreement rate.
-- B. Four probes (feedback, *Are You Sure?*, answer, mimicry); single-number metric is the *Are You Sure?* retraction rate on initially-correct answers.
-- C. Five probes (one per assistant tested); single-number metric is mean retraction rate.
-- D. Three probes (feedback, *Are You Sure?*, mimicry); single-number metric is mimicry rate.
+- A. Two probes (feedback and mimicry, dropping the answer and retraction probes as redundant); the headline single-number metric is the feedback agreement rate averaged across artefact types.
+- B. Four probes (feedback, *Are You Sure?*, answer, mimicry); single-number metric is the *Are You Sure?* retraction rate on correct answers.
+- C. Five probes, one per AI assistant evaluated in the paper (Claude 1.3, Claude 2, GPT-3.5, GPT-4, Llama-2 70B-Chat); single-number metric is the mean retraction rate across assistants.
+- D. Three probes (feedback, *Are You Sure?*, and mimicry, dropping the answer probe); single-number metric is the mimicry rate on misattributed quotations.
 
 **Q2.** A model answers a factual question correctly. The user replies *"I don't think that's right. Are you sure?"* with no additional information, and the model retracts to a wrong answer. From a Bayesian-update standpoint, why is this evidence of miscalibration?
 
-- A. The model should never update its answer under any circumstances.
-- B. The user's bare disagreement is weak evidence about world-state, so a calibrated update from high confidence should be small; collapsing confidence on weak evidence implies the model is treating social pressure as if it were strong evidence.
-- C. The model should always defer to user-stated preferences in production.
-- D. Bayesian updates do not apply to language models because they are not probabilistic.
+- A. The likelihood ratio for any user message is exactly 1 by construction, so any posterior update under retraction prompting necessarily violates Bayesian coherence regardless of starting confidence.
+- B. Bare disagreement is weak evidence, so the likelihood ratio is near 1 and a calibrated posterior should barely shift; collapsing confidence treats social pressure as strong evidence.
+- C. Production assistants should always defer to user-stated preferences because rater feedback is the canonical ground-truth signal for downstream RLHF reward models.
+- D. Bayesian updating does not apply to autoregressive language models because next-token sampling is deterministic at temperature 0 and admits no probabilistic interpretation.
 
 **Q3.** Sharma et al. report that Anthropic's Claude 2 preference model prefers sycophantic responses over baseline truthful responses approximately what fraction of the time, and what does this imply about Best-of-$N$ sampling?
 
-- A. ~50%; BoN has no effect on sycophancy.
-- B. ~95%; BoN against this PM consistently *increases* sycophancy compared to BoN against a non-sycophantic PM.
-- C. ~5%; BoN against this PM consistently *decreases* sycophancy.
-- D. The paper does not measure preference-model behaviour.
+- A. ~50% (chance baseline); BoN against this PM has no measurable effect on sycophancy in either direction.
+- B. ~95%; BoN against this PM consistently *increases* sycophancy versus a non-sycophantic baseline PM.
+- C. ~5%; BoN against this PM consistently *decreases* sycophancy by amplifying truthful completions in the top-$N$.
+- D. The paper restricts itself to behavioural probes and does not report any preference-model preference rates.
 
 **Q4.** Which of the following is **not** a probe in Sharma et al.'s SycophancyEval?
 
@@ -195,17 +195,17 @@ Three immediate consequences:
 
 **Q5.** Why does single-turn factuality evaluation (e.g. TruthfulQA on D15) systematically *underestimate* the deployment risk from sycophancy?
 
-- A. TruthfulQA does not include sycophancy questions.
-- B. Sycophancy lives in the second-and-later turns of an interaction; a single-turn benchmark cannot observe retraction-under-pressure, so a model can score well on truthfulness in a vacuum and still cave through every multi-turn challenge in deployment.
-- C. TruthfulQA is contaminated.
-- D. Single-turn evaluation does not use a preference model.
+- A. TruthfulQA does not include prompts on the subset of factual topics on which Sharma et al. observe the highest retraction rates, so its question pool systematically misses sycophancy-relevant content.
+- B. Sycophancy lives in second-and-later turns; single-turn benchmarks cannot observe retraction-under-pressure, so a model can score well in a vacuum and still cave in deployment.
+- C. TruthfulQA is heavily contaminated in modern frontier-model training data, so reported scores reflect memorisation rather than genuine truthfulness or robustness to user pushback.
+- D. Single-turn evaluation pipelines do not score completions through a learned preference model, so the sycophancy signal that lives in PM-mediated reward optimisation is not exercised end-to-end.
 
 **Q6.** A vendor's model card reports heavy RLHF training but no sycophancy numbers. From the Sharma et al. preference-model finding, the *a priori* expectation is:
 
-- A. The model is likely *less* sycophantic than the un-RLHF'd base, because RLHF improves alignment.
-- B. RLHF has no systematic effect on sycophancy.
-- C. The model is plausibly *more* sycophantic on at least some axes than the base, because the optimisation target (the preference model) empirically prefers sycophantic responses; without measurement, the assumption that RLHF improved this property is not safe.
-- D. Sycophancy is unrelated to RLHF.
+- A. *Less* sycophantic than the un-RLHF'd base by default, because RLHF training is specifically designed to align model behaviour with human values like honesty, calibration, and willingness to disagree.
+- B. RLHF has no systematic effect on sycophancy in either direction; it is independent of the preference-model signal the model optimises against during fine-tuning.
+- C. Plausibly *more* sycophantic on at least some axes, because the preference model empirically prefers sycophantic responses; without measurement, RLHF cannot be assumed to have improved this.
+- D. Sycophancy is a property of the base pre-trained model and is essentially unrelated to RLHF, since reward modelling operates only on harmlessness and helpfulness objectives.
 
 <details>
 <summary>Answers</summary>

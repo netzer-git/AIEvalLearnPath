@@ -262,45 +262,45 @@ The through-line: Week 1's "an evaluation is a pipeline" generalizes in Week 4 t
 
 **Q1.** A model is sampled $n = 10$ times on an AIME 2024 problem and $c = 4$ samples produce the correct integer answer. Using the unbiased Chen et al. 2021 estimator, what is pass@2 for this problem?
 
-- A. $1 - \binom{6}{2}/\binom{10}{2} = 1 - 15/45 = 2/3 \approx 0.667$
-- B. $1 - (1 - 4/10)^2 = 1 - 0.36 = 0.64$
-- C. $4/10 = 0.4$
-- D. $1 - \binom{4}{2}/\binom{10}{2} = 1 - 6/45 = 13/15 \approx 0.867$
+- A. $1 - \binom{6}{2}/\binom{10}{2} = 2/3 \approx 0.667$
+- B. $1 - (1 - 4/10)^2 = 0.64$, the i.i.d. plug-in that ignores sampling-without-replacement and gives the asymptotic large-$n$ limit
+- C. $4/10 = 0.4$, the empirical pass@1 single-sample accuracy from the same 10 draws
+- D. $1 - \binom{4}{2}/\binom{10}{2} = 13/15 \approx 0.867$, computed by counting correct-pool subsets in the numerator instead of wrong-pool subsets
 
 **Q2.** A model produces 5 sampled chains on an AIME problem. The final integers are $\{42, 42, 17, 42, 600\}$. The gold answer is $42$. What is the cons@5 score for this problem, and which property of cons@$N$ does this illustrate?
 
-- A. $0$, because not all 5 samples agree.
-- B. $1$, because the plurality vote is $42$ (3/5 chains) and matches the gold answer; cons@$N$ rewards mode-concentration rather than coverage.
-- C. $3/5 = 0.6$, the fraction of correct samples.
-- D. Undefined, because cons@$N$ requires $N$ to be even.
+- A. $0$, because cons@$N$ requires unanimous agreement across all $N$ chains for the per-problem indicator to fire
+- B. $1$, since the plurality vote $42$ (3/5) matches gold; cons@$N$ scores mode-concentration
+- C. $3/5 = 0.6$, the fraction of chains whose final integer matches the gold; cons@$N$ averages this fraction across the test set
+- D. Undefined, because cons@$N$ is only well-posed for even $N$ so that ties cannot occur in the plurality vote on integer answers
 
 **Q3.** A vendor reports "Model X: AIME 2024 = 89%". Which single follow-up question is most informative about whether the number is comparable to a competitor's "Model Y: AIME 2024 = 87%"?
 
-- A. What was the GPU type used at inference?
-- B. What inference-time compute (tokens or dollars per problem) and what aggregation (pass@1, cons@$N$, best-of-$k$ with reranker) was used to produce the 89%?
-- C. Whether the model is open-weights.
-- D. Whether the AIME papers were AIME I or AIME II.
+- A. Which GPU SKU, inference framework, and quantization profile were used to run the evaluation pipeline end-to-end
+- B. Which inference-time compute and aggregation (pass@1, cons@$N$, best-of-$k$) produced the 89%?
+- C. Whether Model X is released under open weights or only as a closed API endpoint behind a paywall
+- D. Whether the 89% averaged AIME I and AIME II separately or pooled all 30 problems into a single denominator without reweighting
 
 **Q4.** Which of the following best describes the **structural** Goodhart pattern that single-scalar accuracy reporting creates for reasoning-model leaderboards?
 
-- A. Reasoning models can be trained on the test set, inflating their score.
-- B. When only accuracy is reported and inference-time compute is not, vendors can scale inference budget to whatever level wins the leaderboard, so the leaderboard number rises while the deployment-relevant per-fixed-budget capability does not. The fix is structural: report (accuracy, cost) pairs.
-- C. Reasoning models always saturate benchmarks within one year of release.
-- D. cons@$N$ is biased upward relative to pass@1 by exactly $\log N$ percentage points.
+- A. Reasoning models can be contaminated by direct inclusion of AIME 2024 problems in pretraining or instruction-tuning data, which inflates their reported score relative to true held-out performance
+- B. Inference compute is the unmeasured slack variable; vendors scale it until the leaderboard wins, while per-fixed-budget capability does not move. Fix: report (accuracy, cost) pairs.
+- C. Reasoning models always saturate any newly released math benchmark within one year because RL on outcome rewards forces near-perfect generalization to integer-answer problem distributions
+- D. cons@$N$ is mathematically biased upward relative to pass@1 by exactly $\log_2 N$ percentage points, regardless of the underlying answer distribution or sampling temperature
 
 **Q5.** FrontierMath (Glazer et al. 2024) and AIME 2024 sit at very different difficulty bands. Which best describes the methodological *complementarity* between them in this lesson's framing?
 
-- A. They are interchangeable; either can stand in for the other in a reasoning-model report.
-- B. AIME provides a near-saturation discriminator with a clean scoring rule and per-year contamination control; FrontierMath provides a research-level difficulty ceiling with held-out problems and exact-answer scoring. Together they let a report claim a *capability profile across difficulty bands* rather than a single number — and a model with high AIME and low FrontierMath has a much narrower capability claim than one with high scores on both.
-- C. FrontierMath is a subset of AIME at higher difficulty levels.
-- D. AIME problems are scored by an LLM-as-judge while FrontierMath uses exact match; the difference is purely about scoring infrastructure.
+- A. They are functionally interchangeable in a reasoning-model report — AIME 2024 or FrontierMath alone is sufficient to characterize math capability across all difficulty bands of interest
+- B. AIME is the near-saturation, integer-match discriminator; FrontierMath is the research-level held-out ceiling. Together they report a capability profile across difficulty bands rather than a single number.
+- C. FrontierMath is a curated subset of AIME problems re-tagged at higher difficulty levels by the Glazer et al. expert panel of 60+ research mathematicians
+- D. AIME problems are scored by an LLM-as-judge over free-form derivations while FrontierMath uses exact symbolic match against the gold object; the difference between the two is purely about scoring infrastructure rather than underlying difficulty
 
 **Q6.** A reasoning model produces an accuracy-vs-log-tokens curve on AIME 2024 with three regimes: a low-compute floor where accuracy is near random, a log-linear midrange where each doubling of compute buys a roughly constant absolute-percentage-point gain, and a high-compute ceiling. Which of the following is the **most accurate** characterization of why each doubling in the midrange buys roughly the *same* absolute gain rather than a constant *relative* gain?
 
-- A. Because the model's parameter count doubles each time inference compute doubles.
-- B. Because, empirically and per the o1 system card's reported curves, accuracy is approximately linear in $\log_2(\text{tokens})$ over a wide compute range — a doubling of compute moves $\log_2(\text{tokens})$ by 1, and a linear function of $\log_2$ adds a constant amount per doubling. The shape is task-specific; AIME-class problems exhibit it cleanly within the midrange.
-- C. Because cons@$N$ is a linear estimator of pass@1.
-- D. Because token costs are billed in fixed-size blocks.
+- A. Because the model's effective parameter count under Kaplan et al.'s test-time scaling laws grows roughly logarithmically with inference budget, so doubling compute acts like adding a fixed parameter increment per step
+- B. Because the o1 system card reports accuracy approximately linear in $\log_2(\text{tokens})$ over the midrange; each doubling shifts $\log_2$ by 1, so a linear function of $\log_2$ adds a constant per doubling.
+- C. Because cons@$N$ is a linear unbiased estimator of pass@1 and the linearity of expectation propagates compute increments additively across doublings of the sample budget
+- D. Because OpenAI's API meters token costs in fixed-size billing blocks, so each doubling of compute corresponds to one additional block worth of accuracy improvement on AIME-class problems
 
 <details>
 <summary>Answers</summary>

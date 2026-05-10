@@ -228,10 +228,10 @@ Memorization is necessary but not sufficient for contamination-driven score infl
 
 **Q1.** Which of the following best states why contamination is the canonical Goodhart-collapse mechanism for static benchmarks?
 
-- A. Models eventually saturate every benchmark to 100%.
-- B. The benchmark becomes the optimization target, gets indexed on the web, and leaks into the pretraining set — so the score measures memorization, not generalization.
-- C. Benchmarks always have ambiguous reference answers.
-- D. Researchers cherry-pick prompt templates.
+- A. Saturation drags every benchmark's headline accuracy toward 100% over time, leaving no headroom for further capability gains and forcing the leaderboard into ties at the ceiling.
+- B. It becomes an optimization target, gets indexed online, and leaks into pretraining — so the score reflects memorization rather than generalization.
+- C. Reference answers in popular benchmarks are written by crowd workers with inconsistent rubrics, so different graders disagree about edge cases and any reported number carries a large grader-variance term.
+- D. Researchers cherry-pick few-shot prompt templates per task, and the resulting multiple-comparisons effect across templates inflates the headline number with no training-data leakage required.
 
 **Q2.** What is the single biggest mechanical change MMLU-Pro makes vs. MMLU?
 
@@ -242,10 +242,10 @@ Memorization is necessary but not sufficient for contamination-driven score infl
 
 **Q3.** What does Min-K% Prob compute, and why is it "low for unseen text, high for seen text"?
 
-- A. It averages the log-probabilities of the *lowest-K%* tokens; unseen text contains some genuinely-low-probability tokens that drag the average down, while seen (memorized) text has uniformly high probabilities even at its weakest tokens.
-- B. It computes a Bayesian posterior over training-set membership using the full pretraining corpus.
-- C. It is the rank of the canary string among random sequences.
-- D. It is the n-gram overlap fraction between two strings.
+- A. It averages log-probs of the bottom-K% tokens; unseen text has some genuinely-low-probability tokens that drag the mean down, while memorized text stays uniformly high even at its weakest tokens.
+- B. It computes a Bayesian posterior over training-set membership by integrating across the full pretraining corpus, using the model's perplexity ratio against a held-out reference distribution as the likelihood term.
+- C. It is the rank of an inserted canary string among equivalently-random non-inserted sequences, normalized by population size to give an exposure score in bits of memorization.
+- D. It is the 13-gram overlap fraction between a candidate test string and the training corpus, scaled by document length to estimate the verbatim contamination rate at corpus scale.
 
 **Q4.** A lab decontaminates against a benchmark using 13-gram overlap on its pretraining corpus. Which type of contamination is **least** mitigated?
 
@@ -256,17 +256,17 @@ Memorization is necessary but not sufficient for contamination-driven score infl
 
 **Q5.** Why does Duan et al. (2024) find that membership inference attacks against frontier LLMs are near chance, and what does this imply for contamination forensics?
 
-- A. MIAs require infinite shadow models, which is theoretically impossible.
-- B. Modern LLMs are trained on so much data that any given training item contributes very little to the model's likelihood landscape — so the membership signal is weak. The implication: lab-side decontamination at training time matters more than post-hoc detection.
-- C. MIAs only work on small models, and frontier LLMs are large.
-- D. Frontier LLMs all use differential privacy.
+- A. Strong MIAs require an infinite ensemble of shadow models trained without each candidate item, which is theoretically impossible to construct under the standard learning-theoretic assumptions used by LiRA.
+- B. Each training item contributes too little to a frontier-scale loss landscape for the membership signal to be detectable. Implication: pre-training decontamination beats post-hoc detection.
+- C. MIAs only work on small models because the per-parameter membership signal vanishes with model width, and frontier LLMs sit well past the parameter count where the LiRA test retains measurable AUC.
+- D. Frontier LLMs are now routinely trained with differential-privacy noise injection at the optimizer level, which provably bounds membership-inference advantage to near zero across input distributions.
 
 **Q6.** A safety researcher reports that a frontier model's measured attack-success rate on HarmBench dropped from 30% (last quarter) to 12% (this quarter). The model card mentions that HarmBench prompts were used in red-team training. Why is the 12% number not necessarily evidence of improved safety?
 
-- A. HarmBench is too small for confidence intervals.
-- B. The training data includes the test prompts, so the lower number partly reflects pattern-matching to the training set rather than transfer to novel attacks. Contamination *deflates* safety-eval scores in the same way it inflates capability scores.
-- C. HarmBench is multiple-choice and 12% is the random baseline.
-- D. HarmBench scoring requires an LLM judge, which is biased.
+- A. HarmBench's 400-prompt test set is too small for the reported quarter-over-quarter difference to clear a Wilson confidence interval at the 95% level, so the change sits within sampling noise.
+- B. The test prompts were in training, so the drop partly reflects pattern-matching rather than transfer to novel attacks. Contamination deflates safety scores the same way it inflates capability scores.
+- C. HarmBench uses multiple-choice scoring across ten harm categories, so 12% sits at the random-baseline floor and any sub-15% number is statistically indistinguishable from random guessing on the format.
+- D. HarmBench scoring requires an LLM judge, which has a documented refusal-classification bias toward false negatives that grows with judge-model scale and explains the apparent quarter-over-quarter drop.
 
 <details>
 <summary>Answers</summary>

@@ -163,45 +163,45 @@ The point of holding these four against each other is that "reasoning eval" is n
 
 **Q1.** What is the operational definition of "ARC-Challenge" — i.e., what filter selects an item into the Challenge subset rather than the Easy subset?
 
-- A. A panel of grade-school teachers rates the question as "hard."
-- B. The question is answered incorrectly by both an IR baseline and a word co-occurrence baseline.
-- C. The question contains at least one numerical computation.
-- D. Domain-expert PhDs validate the question and Google-with-internet pilot fails.
+- A. A panel of grade-school science teachers rates the question "hard" on the AI2 four-level difficulty rubric.
+- B. Both an IR baseline and a word co-occurrence baseline answer it incorrectly.
+- C. The question requires at least one numerical computation step combined with a unit conversion.
+- D. Domain-expert PhDs validate the question and a Google-with-internet pilot consistently fails to solve it.
 
 **Q2.** A model scores 89 on MMLU and 78 on ARC-Challenge. A second model scores 78 on MMLU and 89 on ARC-Challenge. What does the gap tell you, holding all else equal?
 
-- A. The first model has more world knowledge but composes inferences over it less reliably; the second is the inverse profile.
-- B. The first model is better calibrated; the second is worse.
-- C. The first model is contaminated; the second is not.
-- D. Both models are equivalent because the average is the same.
+- A. The first model has more world knowledge but composes inferences less reliably; the second has the inverse profile.
+- B. The first model is better-calibrated on multiple-choice log-likelihood scoring; the second has higher Brier loss.
+- C. The first model is contaminated on the ARC-Challenge train split; the second was filtered with a clean-decontamination protocol.
+- D. Both models are equivalent because the average across both benchmarks is identical, and averaging is the standard frontier-model summary.
 
 **Q3.** You evaluate Llama-3.1-8B on ARC-Challenge with `lm-evaluation-harness` and see `acc = 0.543` and `acc_norm = 0.577`. Which is the right metric to report for an Open LLM Leaderboard-style comparison?
 
-- A. `acc`, because raw accuracy is the only meaningful metric on MC tasks.
-- B. `acc_norm`, because ARC-Challenge options vary substantially in length and length-normalization removes that bias.
-- C. The mean of the two, because either alone is unstable.
-- D. Neither — the harness should be run with `output_type: generate_until` instead.
+- A. `acc`, because raw accuracy is the only meaningful metric on multiple-choice tasks under log-likelihood scoring.
+- B. `acc_norm`, because ARC option lengths vary and length-normalization removes that bias.
+- C. The mean of `acc` and `acc_norm`, because either metric alone is statistically unstable on small test sets.
+- D. Neither — the harness should be run with `output_type: generate_until` and answer-letter regex extraction instead.
 
 **Q4.** ARC-Challenge has 1,172 test items. A frontier model scores 0.951. What is the approximate 95% CI on its score under a binomial model, and what does that imply about ranking it against a model scoring 0.962?
 
-- A. CI is roughly $\pm 0.013$ (i.e. $\pm 1.3$ pp); the gap of $\sim 1.1$ pp is at the edge of single-run distinguishability and a paired test is needed to claim a real difference.
-- B. CI is roughly $\pm 0.05$; the gap is clearly noise.
-- C. CI is roughly $\pm 0.005$; the gap is highly significant.
-- D. CI is undefined for normalized accuracy.
+- A. CI is roughly $\pm 1.3$ pp; the $\sim 1.1$ pp gap is borderline on a single run and a paired test on shared items is needed.
+- B. CI is roughly $\pm 0.05$ (i.e. $\pm 5$ pp); the gap is small relative to the CI and is clearly noise.
+- C. CI is roughly $\pm 0.005$ ($\pm 0.5$ pp); the 1.1-pp gap is more than two CI widths and is highly significant.
+- D. The binomial confidence interval is undefined for length-normalized accuracy because the score is no longer a proportion of binary trials.
 
 **Q5.** A reviewer claims that "ARC-Challenge tests reasoning, while MMLU tests knowledge — so a high ARC score guarantees genuine reasoning capability." What is the most precise critique?
 
-- A. ARC's filter is calibrated to 2018-era IR and co-occurrence baselines; modern LMs may exceed those baselines without exhibiting the kind of reasoning the filter was designed to require, so ARC-Challenge guarantees the *absence* of shallow-baseline solvability, not the *presence* of reasoning.
-- B. MMLU also tests reasoning, so the dichotomy is wrong by definition.
-- C. ARC-Challenge can only be scored via generation, not log-likelihood, so accuracy numbers are not interpretable.
-- D. The Easy/Challenge split is randomized, so the distinction is meaningless.
+- A. ARC's filter only rules out 2018-era IR and co-occurrence baselines, so a high score shows absence of shallow-baseline solvability, not presence of reasoning.
+- B. MMLU also requires multi-step inference on its harder subdomains, so the knowledge-versus-reasoning dichotomy is wrong by definition and ARC adds nothing.
+- C. ARC-Challenge can only be scored via free-form generation with regex letter extraction rather than log-likelihood, so accuracy numbers are not directly interpretable across harnesses.
+- D. The Easy/Challenge split is randomized at dataset construction, so the distinction is meaningless and any score gap is just sampling variance across splits.
 
 **Q6.** ARC-Challenge has a small chain-of-thought gap (CoT vs. direct prompting changes the score by only a few points), while GSM8K (D9 anchor) has a large CoT gap. What does this contrast tell you about the *kind* of reasoning each benchmark exercises?
 
-- A. ARC-Challenge cannot be evaluated with CoT; GSM8K can.
-- B. ARC items mostly require single-step or two-step inference over factual knowledge that fits in a single forward pass; GSM8K items require multi-step arithmetic with intermediate state, where writing the steps down materially helps.
-- C. CoT gaps are determined by the harness, not the benchmark.
-- D. GSM8K is contaminated and ARC-Challenge is not.
+- A. ARC-Challenge cannot be evaluated under chain-of-thought prompting because its multiple-choice scoring frame leaves no place for reasoning traces; GSM8K can.
+- B. ARC items are mostly one- or two-step inferences in a single forward pass; GSM8K items are multi-step arithmetic where externalized state helps.
+- C. CoT gap sizes are determined by the harness's decoding parameters and few-shot count, not by anything intrinsic to the benchmark or its reasoning shape.
+- D. GSM8K is contaminated by web-scale text whereas ARC-Challenge is not, and the gap is purely the contamination differential being amplified by chain-of-thought decoding.
 
 <details>
 <summary>Answers</summary>

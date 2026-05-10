@@ -204,10 +204,10 @@ Week 4 turns to the *evaluation methods* that sit underneath those benchmarks on
 
 **Q1.** What does the "P" in WMDP stand for, and what is the methodological consequence of that choice?
 
-- A. *Performance* — the benchmark optimizes for top-of-leaderboard scoring.
-- B. *Proxy* — items test adjacent / precursor / component knowledge rather than direct hazardous content, which is what makes the benchmark publishable.
-- C. *Public* — items are crowdsourced from public Hugging Face contributors.
-- D. *Probe* — every item is paired with a paraphrased adversarial probe.
+- A. *Performance* — items are scaled by item-response-theory difficulty so the headline number maps directly to a leaderboard percentile across model sizes.
+- B. *Proxy* — items test adjacent rather than direct hazardous knowledge, which is what makes the benchmark publishable.
+- C. *Public* — items are crowdsourced from public Hugging Face contributors and filtered by a rotating CAIS reviewer panel before each quarterly release.
+- D. *Probe* — every item is paired with a paraphrased adversarial probe drawn from the HarmBench red-team corpus to measure jailbreak robustness on identical content.
 
 **Q2.** WMDP contains how many multiple-choice questions, in which subset breakdown?
 
@@ -218,31 +218,31 @@ Week 4 turns to the *evaluation methods* that sit underneath those benchmarks on
 
 **Q3.** RMU (Representation Misdirection for Unlearning) operates by:
 
-- A. Removing all hazardous-knowledge tokens from the tokenizer vocabulary.
-- B. Fine-tuning a small window of intermediate layers under a two-term loss: a forget term that pushes activations on hazardous-content inputs toward a fixed random unit vector, and a retain term that preserves activations on benign inputs.
-- C. Filtering the model's outputs through a separate refusal classifier at inference time.
-- D. Replacing the model's weights with a smaller "safe" model whenever a WMDP-shaped prompt is detected.
+- A. Removing all hazardous-knowledge tokens from the tokenizer vocabulary and re-tokenizing the forget set so the model cannot represent the targeted concepts during fine-tuning.
+- B. Fine-tuning a small window of intermediate layers under a two-term loss that pushes hazardous-content activations toward a random unit vector while preserving activations on benign retain-set inputs.
+- C. Filtering the model's outputs through a separate BERT-based refusal classifier at inference time, blocking any continuation flagged as belonging to the WMDP forget-set distribution.
+- D. Replacing the model's weights with a smaller distilled student model whenever a WMDP-shaped multiple-choice prompt is detected by an inference-time prompt classifier.
 
 **Q4.** What is the "Goodhart-on-safety-eval" concern raised by training against WMDP via RMU?
 
-- A. RMU itself violates Goodhart's Law because unlearning is undefined for transformers.
-- B. A model can be optimized to fail on WMDP's specific multiple-choice surface form while retaining the underlying hazardous knowledge under different prompt distributions (free-form, multilingual, agentic) — so a low WMDP score after unlearning is necessary but not sufficient evidence the capability is gone.
-- C. WMDP scores are bounded above by 100%, which violates Goodhart's monotonicity assumption.
-- D. WMDP cannot be evaluated by `lm-evaluation-harness`, so all reported scores are biased.
+- A. RMU itself violates Goodhart's Law because activation-steering unlearning is mathematically undefined for transformer architectures with residual connections.
+- B. A model can learn to fail on WMDP's MC surface form while retaining the hazardous knowledge under free-form, multilingual, or agentic prompting, so a low post-unlearning score is necessary but not sufficient.
+- C. WMDP scores are bounded above by 100%, which violates Goodhart's monotonicity assumption when the optimization target is a downward-pushed accuracy metric.
+- D. WMDP cannot be evaluated by `lm-evaluation-harness` due to license restrictions on the `cais/wmdp` dataset, so all reported frontier scores are systematically biased upward.
 
 **Q5.** Which of the following is the *best* description of how WMDP composes with D17 (situational awareness, SAD)?
 
-- A. SAD and WMDP are scored on the same questions; you can run one and infer the other.
-- B. WMDP measures latent dangerous knowledge; SAD measures whether the model knows it is being evaluated. A model that scores low on WMDP *because* it has detected the WMDP-style format and is strategically refusing is a different safety state from one that scores low because the knowledge is genuinely absent. The two evaluations compose; situational awareness is the substrate that makes WMDP refusal-behavior interpretation non-trivial.
-- C. WMDP is contained in SAD; SAD is the broader benchmark.
-- D. SAD has been deprecated in favor of WMDP; only WMDP needs to be reported.
+- A. SAD and WMDP share the same 3,668 four-way multiple-choice items but score them under different prompt templates, so running either harness automatically yields both numbers without a second query.
+- B. WMDP measures latent dangerous knowledge; SAD measures whether the model detects evaluation context. A low WMDP score from format-detection-and-refusal is a different safety state from one from genuine unlearning.
+- C. WMDP is contained inside SAD as its dangerous-capability awareness subtask, which makes SAD the strictly broader benchmark to report in any RSP-style safety case.
+- D. SAD has been deprecated by the original Apollo authors in favor of WMDP, so under current AISI guidance only the WMDP score needs to appear in a frontier-safety report.
 
 **Q6.** A frontier-model release report cites a **single** WMDP-Bio score (post-mitigation) below the random baseline of 25%. Which interpretation is **most appropriate** under this lesson's framing?
 
-- A. The model genuinely lacks all biology knowledge.
-- B. The number is by itself insufficient: WMDP measures latent capacity via a specific MC surface form, and a low post-unlearning score should be paired with (i) a free-form or agentic re-elicitation probe, (ii) a HarmBench-style adversarial test, and (iii) ideally a re-test under fine-tuning attack to argue robustness rather than surface-form forgetting.
-- C. Sub-random scores indicate the benchmark is broken; ignore the number.
-- D. This score makes the model safer than any benchmark could measure; further evaluation is unnecessary.
+- A. The model genuinely lacks all biology knowledge, so no further safety review on the biological-uplift axis is required for this particular release.
+- B. The number is insufficient on its own: pair it with a free-form re-elicitation probe, an adversarial HarmBench-style test, and ideally a fine-tuning-attack re-test to separate substrate removal from surface-form forgetting.
+- C. Sub-random scores indicate the benchmark is broken — most likely a tokenizer or chat-template mismatch inside the harness — so the reported number should simply be discarded.
+- D. This score makes the model strictly safer than any benchmark could measure on the biological-uplift axis, retiring that question for the release and freeing review capacity for cyber.
 
 <details>
 <summary>Answers</summary>

@@ -205,51 +205,51 @@ This lesson does not teach the Apollo evals; SA is the substrate, scheming is th
 
 **Q1.** Which is the **best** single statement of why situational awareness is a distinct evaluation problem rather than a sub-case of contamination (D6)?
 
-- A. Situational awareness is measured on a different harness (Inspect) than contamination (lm-eval-harness).
-- B. Contamination targets a specific benchmark's items leaking into training data; situational awareness targets the model conditioning on the *class* of inputs that look like evaluations, which no per-benchmark decontamination can remove.
-- C. Situational awareness is only relevant for agent benchmarks.
-- D. Contamination is a Goodhart problem; situational awareness is not.
+- A. Situational awareness is measured by the Inspect harness while contamination is detectable only via n-gram overlap audits run against the lm-eval-harness training corpus snapshot.
+- B. Contamination is per-item training-data overlap; situational awareness is the model conditioning on the *class* of evaluation-shaped inputs, which decontamination cannot remove.
+- C. Situational awareness manifests only on agentic tool-use benchmarks, since multiple-choice probes lack the action space the model would need to condition on its context.
+- D. Contamination is a Goodhart-type measurement failure, while situational awareness is a deployment-distribution shift problem unrelated to how benchmark scores are interpreted.
 
 **Q2.** The Situational Awareness Dataset (SAD) reports per-category accuracy across how many task categories?
 
-- A. 3 categories.
-- B. 5 categories.
-- C. 7 categories (Facts, Self-Recognition, Introspection, Stages, Influence, ID-Leverage, Anti-Imitation), comprising 16 tasks and over 12,000 questions.
-- D. 13 categories.
+- A. 3 categories — one per high-level aspect (self-knowledge, situational inferences, taking actions).
+- B. 5 categories, matching the canonical SAD-mini multiple-choice subset shipped in `inspect_evals`.
+- C. 7 categories spanning 16 tasks and over 12,000 questions.
+- D. 13 categories, one per individual task in the SAD release plus an aggregate Stages category.
 
 **Q3.** Berglund et al. 2023 introduced *out-of-context reasoning* as the mechanism by which situational awareness becomes operational. The clearest single demonstration is:
 
-- A. A model fine-tuned only on a textual *description* of a test (e.g., "Pangolin always responds in German") successfully applies that description at test time, with no in-context examples — establishing the training-text → test-behavior channel.
-- B. A model trained on the test set scores higher than one not trained on it.
-- C. A model with longer context windows scores higher on long-context benchmarks.
-- D. A model fine-tuned on multilingual data refuses harmful prompts in more languages.
+- A. A model fine-tuned only on a description of a test applies it at test time with no in-context examples, establishing the training-text → test-behavior channel.
+- B. A model fine-tuned on the test set itself outscores a baseline that was not, demonstrating direct training-test data overlap on the held-out split.
+- C. A model with a longer context window outperforms shorter-window baselines on retrieval benchmarks, demonstrating in-context capacity scaling under fixed weights.
+- D. A model fine-tuned on multilingual safety data generalizes its refusal behavior to harmful prompts in unseen languages, demonstrating cross-lingual transfer.
 
 **Q4.** Goodhart's Law applied to D17 (situational awareness) corresponds to which mechanism?
 
-- A. Data leakage — the test items appear in pretraining (this is D6's mechanism).
-- B. Incentive structure — the benchmark rewards refusal over truth (this is D15's mechanism).
-- C. Situational conditioning — the model conditions on an *upstream feature* (whether the input looks like an evaluation) rather than on the score itself, so any benchmark whose inputs share the eval distribution is affected, with no per-item leakage required.
-- D. Saturation — the benchmark is no longer informative because all models score near the ceiling.
+- A. Data leakage — specific benchmark items appear in pretraining tokens, the per-item overlap mechanism foregrounded in D6's contamination lesson.
+- B. Incentive structure — the benchmark's reward shape favors refusal over calibrated truth, the gradient-time mechanism foregrounded in D15's TruthfulQA lesson.
+- C. Situational conditioning — the model conditions on whether inputs look like evaluations rather than on the score itself, with no per-item leakage required.
+- D. Saturation — the benchmark is no longer informative because frontier models score near the ceiling and no headroom remains for ranking, the mechanism foregrounded in D7.
 
 **Q5.** A frontier model scores 92% on a Week 3 jailbreak benchmark and 78% on SAD's Stages-Oversight task (above the 33% chance baseline by a wide margin). Which is the **most defensible** reading?
 
-- A. The model is robustly jailbreak-resistant; the SAD number is irrelevant.
-- B. The model passes the jailbreak benchmark *and* reliably distinguishes evaluation contexts from deployment contexts. The 92% is consistent with either genuine robustness or with eval-conditioned refusal; the SAD number raises the second possibility, which deployment-realistic red-teaming is the standard way to discriminate.
-- C. The 78% SAD score proves the model is scheming.
-- D. The benchmark scores are inconsistent and one of them must be measurement error.
+- A. The model is robustly jailbreak-resistant since the 92% jailbreak score dominates the analysis, and the SAD number is a separate self-knowledge metric without bearing on safety.
+- B. The 92% is consistent with genuine robustness or with eval-conditioned refusal; the SAD score raises the second possibility, and deployment-realistic red-teaming is the standard discriminator.
+- C. The 78% SAD score is direct evidence the model is actively scheming, since situational-awareness scores above 70% imply deliberate evaluation-conditioned behavior at deployment time.
+- D. The benchmark scores are mutually inconsistent because high jailbreak resistance and high situational awareness cannot co-occur, so one of the two numbers must reflect measurement error.
 
 **Q6.** What is Apollo's *Frontier Models are Capable of In-Context Scheming* (Meinke et al. 2024) doing that the Situational Awareness Dataset is **not** doing, and why is the relationship a forward pointer rather than a parallel anchor?
 
-- A. Meinke et al. measure *whether models, given a goal and an oversight-incentive structure, deliberately undermine oversight* (sandbagging, oversight-disabling, weight exfiltration attempts in agentic environments). SAD measures the SA *capability*; Meinke et al. measure scheming *behavior*. SA is necessary but not sufficient for scheming, so SAD is the upstream measurement and Apollo is the open question.
-- B. Meinke et al. is a multiple-choice benchmark and SAD is an agentic one.
-- C. Meinke et al. supersedes SAD because it measures more recent models.
-- D. They measure the same thing; Apollo is just a different name for SAD.
+- A. SAD measures the SA capability; Apollo measures scheming behavior under oversight-incentive structures. SA is necessary but not sufficient for scheming, so SAD is upstream and Apollo is the open frontier.
+- B. Meinke et al. is a multiple-choice benchmark while SAD is an agentic environment for scheming behavior, so the two sit on opposite ends of the eval-format spectrum within Week 3.
+- C. Meinke et al. supersedes SAD as the canonical anchor for situational awareness because it covers more recent frontier models and a substantially larger task set.
+- D. They measure the same construct under different names; Apollo Research's release is a rebranded extension of the LRudL/sad task set with additional agentic environments.
 
 <details>
 <summary>Answers</summary>
 
 1. **B** — D6's leak channel is per-item training-data overlap; D17's leak channel is the model's classifier over the entire input distribution. Decontamination defeats D6; it does not defeat D17, because there is no specific item to remove. See "Goodhart on D17" and "Cross-references."
-2. **C** — 7 categories, 16 tasks, >12,000 questions. The lesson foregrounds three (Facts, Influence, ID-Leverage) but a complete SAD report cites all seven and never aggregates to a single number, because the categories test structurally different capabilities and the dependencies between them (Facts is a precondition for Influence is a precondition for ID-Leverage) are part of the signal.
+2. **C** — 7 categories (Facts, Self-Recognition, Introspection, Stages, Influence, ID-Leverage, Anti-Imitation), 16 tasks, >12,000 questions. The lesson foregrounds three (Facts, Influence, ID-Leverage) but a complete SAD report cites all seven and never aggregates to a single number, because the categories test structurally different capabilities and the dependencies between them (Facts is a precondition for Influence is a precondition for ID-Leverage) are part of the signal.
 3. **A** — Berglund et al.'s contribution is the *channel*: training text → test behavior with no in-context bridge. The German-translation behavior is the demonstration; the channel is the finding. (B is contamination; C is long-context capability; D is multilingual robustness — none are OOC reasoning.)
 4. **C** — situational conditioning. The model conditions on whether the input looks like evaluation; the benchmark score is computed on a sample drawn from the conditional-on-eval distribution. This is structurally different from D6 (per-item leakage) and D15 (reward-shape miscalibration). The "Goodhart on D17" table is the canonical contrast.
 5. **B** — high SAD scores are consistent with robustness *or* with eval-conditioned refusal; the joint motion of safety scores and SA scores is the signal. The standard discriminator is to re-run the safety eval under deployment-realistic system prompts and compare. (A ignores the SA caveat; C confuses SA with scheming; D assumes inconsistency that isn't there.)

@@ -187,24 +187,24 @@ You are now equipped to read any capability-benchmark paper's methods section. W
 
 **Q1.** Why does the standard error on a model's score *not* protect you from saturation?
 
-- A. SE goes to zero as $p \to 1$, but the model's true skill becomes unmeasurable.
-- B. SE is dominated by tokenizer choice, not item count.
-- C. SE shrinks as $p \to 1$, but the *headroom* shrinks faster, so the SNR of cross-model differences collapses.
-- D. SE is only valid for binary-classification benchmarks.
+- A. SE goes to zero as $p \to 1$, but the model's true skill becomes unmeasurable in absolute terms.
+- B. SE is dominated by tokenizer choice and prompt format, not by item count or scoring rule.
+- C. SE shrinks as $p \to 1$, but headroom shrinks faster, so cross-model SNR collapses.
+- D. SE is only valid for binary-classification benchmarks, not for generative or rubric-graded items.
 
 **Q2.** Which is the *defining* construction property of GPQA's "Google-proof" pipeline?
 
-- A. Items are graduate-level.
-- B. Items are validated against PhD-holders in *other* fields who have unrestricted internet access and 30+ minutes per question.
-- C. Items are filtered through OpenAI's content policy.
-- D. Items are translated into multiple languages.
+- A. Items are written at graduate level across biology, physics, and chemistry.
+- B. Items are piloted by PhDs in *other* fields with internet access and 30+ minutes per question.
+- C. Items are filtered through a content-policy review and a per-item refusal-rate threshold.
+- D. Items are translated into multiple languages and back-translated for cross-lingual robustness.
 
 **Q3.** GPQA Diamond is the subset where:
 
-- A. All three non-experts answer correctly.
-- B. Both expert validators answer correctly *and* no more than one of three non-experts answers correctly.
-- C. The question writer is anonymous.
-- D. Items are released after a specified training-data cutoff.
+- A. All three non-experts with internet access answer correctly within the time limit.
+- B. Both expert validators answer correctly *and* at most one of three non-experts is correct.
+- C. The question writer is anonymous and reviewers cannot see the source domain.
+- D. Items are released only after a specified post-training cutoff date for retrieval evaluation.
 
 **Q4.** A model's GPQA Diamond score moves from 39% (late 2023) to 94% (early 2026). Which of the following is **not** a plausible co-explanation?
 
@@ -215,17 +215,17 @@ You are now equipped to read any capability-benchmark paper's methods section. W
 
 **Q5.** Why is ARC-AGI a useful conceptual contrast to GPQA Diamond, even though it's not the D28 anchor?
 
-- A. ARC-AGI is multilingual and GPQA is English-only.
-- B. ARC-AGI's saturation resistance is *structural* (each task requires inferring a novel rule from few examples), not gatekept by an expert panel; it's the cleanest example of resistance-by-construction.
-- C. ARC-AGI uses log-likelihood scoring, which GPQA can't.
-- D. ARC-AGI is part of the Open LLM Leaderboard.
+- A. ARC-AGI is multilingual and tokenizer-agnostic, while GPQA is English-only and tokenizer-sensitive.
+- B. ARC-AGI's resistance is *structural* — each task requires inferring a novel rule from few examples — not gatekept by an expert panel.
+- C. ARC-AGI uses log-likelihood scoring with normalized choice ranking, which GPQA's free-form rubric can't support.
+- D. ARC-AGI is part of the Open LLM Leaderboard's v3 reasoning suite alongside GPQA Diamond.
 
 **Q6.** A reviewer claims that "Model A scores 93.4% and Model B scores 95.1% on GPQA Diamond, so Model B is better." On a 198-item benchmark, what is the most precise critique?
 
-- A. The two models should be compared on MMLU instead.
-- B. At $p \approx 0.94$, the per-model 95% CI on a 198-item benchmark is roughly $\pm 3$ points; the gap is plausibly noise and a paired test (e.g., McNemar) is required to claim a real difference.
-- C. GPQA Diamond doesn't support log-likelihood scoring, so the comparison is invalid by construction.
-- D. The reviewer must use `acc_norm` instead of `acc`.
+- A. The two models should be compared on MMLU-Pro and HELM scenario coverage with bootstrap CIs over scenarios.
+- B. At $p \approx 0.94$ on 198 items, per-model 95% CI is about $\pm 3$ points; a paired test (e.g., McNemar) is needed.
+- C. GPQA Diamond's free-form rubric doesn't support log-likelihood scoring, so the comparison is invalid by construction.
+- D. The reviewer must report `acc_norm` rather than `acc` and verify the gap with paired-bootstrap CIs over items.
 
 <details>
 <summary>Answers</summary>

@@ -205,45 +205,45 @@ Week 3 turns the lens. The question stops being *what can the model do* and star
 
 **Q1.** A frontier model claims a 1M-token context window. RULER reports its mean score across the 13 tasks falls below 0.856 above 64K tokens. What is the model's effective context length under RULER's metric?
 
-- A. 1M tokens, because that is the architectural limit.
-- B. 64K tokens, because that is the longest length at which the mean RULER score meets the threshold.
-- C. The arithmetic mean of 64K and 1M.
-- D. Undefined, because effective context is only reported for models trained on long context.
+- A. 1M tokens, since RULER reports effective context as equal to the model's architectural context window cap.
+- B. 64K tokens, the longest length at which mean RULER score meets the 0.856 threshold.
+- C. The arithmetic mean of 64K and 1M, weighted by RULER's per-task accuracy curve.
+- D. Undefined, since RULER only reports effective context for models trained natively on long context.
 
 **Q2.** Why is perplexity an inadequate metric for long-context capability?
 
-- A. Perplexity is computed only on the test set, not the long-context document.
-- B. Perplexity is averaged over all tokens and dominated by typical-case prediction; it does not measure whether a specific fact at a specific depth can be retrieved.
-- C. Perplexity requires a held-out validation set that long-context benchmarks don't supply.
-- D. Perplexity is inherently bounded above by 1.
+- A. Perplexity is computed only on the test set, not on the long-context document supplied at inference time.
+- B. Perplexity averages over all tokens; it does not measure whether a specific fact at a specific depth can be retrieved.
+- C. Perplexity requires a held-out validation set that long-context benchmarks like RULER do not supply.
+- D. Perplexity is inherently bounded above by 1, so it cannot distinguish good from poor long-context recall.
 
 **Q3.** RULER's 13 tasks fall into which 4 categories?
 
-- A. Retrieval, Summarization, Translation, Code.
+- A. Retrieval, Summarization, Translation, Code Generation.
 - B. Retrieval, Multi-hop Tracing, Aggregation, Question Answering.
-- C. NIAH-1, NIAH-2, NIAH-3, NIAH-4.
-- D. Knowledge, Reasoning, Math, Safety.
+- C. NIAH-1, NIAH-2, NIAH-3, NIAH-4 (one task family per category).
+- D. Knowledge Recall, Logical Reasoning, Mathematical Reasoning, Safety Refusal.
 
 **Q4.** What is the methodological difference between vanilla single-NIAH and RULER's MK-NIAH (multi-key NIAH)?
 
-- A. MK-NIAH uses Chinese instead of English haystacks.
-- B. MK-NIAH adds distractor needles that look like the target needle but bind to different keys, so the model must *discriminate* rather than just locate the one out-of-place sentence.
-- C. MK-NIAH places needles only at depth 50%.
-- D. MK-NIAH uses log-likelihood scoring, vanilla NIAH uses generative scoring.
+- A. MK-NIAH uses Chinese-language haystacks and English-language needles to test cross-lingual retrieval.
+- B. MK-NIAH adds distractor needles bound to different keys, forcing discrimination rather than localization.
+- C. MK-NIAH places all needles at exactly depth 50% to isolate the lost-in-the-middle effect.
+- D. MK-NIAH uses log-likelihood scoring at the needle position; vanilla NIAH uses free-form generative scoring.
 
 **Q5.** Which is the **best** description of RULER's relationship to the long-context evaluation landscape?
 
-- A. RULER replaces all prior long-context benchmarks; LongBench-v2, ∞-Bench, and BABILong are deprecated.
-- B. RULER is a single anchor on the *retrieval* axis. LongBench-v2 (real-document QA), ∞-Bench (100K+ token mixed-domain tasks), and BABILong (rule-tracking in irrelevant context) anchor orthogonal axes; a complete long-context eval report cites at least two.
-- C. RULER, LongBench-v2, ∞-Bench, and BABILong are all NIAH variants and produce equivalent rankings.
-- D. RULER is a closed-source benchmark; the foils are its open alternatives.
+- A. RULER replaces all prior long-context benchmarks; LongBench-v2, ∞-Bench, and BABILong have been formally deprecated by their authors and superseded.
+- B. RULER anchors the retrieval axis; LongBench-v2, ∞-Bench, and BABILong anchor orthogonal axes (real-document QA, 100K+ mixed domains, rule-tracking). A complete report cites at least two.
+- C. RULER, LongBench-v2, ∞-Bench, and BABILong are all single-needle NIAH variants with identical task taxonomies and produce equivalent leaderboard rankings.
+- D. RULER is a closed-source NVIDIA benchmark; LongBench-v2, ∞-Bench, and BABILong are its open-source academic-community alternatives released alongside it.
 
 **Q6.** A vendor announces a new model claiming a 2M-token context window. The model card reports 100% on vanilla NIAH at 2M but does not report RULER scores. From this lesson, the right reflex is to:
 
-- A. Trust the 2M figure, since vanilla NIAH at 2M is the strongest possible long-context evidence.
-- B. Treat 2M as the *claimed* length and demand the RULER (or equivalent multi-task) effective-context number, since vanilla NIAH alone has been near-saturated by frontier models since 2024 and is necessary but not sufficient evidence of usable long context.
-- C. Conclude the model is unsafe at long context.
-- D. Compute perplexity on a 2M-token document instead.
+- A. Trust the 2M figure, since 100% on vanilla NIAH at 2M is the strongest single-task evidence currently available for usable long context across the full window.
+- B. Treat 2M as the claimed length and demand the RULER effective-context number, since vanilla NIAH has been near-saturated since 2024 and is necessary but not sufficient.
+- C. Conclude the model is unsafe at long context, since unreported RULER scores typically signal that the model fails indirect-PI robustness checks in the safety surface.
+- D. Compute perplexity on a representative 2M-token document instead, since perplexity at the claimed length is the field-standard substitute for RULER.
 
 <details>
 <summary>Answers</summary>

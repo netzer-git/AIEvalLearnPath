@@ -231,24 +231,24 @@ MMMU saturation has the same Goodhart shape as D7: original benchmark widely cit
 
 **Q1.** What single property best distinguishes MMMU from VQA (Antol et al. 2015)?
 
-- A. MMMU is multilingual; VQA is English-only.
-- B. MMMU is multiple-choice; VQA is open-ended.
-- C. MMMU's items require domain reasoning over heterogeneous image types (charts, chemical structures, medical scans, music notation), not just object/attribute recognition over photographs.
-- D. MMMU uses log-likelihood scoring; VQA uses generative scoring.
+- A. MMMU is multilingual across 30 source languages with parallel translations, while VQA is English-only with no localization variants.
+- B. MMMU is exclusively multiple-choice with a fixed four-option format, while VQA is purely open-ended with free-form short-answer scoring.
+- C. MMMU items demand domain reasoning over heterogeneous image types — charts, chemical structures, medical scans, music notation — beyond photographic recognition.
+- D. MMMU uses log-likelihood scoring over option tokens, while VQA uses exact-match against a pool of ten human reference answers.
 
 **Q2.** A model scores 56% on MMMU but 92% on ScienceQA. Which is the most plausible interpretation?
 
-- A. The model has a bug in its image preprocessing.
-- B. ScienceQA contains many items solvable from text alone, and its image questions skew toward simpler diagrams; MMMU's items demand both domain knowledge and image-grounded reasoning across heterogeneous image types.
-- C. ScienceQA is contaminated and MMMU is not.
-- D. The model uses chain-of-thought on ScienceQA but not on MMMU.
+- A. The model has a regression in its image-tiling preprocessing pipeline that drops resolution below MMMU's expected input size, causing a 35-point hit.
+- B. ScienceQA has many text-only-solvable items and simple diagrams; MMMU requires domain knowledge plus image-grounded reasoning over heterogeneous types.
+- C. ScienceQA is contaminated through its inclusion in pretraining web crawls, while MMMU's textbook-sourced items remain uncontaminated.
+- D. The model uses chain-of-thought decoding on ScienceQA but defaults to direct-answer mode on MMMU's MCQ format.
 
 **Q3.** What is the canonical MMMU split structure?
 
-- A. 1,000 / 5,000 / 5,500 (dev / val / test).
+- A. 1,000 / 5,000 / 5,500 split across dev / val / test, totalling 11,500 items.
 - B. 150 / 900 / 10,500 (dev / val / test) — totalling 11,550 items.
-- C. 198 (Diamond) / 250 (Main) — like GPQA.
-- D. There is no test split; all 11.5K items are public.
+- C. 198 (Diamond) / 250 (Main) — like GPQA, with no additional dev split.
+- D. There is no held-out test split; all 11,550 items are public on HuggingFace.
 
 **Q4.** Which of the following is **not** one of the three changes MMMU-Pro introduces relative to MMMU?
 
@@ -259,22 +259,22 @@ MMMU saturation has the same Goodhart shape as D7: original benchmark widely cit
 
 **Q5.** A 2026 paper reports "Model X scored 86.4% on MMMU and 64.1% on MMMU-Pro." Which is the right reflex?
 
-- A. Model X is broken on MMMU-Pro.
-- B. The 22-point gap is in the expected range (papers report 16.8–26.9 points lower on Pro across models); it reflects MMMU-Pro's harder construction (10 options + text-only filtering + vision-only setting), not a model-specific failure.
-- C. MMMU-Pro is multilingual and Model X is English-only.
-- D. The MMMU score must be on the test split.
+- A. Model X must be broken on MMMU-Pro because its image-tiling configuration drops resolution below the Pro setting's expected input.
+- B. The 22-point drop sits inside the 16.8–26.9 published Pro-vs-original range; it reflects Pro's harder construction, not a model fault.
+- C. MMMU-Pro is multilingual across 12 target languages with parallel translations, and Model X is English-only — so the gap is a localization artefact.
+- D. The MMMU score must therefore be on the held-out test split rather than the public validation set, which inflates results by ~20 points.
 
 **Q6.** A multimodal model scores 87% on a text-only refusal benchmark and 84% on MMMU. A red-teamer reports that 60% of refused requests succeed when re-rendered as an image (FigStep-style typographic jailbreak). What does this reveal about the safety profile that the two headline scores don't?
 
-- A. The text-only refusal benchmark is contaminated.
-- B. The MMMU score is overestimated.
-- C. Multimodal jailbreak surface (visual prompt injection, embedded-text attacks) is a separate axis from both capability scores and text-only refusal scores; you cannot read it off either headline number, and a frontier multimodal safety eval must include this surface explicitly.
-- D. The model's vision encoder is broken.
+- A. The text-only refusal benchmark is contaminated through web crawls that included its disallowed prompts during the model's safety alignment training.
+- B. The MMMU validation score is overestimated by roughly 10 points because image-tiling drift across the 900-item split inflates accuracy.
+- C. Multimodal jailbreak surface — visual prompt injection, embedded-text attacks — is an axis distinct from capability scores and text-only refusal.
+- D. The model's vision encoder is broken on text-rendered images and must be re-trained on OCR-heavy datasets to recover text-channel safety.
 
 <details>
 <summary>Answers</summary>
 
-1. **C** — the heterogeneous-image-type + domain-reasoning combination is MMMU's construction principle. (B) is partially true — MMMU is mostly MCQ — but VQA also has MCQ variants and the format isn't the defining difference; (A) and (D) are incorrect.
+1. **C** — heterogeneous-image-type + domain-reasoning is MMMU's construction principle. (B) is wrong because MMMU is mostly but not exclusively MCQ (a minority are short-answer) and VQA also has MCQ variants; (A) and (D) misattribute properties that don't differentiate the two.
 2. **B** — ScienceQA's items skew K–12 and ~51% have no image at all; the multimodal slice is dominated by simpler diagrams. MMMU's reasoning load on heterogeneous images is the gap.
 3. **B** — the standard MMMU split. Most reported numbers are validation-split (the 900); the 10,500 test items are server-side held out.
 4. **D** — MMMU-Pro retains MCQ scoring (in fact extends MCQ with 10 options). A/B/C are the three Pro changes per Yue et al. 2024.

@@ -200,38 +200,38 @@ The composition is the lesson. Arena → preference dataset → reward model →
 
 **Q3.** Why did LMSYS migrate Chatbot Arena's headline aggregator from online ELO to Bradley-Terry MLE in late 2023?
 
-- A. Bradley-Terry produces higher rating numbers, which look better in marketing.
-- B. ELO updates are order-dependent and lack principled confidence intervals; Bradley-Terry MLE is a convex, order-independent fit that admits standard sandwich-robust CIs on the rankings, which fits Arena's "frozen-checkpoint" setting better than ELO's "drifting-skill" assumption.
-- C. ELO cannot handle ties, while Bradley-Terry can.
-- D. Bradley-Terry is faster to compute on large battle logs.
+- A. Bradley-Terry produces inflated rating numbers that compress the visible gap between frontier-tier models, which makes the top of the public leaderboard look more competitive in marketing materials.
+- B. ELO is order-dependent and lacks principled CIs; Bradley-Terry is the convex MLE that ELO heuristically approximates, with order-independent fits and standard CIs on rank.
+- C. ELO has no native treatment for tied battles, whereas Bradley-Terry's Rao-Kupper extension fits a dedicated tie-probability parameter that Arena needs because its four-way label space includes ties and *both bad*.
+- D. Bradley-Terry is asymptotically faster than online ELO on million-battle logs because its closed-form MLE avoids the per-battle update step that makes online ELO scale linearly in vote count.
 
 **Q4.** Which of the following best captures the conceptual contrast between Chatbot Arena (D23) and the LLM-as-judge frameworks of D22 (WildBench, MT-Bench, Arena-Hard-Auto)?
 
-- A. Arena uses ELO and the auto-judge frameworks use Bradley-Terry; the difference is purely statistical.
-- B. The auto-judge frameworks replace Arena because human preference is too noisy to be useful.
-- C. Arena keeps a *human* in the judge position with the cost-and-throughput trade-offs that implies; the auto-judge frameworks replace the human with a strong LLM, gaining throughput and reproducibility at the cost of judge biases (self-preference, position, verbosity); Arena-Hard-Auto in particular is the auto-judge *derivative* of Arena, not a substitute.
-- D. Arena and the auto-judge frameworks use different prompts, but the methodology is otherwise identical.
+- A. Arena uses online ELO whereas the auto-judge frameworks use Bradley-Terry MLE on the judge's pairwise outputs; the methodological gap between the two reduces to a choice of paired-comparison estimator on otherwise-identical pipelines.
+- B. The auto-judge frameworks supersede Arena because crowd-vote noise dominates the signal once frontier models cluster within a 50-ELO band, making human preference statistically uninformative at the top of the leaderboard.
+- C. Arena keeps a *human* judge; the D22 frameworks substitute a strong LLM, gaining throughput at the cost of judge biases. Arena-Hard-Auto is the auto-judge derivative of Arena, not a substitute.
+- D. Arena draws prompts from live user traffic while the auto-judge frameworks use curated test sets, but the scoring rule, aggregation method, and bias profile are otherwise identical across the two families.
 
 **Q5.** A frontier-model release report cites "Arena ELO 1287, rank 4." Which interpretation is **most consistent** with this lesson's framing?
 
-- A. The model is the 4th-best model on every dimension; rank 4 is a verdict.
-- B. The headline rank is one coordinate. Without (i) a confidence interval on the rank, (ii) the size of the cluster the model sits in, and (iii) composition with capability evals (Week 1–2), truthfulness (D15), and safety (D17–D21), the number is a marketing artefact rather than a deployment-ready safety signal. Arena rewards user-preferred style; it does not measure correctness or safety.
-- C. Arena ELO of 1287 means the model wins ~64% of battles against a 1000-rated baseline; nothing else can be inferred.
-- D. Rank 4 implies the model is unsafe to deploy.
+- A. The model is unambiguously the fourth-best system on every relevant axis — capability, truthfulness, safety, and user preference — so rank 4 from Arena is a sufficient single-number verdict for any production deployment decision.
+- B. The headline rank is one coordinate; without a CI on the rank, the cluster size, and composition with capability and safety axes, it is a marketing artefact. Arena rewards user-preferred style, not correctness or safety.
+- C. Arena ELO of 1287 corresponds to roughly a 64% expected win rate against a 1000-rated baseline under the 400-point logistic scale, and the rank-4 position is a derived statistic with no additional safety-relevant information beyond that.
+- D. Rank 4 implies the model has not yet passed the safety threshold required for deployment, because Arena's pairwise rating system penalizes refusal-heavy responses by construction and a top-tier rank under that rule is itself a safety red flag.
 
 **Q6.** Which property of Arena's design makes the rank signal *fragile* in a Goodhart-relevant way, and what is the structural defense?
 
-- A. Property: ELO ratings are unbounded above, so models can be optimized indefinitely. Defense: cap ratings at 2000.
-- B. Property: anonymity is required for the rating signal to be valid, but it can be violated by vote-stuffing or by models that name-drop themselves in outputs (a form of model self-identification that compromises the anonymous condition); both attacks are documented in the literature. Defense: report ranks with conservative confidence intervals (rather than point ELOs), filter suspicious votes from the rating computation, and treat Arena rank as one coordinate in a multi-axis safety case rather than a verdict.
-- C. Property: Bradley-Terry MLE is non-convex, so the optimization can be gamed by adversarial battle logs. Defense: switch back to online ELO.
-- D. Property: ties are handled with the half-credit convention, which biases the ranking toward middle-rated models. Defense: drop ties from the dataset entirely.
+- A. Property: online ELO ratings are unbounded above, so a model that wins enough battles can drift its rating indefinitely upward and dominate the leaderboard regardless of true underlying skill. Defense: cap ratings at 2000 and renormalize the leaderboard quarterly to keep the scale interpretable.
+- B. Property: the anonymity guarantee that makes the rating signal valid is fragile — vote-stuffing and self-identification (models leaking identity tokens in outputs) both violate it. Defense: report ranks with CIs, filter suspicious votes, and treat Arena rank as one coordinate in a multi-axis safety case.
+- C. Property: the Bradley-Terry MLE objective is non-convex when the battle log contains a high fraction of ties, so adversarial vote patterns can push the optimizer into a local minimum that overrates a target model. Defense: revert the leaderboard to online ELO with a higher K factor for stability.
+- D. Property: ties are handled with the Rao-Kupper half-credit convention, which biases the rankings toward middle-rated models because frequent ties between mid-tier systems compress the effective rating spread. Defense: drop all *tie* and *both bad* labels from the rating computation entirely.
 
 <details>
 <summary>Answers</summary>
 
 1. **C** — $E_A = 1 / (1 + 10^{(1100 - 1300)/400}) = 1 / (1 + 10^{-0.5}) = 1 / (1 + 0.3162) \approx 0.760$. (B is the value for a 100-point gap, not a 200-point gap; A is the equal-rating case; D is the value for a roughly 400-point gap.)
 2. **A** — $R_A' = R_A + K(S_A - E_A) = 1300 + 4(1 - 0.760) = 1300 + 4 \cdot 0.240 = 1300 + 0.96 = 1300.96$. The small magnitude of the update (under 1 point) reflects the deliberately conservative $K = 4$ that LMSYS uses to keep ratings stable across battles; in chess, $K \in [10, 40]$ would produce updates of several points per game.
-3. **B** — ELO's order-dependence is the structural mismatch with Arena's frozen-checkpoint setting (the underlying "skill" is fixed across battles, so the order in which you process the battle log shouldn't matter, but for ELO it does). Bradley-Terry is a convex MLE that is order-independent and admits standard CIs, fitting Arena's setting properly. (A and D are wrong on substance; C is wrong because both models can handle ties.)
+3. **B** — ELO's order-dependence is the structural mismatch with Arena's frozen-checkpoint setting (the underlying "skill" is fixed across battles, so the order in which you process the battle log shouldn't matter, but for ELO it does). Bradley-Terry is a convex MLE that is order-independent and admits standard CIs, fitting Arena's setting properly. (A and D are wrong on substance; C is wrong because both models handle ties — ELO via $S = 0.5$, Bradley-Terry via the half-credit collapse LMSYS actually deploys, not the separate tie-probability extension.)
 4. **C** — Arena keeps the human in the judge position; D22's frameworks replace the human with a strong LLM. Arena-Hard-Auto is the auto-judge derivative of Arena (its prompts are sampled from Arena traffic and its purpose is to be a cheap reproducible proxy for Arena ranks), not a substitute. The trade-offs (cost, reproducibility, biases) flow from this difference.
 5. **B** — Arena measures user preference, which rewards style, helpfulness, and confidence-of-presentation. It does not measure correctness, truthfulness, or safety. A safety-relevant deployment decision needs Arena rank *plus* the capability and safety axes the rest of the curriculum names — Arena rank is a coordinate, not a verdict, in the same shape D21 framed WMDP.
 6. **B** — anonymity is the construction guarantee that makes Arena's rating signal a comparison of *outputs* rather than of brand recognition. Both vote-stuffing (Huang et al. 2025) and self-identification (models leaking identifying tokens, the "Leaderboard Illusion" submission strategies) violate that guarantee in different ways, and both are real attack surfaces in the deployed system. The rank-with-CI reporting discipline plus suspicious-vote filtering plus *don't read Arena rank as a single-number verdict* is the structural defense, and it is the same multi-axis composition framing D21 used for WMDP applied to user-preference rather than dangerous-capability.

@@ -261,38 +261,38 @@ The structural defense — held-out post-cutoff tasks, novel attack distribution
 
 **Q1.** WebArena (Zhou et al. 2024) contains how many tasks across how many self-hostable websites?
 
-- A. 466 tasks across 4 websites.
-- B. 812 tasks across 5 self-hostable websites (e-commerce, CMS admin, social forum, software development, map).
-- C. 1,054 tasks across 17 websites.
-- D. 97 tasks across 4 websites.
+- A. 466 tasks across 4 self-hostable Docker websites.
+- B. 812 tasks across 5 self-hostable websites.
+- C. 1,054 tasks across 17 self-hostable websites and 62 utility tools.
+- D. 97 tasks across 4 simulated user-task domains and 8 utility tools.
 
 **Q2.** Which is the **best** description of indirect prompt injection (IPI) as a threat model, contrasted with direct jailbreaks (D19 / HarmBench)?
 
-- A. IPI and direct jailbreaks are the same threat — IPI is just a renaming.
-- B. In direct jailbreaks the user types the adversarial prompt; in IPI the user is benign and the attacker writes content into a tool output (webpage, email, file) that the agent ingests through a tool boundary, which the model then treats as instructions because data and instructions share the token stream.
-- C. IPI requires gradient access to the model; direct jailbreaks do not.
-- D. IPI applies only to multimodal agents; direct jailbreaks apply only to text agents.
+- A. IPI and direct jailbreaks are the same threat under different names; HarmBench's standard pipeline already scores both attack channels with the same refusal rubric.
+- B. Direct jailbreaks come through the user's prompt; IPI enters through a tool boundary — the attacker writes content into a page or email the agent reads, and the model treats that data as instructions.
+- C. IPI requires white-box gradient access to the model weights, while direct jailbreaks rely only on black-box prompt engineering through the chat interface.
+- D. IPI applies only to multimodal agents that parse screenshots, while direct jailbreaks apply only to text-only chatbots without any tool integration.
 
 **Q3.** AgentDojo (Debenedetti et al. 2024) measures, on each test case:
 
-- A. Only whether the agent completes the user's task.
-- B. Only whether the agent executes the attacker's payload.
-- C. A `(utility, targeted-attack-success)` pair: did the agent complete the user's benign task, and did it additionally execute the attacker's injected payload? Both axes must be reported; a deployable agent has high utility *and* low attack success.
-- D. The Bradley-Terry coefficient between the user task and the attack.
+- A. Only whether the agent completes the user's benign task, scored by exact-match against a gold reference trajectory from human annotators.
+- B. Only whether the agent executes the attacker's injected payload, scored via a held-out HarmBench-style refusal rubric over the trace.
+- C. A `(utility, targeted-attack-success)` pair: did the agent complete the user task, and did it additionally execute the attacker's payload? Both axes must be reported.
+- D. The Bradley-Terry coefficient between the user task and the attacker payload, fit by maximum-likelihood over pairwise preference judgments.
 
 **Q4.** AgentDojo's environment design is best described as:
 
-- A. A static test set of 1,054 fixed prompts.
-- B. A dynamic, extensible Python framework with 97 user tasks across four simulated domains (Workspace, Slack, Travel, Banking) and 629 security test cases combining tasks with injections in attacker-controllable tool outputs; new attacks, defenses, and tasks can be plugged in.
-- C. A leaderboard of human preferences over agent traces.
-- D. A reward model trained on agent trajectories.
+- A. A static test set of 1,054 fixed prompts paired with gold trajectories from human red-teamers.
+- B. A dynamic Python framework with 97 user tasks across four simulated domains and 629 security test cases; new attacks and defenses can be plugged in.
+- C. A leaderboard of human preferences over agent traces, scored by Bradley-Terry coefficients across paired trajectory comparisons.
+- D. A reward model trained on agent trajectories with PPO-style policy-gradient feedback from frontier-lab annotators.
 
 **Q5.** Which forward/backward connection is **most accurate**?
 
-- A. D26 indirect-PI is unrelated to D10 RAG counterfactual robustness.
-- B. D10 RGB-counterfactual is the controlled-lab precursor to D26: the same primitive (perturb retrieved content, measure model behavior) generalizes from benign warned edits with no action consequence to adversarial attacker-controlled tool outputs with no warning and a tool-action consequence. A model that fails RGB-counterfactual is unlikely to pass AgentDojo.
-- C. AgentDojo is a strict subset of HarmBench.
-- D. WebArena replaces GAIA because GAIA is unsafe to run.
+- A. D26 indirect-PI is unrelated to D10 RAG counterfactual robustness, since RAG operates over retrieved passages and IPI over tool outputs in disjoint threat surfaces.
+- B. D10 RGB-counterfactual is the controlled-lab precursor: the same primitive (perturb retrieved content) generalizes from warned benign edits to adversarial tool outputs with a tool-action consequence.
+- C. AgentDojo is a strict subset of HarmBench, since both benchmarks score targeted refusal against adversarial prompts authored by red-teamers.
+- D. WebArena replaces GAIA because GAIA's open-web environment makes the benchmark unsafe to run on production browsers without a sandbox layer.
 
 **Q6.** A 2026 system card reports "GPT-X scores 52% on WebArena." Under D26's framing, the most defensible read is:
 

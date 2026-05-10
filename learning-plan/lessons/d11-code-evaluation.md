@@ -225,45 +225,45 @@ The pattern from D7 — *saturated predecessor, contamination-resistant successo
 
 **Q1.** A model is sampled $n = 200$ times on a given HumanEval problem and $c = 40$ samples pass all unit tests. What is the unbiased estimate of pass@1 for this problem?
 
-- A. $0.20$
-- B. $1 - (160/200)^1 = 0.20$
-- C. $1 - \binom{160}{1}/\binom{200}{1} = 0.20$
-- D. All of the above are correct and identical at $k = 1$.
+- A. $c/n = 40/200 = 0.20$
+- B. $1 - (1 - c/n)^k = 1 - (160/200)^1 = 0.20$
+- C. $1 - \binom{n-c}{k}/\binom{n}{k} = 1 - \binom{160}{1}/\binom{200}{1} = 0.20$
+- D. All of the above; at $k = 1$ they coincide.
 
 **Q2.** Why is the plug-in estimator $1 - (1 - c/n)^k$ biased for pass@k when $k > 1$?
 
-- A. It underestimates pass@k because the function is convex in $p$.
-- B. It overestimates pass@k because the function $f(p) = 1 - (1-p)^k$ is concave in $p$, and $\hat{p} = c/n$ is plugged into a non-linear function (Jensen's inequality).
-- C. It is only biased when $n < k$.
-- D. It is unbiased; Chen et al. 2021 use it directly.
+- A. It underestimates pass@k because $f(p) = 1 - (1-p)^k$ is convex in $p$, so the plug-in deflates by Jensen's inequality.
+- B. It overestimates pass@k because $f(p) = 1 - (1-p)^k$ is concave (Jensen's inequality).
+- C. It is only biased when $n < k$, since the hypergeometric estimator is undefined for $n < k$.
+- D. It is unbiased; Chen et al. 2021 use it as the canonical estimator in the human-eval reference repo.
 
 **Q3.** A practitioner reports "Model X achieves pass@100 = 0.85 on HumanEval." Which piece of information is **most necessary** to interpret this number, beyond what's stated?
 
-- A. The Python version used in the sandbox.
-- B. The sampling temperature (pass@1 and pass@100 are typically reported at different temperatures; the number is under-specified without it).
-- C. The model's parameter count.
-- D. Whether `numpy` is installed in the sandbox.
+- A. The exact Python version used in the sandbox, since CPython 3.11's bytecode changes can affect timing-sensitive unit tests.
+- B. The sampling temperature used during decoding.
+- C. The model's parameter count, since pass@k variance scales with parameter count for a fixed sampling budget.
+- D. Whether `numpy` and `scipy` are installed in the sandbox, since several HumanEval reference solutions import them implicitly.
 
 **Q4.** A model is sampled $n = 5$ times on a problem. Three samples are correct ($c = 3$). Using the unbiased estimator, what is pass@2 for this problem?
 
 - A. $1 - \binom{2}{2}/\binom{5}{2} = 1 - 1/10 = 0.9$
-- B. $1 - (1 - 3/5)^2 = 1 - 0.16 = 0.84$
-- C. $3/5 = 0.6$
-- D. $1 - \binom{3}{2}/\binom{5}{2} = 1 - 3/10 = 0.7$
+- B. $1 - (1 - 3/5)^2 = 1 - 0.16 = 0.84$ from the standard plug-in formula
+- C. $3/5 = 0.6$, the empirical fraction of correct samples
+- D. $1 - \binom{3}{2}/\binom{5}{2} = 1 - 3/10 = 0.7$ from the hypergeometric estimator
 
 **Q5.** What is the *structural* difference between HumanEval and LiveCodeBench that makes LiveCodeBench contamination-resistant?
 
-- A. LiveCodeBench uses a stronger LLM judge to score outputs.
-- B. LiveCodeBench tags each problem with its source-platform release date, so a researcher can filter to problems released *after* a model's training cutoff and guarantee per-item that the model did not see them in training.
-- C. LiveCodeBench problems are written in Rust, which is harder to memorize than Python.
-- D. LiveCodeBench uses a private held-out test set that no model can access.
+- A. LiveCodeBench replaces execution-based scoring with a stronger LLM-as-judge model that grades outputs against a contest-style rubric.
+- B. Problems carry release-date tags; filtering to post-cutoff items guarantees per-item contamination-freedom.
+- C. LiveCodeBench problems are authored in Rust and OCaml rather than Python, which prevents string-level memorization from pretraining crawls.
+- D. LiveCodeBench keeps a private held-out test set behind an API gate that no submission ever sees, similar to ARC-AGI's hidden split.
 
 **Q6.** Liu et al. (2023, EvalPlus / HumanEval+) and Riddell et al. (2024) are *both* critiques of HumanEval, but they target different legs of the (dataset, scoring rule, reporting convention) triple. Which best describes the distinction?
 
-- A. They are the same critique restated.
-- B. EvalPlus targets the scoring rule (HumanEval's ~7.7 tests are too few — wrong solutions pass the tests), while Riddell et al. target the dataset (HumanEval items overlap with pretraining corpora). Both critiques can apply to the same model report independently.
-- C. EvalPlus targets the dataset and Riddell et al. target the scoring rule.
-- D. EvalPlus is about contamination and Riddell et al. is about test coverage.
+- A. They are the same critique restated using slightly different vocabulary across the two papers.
+- B. EvalPlus targets the scoring rule and Riddell et al. target the dataset; the critiques are orthogonal.
+- C. EvalPlus targets the dataset (overlap with pretraining corpora) while Riddell et al. target the scoring rule (test-suite weakness).
+- D. EvalPlus measures pretraining contamination overlap, and Riddell et al. propose stronger test suites to address weak-oracle problems.
 
 <details>
 <summary>Answers</summary>

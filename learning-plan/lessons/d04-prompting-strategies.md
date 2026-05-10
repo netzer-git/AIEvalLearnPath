@@ -206,17 +206,17 @@ Today established that the prompting strategy is part of the eval pipeline. **D9
 
 **Q1.** A paper reports "BBH = 71.2" for a model checkpoint. Which piece of information is **most likely** missing from that headline that you should reach for first?
 
-- A. Which GPU was used.
-- B. Which of `bbh_zeroshot` / `bbh_fewshot` / `bbh_cot_zeroshot` / `bbh_cot_fewshot` was used.
-- C. The model's parameter count.
-- D. The temperature used at decoding time.
+- A. Which GPU type was used during the evaluation run.
+- B. Which of the four `bbh_*` prompting variants was used.
+- C. The model's parameter count and pre-training corpus size.
+- D. The decoding temperature and top-$p$ used to sample answers.
 
 **Q2.** BIG-Bench Hard's 23 tasks were selected because:
 
-- A. They are the easiest tasks in BIG-Bench.
-- B. They are the tasks where prior language models, evaluated with answer-only few-shot prompting, failed to exceed the average human-rater baseline.
-- C. They cover exactly 23 disjoint domains of reasoning.
-- D. They are the only BIG-Bench tasks with multiple-choice format.
+- A. They are the easiest BIG-Bench tasks, chosen so that small open-source models could solve them at near-ceiling without exemplars.
+- B. They are the BIG-Bench tasks where prior LMs under answer-only few-shot failed to beat the average human-rater baseline.
+- C. They cover exactly 23 mutually disjoint reasoning domains, one task per domain, balanced between arithmetic and language.
+- D. They are the BIG-Bench tasks with multiple-choice format and a fixed four-option layout, selected for harness compatibility.
 
 **Q3.** On BBH, switching from answer-only few-shot to CoT few-shot moves Codex (`code-davinci-002`) from 56.6% to 73.9% averaged across tasks. Which of these is **not** a contributing reason CoT helps on this benchmark?
 
@@ -227,24 +227,24 @@ Today established that the prompting strategy is part of the eval pipeline. **D9
 
 **Q4.** A safety practitioner reads a model's chain-of-thought and concludes it is reasoning honestly to a refusal. Which assumption are they implicitly making, and which Day 4 reference flags it as not always justified?
 
-- A. They are assuming the verbalized reasoning is faithful to the model's actual decision; Turpin et al. 2023 documents that this is often false.
-- B. They are assuming CoT lowers latency; this is not safety-relevant.
-- C. They are assuming the model is instruction-tuned; CoT does not depend on this.
-- D. They are assuming the harness uses log-likelihood scoring; CoT requires generative scoring.
+- A. They are assuming CoT is faithful to the model's actual decision; Turpin et al. 2023 shows this is often false.
+- B. They are assuming CoT reduces decoding latency, which Wei et al. 2022 report is offset by the longer reasoning trace.
+- C. They are assuming the model must be instruction-tuned to refuse, which contradicts Suzgun et al. 2022's results on base Codex.
+- D. They are assuming the harness uses log-likelihood scoring on the full trace; in practice CoT requires generative decoding throughout.
 
 **Q5.** Which of the following correctly describes the relationship between zero-shot CoT (`Let's think step by step.`) and few-shot CoT?
 
-- A. They are the same technique under different names.
-- B. Few-shot CoT prepends $k$ worked-reasoning exemplars before the test item; zero-shot CoT prepends no exemplars but appends a trigger phrase to elicit reasoning. Few-shot CoT is generally stronger but requires hand-written exemplars.
-- C. Zero-shot CoT is strictly stronger because it does not depend on hand-written exemplars.
-- D. Few-shot CoT only works for instruction-tuned models; zero-shot CoT works on base models.
+- A. They are equivalent prompting techniques given different names by Wei et al. 2022 and Kojima et al. 2022 in the same NeurIPS proceedings.
+- B. Few-shot CoT prepends $k$ worked-reasoning exemplars; zero-shot CoT instead appends a trigger phrase, and is usually weaker.
+- C. Zero-shot CoT is strictly stronger on BBH because the trigger phrase generalizes across tasks while hand-written exemplars overfit.
+- D. Few-shot CoT only works on instruction-tuned chat models; zero-shot CoT is the only variant compatible with base pre-trained checkpoints.
 
 **Q6.** On BBH, you observe that on the 23-task average CoT beats answer-only by +17 points, but on a specific sub-task (e.g., `causal_judgement`) the two prompting strategies are within noise. What is the right takeaway?
 
-- A. The sub-task's evaluation is broken.
-- B. The aggregate number conceals the per-task pattern; CoT helps on multi-step-reasoning tasks and is roughly neutral on single-step recognition tasks. Reporting only the aggregate throws away that signal.
-- C. The model is overfitting to CoT exemplars on the sub-task.
-- D. The sub-task should be removed from BBH.
+- A. The sub-task's evaluation pipeline is broken: its scoring rule is silently rejecting CoT outputs that don't match the regex format.
+- B. The aggregate hides the per-task pattern: CoT helps on multi-step-reasoning tasks and is neutral on single-step recognition tasks.
+- C. The model is overfitting to the CoT exemplars on the sub-task, memorizing their reasoning style without generalizing to the test items.
+- D. The sub-task should be removed from BBH because it dilutes the headline CoT-vs-direct gap reported by Suzgun et al. 2022.
 
 <details>
 <summary>Answers</summary>

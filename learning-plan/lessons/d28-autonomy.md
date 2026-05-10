@@ -309,45 +309,45 @@ The frontier moves. The reading habits don't. That's the curriculum.
 
 **Q1.** METR (Model Evaluation and Threat Research) is best described as:
 
-- A. A division of OpenAI's Preparedness team.
-- B. A standalone 501(c)(3) non-profit, formerly *ARC Evals* (a project of the Alignment Research Center), spun out and renamed in December 2023; runs pre-deployment autonomy evaluations for frontier labs and contributes to system cards.
-- C. A UK government agency.
-- D. The author of the lm-evaluation-harness.
+- A. The internal red-team-and-Preparedness division of OpenAI that authored the Preparedness Framework and runs CBRN evaluations under that policy.
+- B. A standalone 501(c)(3) non-profit, formerly ARC Evals, spun out and renamed in December 2023; runs pre-deployment autonomy evaluations for frontier labs.
+- C. A UK government agency operating under DSIT that owns the Inspect harness and conducts statutory pre-deployment third-party evaluation of frontier models.
+- D. The EleutherAI-affiliated engineering team that maintains the lm-evaluation-harness and the Open LLM Leaderboard reproducibility infrastructure.
 
 **Q2.** Which three published artefacts together constitute the METR autonomy suite as framed in this lesson?
 
-- A. ARC-AGI-1, ARC-AGI-2, and Humanity's Last Exam.
-- B. RE-Bench (Wijk et al. 2024, ~7 ML-R&D environments with expert baselines), HCAST (Rein et al. 2025, 189 software tasks calibrated against ~563 human baselines), and the Kwa et al. 2025 horizon-length result that fits the doubling-time curve across the suite.
-- C. WMDP-Bio, WMDP-Chem, WMDP-Cyber.
-- D. WebArena, OSWorld, AgentDojo.
+- A. ARC-AGI-1 (Chollet 2019), ARC-AGI-2 (Chollet et al. 2025), and the Humanity's Last Exam multi-discipline closed-book benchmark released in early 2025.
+- B. RE-Bench (Wijk et al. 2024), HCAST (Rein et al. 2025, 189 software tasks calibrated to ~563 human baselines), and Kwa et al. 2025's horizon-length result.
+- C. WMDP-Bio, WMDP-Chem, and WMDP-Cyber from Li et al. 2024 — the three subset MC benchmarks for hazardous proxy knowledge that anchor D21.
+- D. WebArena (Zhou et al. 2023), OSWorld (Xie et al. 2024), and AgentDojo (Debenedetti et al. 2024) — the three agent benchmarks that anchor D26 and D27.
 
 **Q3.** Kwa et al. 2025's headline finding — that the agent's *50%-task-completion time horizon* doubles approximately every 7 months over the past 6 years — is computed by:
 
-- A. Counting the number of MMLU-Pro questions the model answers correctly per second.
-- B. Fitting a logistic regression of agent success against log-task-length on a calibrated task suite (HCAST + RE-Bench + SWAA), reading off the human-baseline length at which agent success probability equals 0.5, and plotting that length against model-release date.
-- C. Taking the median completion time across SWE-Bench Verified.
-- D. Counting tool calls per minute.
+- A. Counting the number of MMLU-Pro questions the model answers correctly per minute of wall-clock time, then normalizing against the across-subject expert-human throughput baseline.
+- B. Fitting a logistic regression of agent success against log-task-length on a calibrated suite (HCAST + RE-Bench + SWAA), reading off the human-baseline length at which $P(\text{success})=0.5$ per release.
+- C. Taking the median wall-clock completion time for solved instances on SWE-Bench Verified and projecting that median forward against the model-release date in months.
+- D. Counting tool calls per minute in an Inspect sandbox, weighted by per-call latency, and treating that throughput as a proxy measurement for autonomous task-completion horizon.
 
 **Q4.** Day 28's Goodhart mechanism is *autonomy-measurement-as-selection-pressure*. Which is the **best** statement of how it differs from the four prior foregrounded mechanisms?
 
-- A. It is the same as D17 (situational conditioning) but applied to agents instead of chat models.
-- B. The four prior mechanisms (D6 data leakage, D15 incentive structure, D17 situational conditioning, D22 measurement-instrument biases) each have at least partial *technical* defenses; D28's mechanism does not — any benchmark for autonomous capability is itself a natural training signal for the property it tracks, so the responses are organizational (NDA pre-deployment evaluation, third-party evaluator independence, held-out task families, trend-rate rather than threshold monitoring) rather than methodological.
-- C. D28's mechanism is about contamination of the test set, the same as D6.
-- D. D28's mechanism only applies to multimodal models.
+- A. It is the same as D17 (situational conditioning), only applied to long-horizon agentic loops rather than single-turn chat, with SAD's Stages-Oversight remaining the recommended deployment-realism instrument.
+- B. The four prior mechanisms have partial technical defenses; D28's does not — any autonomy benchmark is itself a training signal for the property it tracks. Responses are organizational (NDA evaluation, held-out tasks, trend monitoring), not methodological.
+- C. It is a generalisation of D6 (data leakage) to multi-task suites, where the contamination unit is now a whole task family rather than a single MC item, and the standard fix is post-cutoff task resampling on a release-aligned schedule.
+- D. It applies only to multimodal vision-language models, because desktop GUI tool use is what enables agentic loops; pure text-only models are out-of-scope for METR's autonomy suite by construction.
 
 **Q5.** *(Synthesis question.)* A 2026 model card reports the following: **GPQA Diamond 94%**, **MMLU-Pro 84%**, **WMDP-Bio post-mitigation 24%**, **HarmBench attack-success 8%**, **RULER effective context 96K (claimed 1M)**, **METR $L_{50}$ ≈ 90 minutes**, **Stages-Oversight 81%**. Which **single** lesson's framing most directly explains why the 24% post-mitigation WMDP-Bio score, taken alone, is *insufficient* evidence that dangerous bio capability has been removed?
 
-- A. D7 (saturation) — because GPQA is near ceiling.
-- B. D14 (RULER) — because effective context lags claimed context.
-- C. D21 (WMDP / RMU). The Goodhart-on-safety-eval pattern says that training against WMDP can drive the surface-form score below random without removing the underlying capability. A serious safety case pairs the post-mitigation score with re-elicitation probes (free-form, multilingual, agentic) and an adversarial fine-tuning attack — and the high SA score (Stages-Oversight 81%) makes the strategic-refusal hypothesis from D17 additionally plausible.
-- D. D23 (Chatbot Arena) — because human preference is the gold standard.
+- A. D7 (saturation) — because GPQA Diamond is at 94%, near ceiling, so the absolute score is no longer informative about marginal capability differences between current frontier models within the same generation, and headroom restoration requires a successor benchmark.
+- B. D14 (RULER) — because effective context (96K) lags claimed context (1M) by an order of magnitude, indicating long-context retrieval failures that scale superlinearly with input length and tool-output volume, and the gap typically widens further after fine-tuning.
+- C. D21 (WMDP / RMU). Training against WMDP can drive the surface-form score below random without removing the underlying capability; a serious case pairs the score with re-elicitation probes plus adversarial fine-tuning, and the high Stages-Oversight number raises the D17 strategic-refusal hypothesis.
+- D. D23 (Chatbot Arena) — because pairwise human preference at scale is the gold-standard signal, and any safety claim must be cross-referenced against the latest leaderboard ranking before being treated as deployment-relevant for any production rollout.
 
 **Q6.** *(Synthesis question.)* The calibration thread runs through which four lessons, and at which lesson does it close?
 
-- A. D1 → D7 → D14 → D21; closes at D21.
-- B. D2 (HellaSwag, ECE / reliability diagrams) → D15 (TruthfulQA, selective prediction / abstention) → D20 (sycophancy, position-holding-under-challenge as a confidence-calibration question) → D24 (RewardBench, reward-model confidence and how it composes with downstream sampling); the thread *closes* at D24, and D28 references it but does not extend it.
-- C. D6 → D15 → D17 → D22; closes at D28.
-- D. D11 → D12 → D26 → D27; closes at D27.
+- A. D1 (MMLU letter-argmax) → D7 (GPQA Diamond) → D14 (RULER effective context) → D21 (WMDP-Bio post-mitigation); closes at D21, where the safety-inversion gradient first takes hold.
+- B. D2 (HellaSwag, ECE / reliability diagrams) → D15 (TruthfulQA, selective prediction) → D20 (sycophancy as a calibration question) → D24 (RewardBench); closes at D24, with D28 referencing but not extending it.
+- C. D6 (data leakage) → D15 (TruthfulQA) → D17 (SAD Stages-Oversight) → D22 (WildBench judge biases); closes at D28 as the curriculum's final foregrounded Goodhart mechanism.
+- D. D11 (HumanEval pass@k) → D12 (SWE-Bench resolved-rate) → D26 (WebArena task-success) → D27 (OSWorld step-success); closes at D27, where agent capability tops out.
 
 <details>
 <summary>Answers</summary>

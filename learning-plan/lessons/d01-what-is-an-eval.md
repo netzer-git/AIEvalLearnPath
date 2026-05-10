@@ -200,10 +200,10 @@ The rest of Week 1 unpacks the four hidden properties — calibration, scoring h
 
 **Q1.** What does "an evaluation is a pipeline" mean?
 
-- A. The evaluation runs in a CI pipeline.
-- B. The evaluation is the (dataset, scoring rule, reporting convention) triple plus a specific model run.
-- C. The evaluation is a sequence of prompts.
-- D. The evaluation is a leaderboard ranking.
+- A. A continuous-integration job that runs the benchmark whenever a new model checkpoint is pushed to the registry.
+- B. The (dataset, scoring rule, reporting convention) triple plus a specific model run.
+- C. A sequence of prompts fed to the model in fixed order, with the final response taken as the headline score.
+- D. The model's averaged ranking position across all public leaderboards that report on that benchmark.
 
 **Q2.** Two papers report MMLU scores for the *same model checkpoint*: 80.4 and 78.1. Which of the following is **not** a typical source of the difference?
 
@@ -214,31 +214,31 @@ The rest of Week 1 unpacks the four hidden properties — calibration, scoring h
 
 **Q3.** Why is ranking more robust than scoring under prompt-template changes?
 
-- A. Ranking uses log-likelihoods, scoring uses generative output.
-- B. A change that shifts every model's score by a similar amount preserves the ordering.
-- C. Ranking averages across templates.
-- D. Scoring is computed only on the test set.
+- A. Ranking is derived from log-likelihoods while scoring uses raw generative output, which is template-sensitive.
+- B. A uniform shift in every model's score preserves the ordering.
+- C. Ranking is computed by averaging accuracy across many prompt templates per model before sorting.
+- D. Scoring is computed on the held-out test split rather than the few-shot dev set used to format prompts.
 
 **Q4.** Which is a **weakness** of multiple-choice formats like MMLU's?
 
-- A. They are too expensive to run.
-- B. They require an LLM-judge for scoring.
-- C. They can be solved by surface cues without genuine knowledge.
-- D. They cannot be batched.
+- A. They are far more expensive to run than free-form prompts because of the per-option likelihood passes.
+- B. They require an LLM-judge in the loop because letter extraction from continuations is unreliable.
+- C. Surface cues can substitute for genuine knowledge.
+- D. They cannot be batched across subjects without breaking the macro-average aggregation rule.
 
 **Q5.** Goodhart's Law applied to MMLU says that:
 
-- A. MMLU's accuracy is bounded above by 1.
-- B. Once MMLU's score becomes a training target, it ceases to measure what it claims to measure.
-- C. MMLU saturates at 100%.
-- D. MMLU is contaminated by definition.
+- A. MMLU's accuracy is mathematically bounded above by 1, since accuracy is a probability over a finite item set.
+- B. Once MMLU is optimized as a target, it stops being a good measure.
+- C. MMLU's headline score saturates at 100% once frontier models reach the test-set ceiling.
+- D. MMLU is contaminated by definition because its items appear on publicly crawled web pages.
 
 **Q6.** You are evaluating a model on MMLU using log-likelihood scoring. You change the prompt template from `"A:"` to `"The correct answer is:"`. The model's weights are unchanged. Why might the score change?
 
-- A. The new prompt changes the conditional distribution over the next token, potentially shifting the argmax.
-- B. Log-likelihood scoring is only compatible with `"A:"` prompts.
-- C. It triggers a different quantization layer in the model.
-- D. MMLU only supports generative scoring, not log-likelihood.
+- A. The conditioning context changes, which can shift the argmax over option log-likelihoods.
+- B. Log-likelihood scoring is only compatible with the literal `A:` prompt format used in the original MMLU paper.
+- C. Switching the prompt suffix triggers a different quantization layer in the model's serving stack.
+- D. MMLU only supports generative letter-extraction scoring; log-likelihood is reserved for free-form benchmarks.
 
 <details>
 <summary>Answers</summary>

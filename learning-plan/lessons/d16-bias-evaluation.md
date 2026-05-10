@@ -207,10 +207,10 @@ As of early 2026, frontier instruction-tuned models score very well on BBQ accur
 
 **Q1.** What is the load-bearing design move that distinguishes BBQ from earlier bias benchmarks like StereoSet and CrowS-Pairs?
 
-- A. BBQ uses pseudo-likelihood scoring on masked language models.
-- B. BBQ tests every item in both an ambiguous context (where "unknown" is correct) and a disambiguated context (where evidence fixes the answer), isolating where the bias enters the decision.
-- C. BBQ uses LLM-as-judge to score open-ended generations.
-- D. BBQ replaces the original benchmarks; StereoSet and CrowS-Pairs are deprecated.
+- A. BBQ uses pseudo-likelihood scoring on masked language models, comparing stereotype-aligned versus counter-stereotype completions per token.
+- B. BBQ pairs each template with both an ambiguous and a disambiguated context, isolating where bias enters.
+- C. BBQ uses an LLM-as-judge pipeline to grade open-ended generations against a hand-curated rubric of stereotype phrasings.
+- D. BBQ replaces StereoSet and CrowS-Pairs by reproducing every item from both under a unified pseudo-likelihood rubric.
 
 **Q2.** A model on a BBQ category produces, in disambiguated contexts, 1,200 stereotype-aligned errors and 200 counter-stereotype errors (and the rest of the items are answered correctly or with "unknown"). What is its $s_{\text{DIS}}$?
 
@@ -221,31 +221,31 @@ As of early 2026, frontier instruction-tuned models score very well on BBQ accur
 
 **Q3.** Why does $s_{\text{AMB}}$ scale the stereotype-rate by $(1 - \mathrm{Accuracy}_{\text{AMB}})$?
 
-- A. To convert the score from a probability into a percentage.
-- B. To penalize models that are slow at the task.
-- C. So that a model that always answers "unknown" on ambiguous items scores 0 regardless of which way its rare commitments lean — bias is only counted in proportion to how often the model commits.
-- D. To make the score symmetric around accuracy = 0.5.
+- A. To convert the raw $s_{\text{DIS,AMB}}$ score from a 0–1 probability into the 0–100 percentage convention used in the BBQ paper's tables.
+- B. To penalize models that are slow at the task by weighting bias inversely with their throughput on ambiguous items.
+- C. So a model that always answers "unknown" scores 0 — bias counts only in proportion to how often the model commits.
+- D. To enforce symmetry of $s_{\text{AMB}}$ around the accuracy = 0.5 midpoint so random-guessing baselines map cleanly to zero.
 
 **Q4.** A model has $s_{\text{AMB}} \gg 0$ on the Religion category but $s_{\text{DIS}} \approx 0$ on the same category. What is the most accurate diagnosis?
 
-- A. The model is unbiased; the two scores cancel.
-- B. The model integrates explicit context cleanly when given, but fills information gaps with stereotype-aligned commitments — the bias is at the priors layer, not the evidence-integration layer.
-- C. The model is biased only when the context is disambiguated.
-- D. The category is too small to measure reliably.
+- A. The model is unbiased on this category overall; the two scores cancel out by construction whenever they take opposite signs.
+- B. The model integrates explicit context cleanly but fills information gaps with stereotypes — bias is at the priors layer, not evidence-integration.
+- C. The model is biased only in disambiguated contexts, where its evidence-integration layer is overpowered by absorbed stereotype priors.
+- D. The Religion category is too small at the per-template level to support reliable estimation of either bias score on this run.
 
 **Q5.** A model card reports a $0.5$-point reduction in $s_{\text{DIS}}$ on the Disability category at $n = 600$ ambiguous + disambiguated items, and claims this as a "bias improvement." Drawing on D5, the right reflex is:
 
-- A. Believe the claim; bias scores are direct measurements.
-- B. Compute the rough sampling-noise floor for $\hat{p}$ at $n \approx 600$; the per-category 95% CI is on the order of several points, so a 0.5-point delta is within the noise envelope and the claim is not statistically supported on this $n$ alone.
-- C. The claim is significant only if the model was retrained.
-- D. BBQ scores are immune to sampling noise because they are normalized.
+- A. Believe the claim; per-category bias scores are direct point measurements that do not require sampling-error intervals.
+- B. Compute the sampling-noise floor at $n \approx 600$; the per-category 95% CI is several points wide, so a 0.5-point delta sits inside the noise envelope.
+- C. The 0.5-point claim is statistically significant only if the model was retrained from scratch rather than fine-tuned on the bias-mitigation set.
+- D. BBQ scores are immune to sampling noise because the $2p - 1$ rescaling normalizes out the binomial variance in $\hat{p}$ at the item level.
 
 **Q6.** Why is BBQ's score described as "necessary but not sufficient" evidence of low bias for a deployed model?
 
-- A. Because BBQ only measures gender bias.
-- B. Because BBQ's templates are public, a model can pattern-match BBQ contexts while preserving the underlying stereotype on OOD prompts; situational-awareness considerations (D17) further mean a model can detect bias-eval contexts and behave differently in them than in deployment.
-- C. Because BBQ requires an LLM judge that introduces its own bias.
-- D. Because BBQ accuracy saturates above 90%.
+- A. Because BBQ only covers gender bias and is silent on race, religion, disability, and socio-economic dimensions of stereotype.
+- B. BBQ's templates are public, so a model can pass them while preserving the stereotype OOD; D17 adds the risk of the model conditioning on "this is an evaluation."
+- C. Because BBQ requires an LLM-judge backend that introduces its own demographic-distribution bias into every reported $s_{\text{AMB}}$ and $s_{\text{DIS}}$ score.
+- D. Because BBQ accuracy on the ambiguous split saturates above 90% across all frontier instruction-tuned models, leaving no headroom to discriminate.
 
 <details>
 <summary>Answers</summary>

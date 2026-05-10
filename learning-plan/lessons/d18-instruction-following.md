@@ -204,45 +204,45 @@ The trade-off has been observed across DeepSeek-R1 distillations, GPT-OSS reason
 
 **Q1.** A prompt contains 4 verifiable instructions. The model satisfies each one *independently* with probability 0.8. Assuming independence, what are the model's expected instruction-level and prompt-level accuracies on this prompt?
 
-- A. Both 0.8.
+- A. Both 0.8, since instruction-level and prompt-level reduce to the same per-check average under independence.
 - B. Instruction-level 0.8; prompt-level $0.8^4 \approx 0.41$.
-- C. Instruction-level $0.8^4 \approx 0.41$; prompt-level 0.8.
-- D. Both $0.8 \times 4 = 3.2$.
+- C. Instruction-level $0.8^4 \approx 0.41$; prompt-level 0.8, since prompt-level averages whereas instruction-level conjoins.
+- D. Both $0.8 \times 4 = 3.2$, since IFEval sums per-instruction success rates across the prompt before normalizing.
 
 **Q2.** What is the difference between IFEval's *strict* and *loose* accuracy?
 
-- A. Strict uses 0-shot, loose uses 5-shot.
-- B. Strict checks the raw response; loose checks the response under multiple light transformations (strip markdown emphasis, drop first line, drop last line) and passes if any transformation satisfies the instruction.
-- C. Strict requires exact match; loose uses BLEU.
-- D. Strict scores prompt-level only; loose scores instruction-level only.
+- A. Strict uses 0-shot prompting; loose uses 5-shot exemplars drawn from the IFEval validation split.
+- B. Strict applies the check to the raw response; loose applies it to several lightly-transformed versions and passes if any one satisfies it.
+- C. Strict requires an exact-match against a reference response; loose accepts any response with BLEU above 0.5 against that reference.
+- D. Strict aggregates only the prompt-level metric across the 9 categories; loose aggregates only the instruction-level metric.
 
 **Q3.** Why is IFEval a structurally cleaner benchmark than AlpacaEval or MT-Bench for the constraints it covers?
 
-- A. IFEval has more prompts.
-- B. IFEval scores with deterministic Python check functions, so it avoids the position, verbosity, length, and self-preference biases that judge-based evaluation introduces.
-- C. IFEval is multilingual and the others are English-only.
-- D. IFEval uses log-likelihood scoring and the others use generative scoring.
+- A. IFEval has roughly 5× more prompts than AlpacaEval and MT-Bench combined, which raises its statistical power.
+- B. IFEval scores with deterministic Python checks, sidestepping the judge biases (position, verbosity, self-preference) of LLM-as-judge evaluation.
+- C. IFEval is fully multilingual across 25 languages whereas AlpacaEval and MT-Bench cover only English-language prompts.
+- D. IFEval uses log-likelihood scoring on closed-form options, whereas AlpacaEval and MT-Bench require open-ended generative scoring.
 
 **Q4.** Which is **not** a category in IFEval's 9-category taxonomy of verifiable instructions?
 
-- A. Length Constraints (e.g., "≥ 400 words").
-- B. Detectable Format (e.g., "respond in JSON").
+- A. Length Constraints (e.g., "response must be at least 400 words").
+- B. Detectable Format (e.g., "respond strictly in valid JSON").
 - C. Factual Accuracy (e.g., "all stated dates are correct").
-- D. Change Cases (e.g., "all lowercase").
+- D. Change Cases (e.g., "response in all lowercase letters").
 
 **Q5.** A vendor reports IFEval prompt-strict = 0.85 for a new model that was post-trained with RL on rule-based rewards. The same vendor's previous model (without IFEval-targeted RL) scored 0.55. What is the right reading?
 
-- A. The new model is unambiguously better at instruction-following; the score gain is the capability gain.
-- B. The score gain is real on the IFEval distribution, but a fraction of it likely reflects optimization against IFEval's specific check functions and may not transfer to held-out constraints. A contamination-resistant successor like IFBench would be the natural cross-check.
-- C. The gain is meaningless because IFEval has been retired.
-- D. The gain proves the new model is unsafe.
+- A. The new model is unambiguously better at instruction-following, since rule-based rewards are a direct measurement of the underlying capability and not a proxy.
+- B. The gain is real on this distribution but partly reflects optimization against the public check functions; cross-check on IFBench before reading it as capability.
+- C. The gain is meaningless because IFEval was retired from the Open LLM Leaderboard v2 in March 2025 and is no longer a supported instruction-following benchmark.
+- D. The gain proves the new model is unsafe, since rule-based reward shaping is associated with deceptive alignment in the recent post-training literature.
 
 **Q6.** A 2025 reasoning model (extended-CoT post-training) scores **+8 points on AIME** and **−5 points on IFEval prompt-strict** versus its non-reasoning sibling. What does this tell a safety-leaning practitioner?
 
-- A. Nothing — the two benchmarks are unrelated.
-- B. The reasoning training improved math at the cost of explicit-constraint adherence; instruction-following has measurably regressed, and since refusal is itself an instruction the regression is safety-relevant — D25 returns to this trade-off.
-- C. The IFEval drop must be a measurement artifact since reasoning models are more capable.
-- D. The model should be retrained from scratch.
+- A. Nothing — AIME and IFEval probe disjoint capabilities, so no inference about safety can be drawn from gains and losses across the two.
+- B. Reasoning training traded explicit-constraint adherence for math; since refusal is itself an instruction, the IFEval regression is safety-relevant.
+- C. The IFEval drop is a measurement artifact: reasoning models tend to write longer answers that fail loose-mode line-stripping by accident.
+- D. The model should be retrained from scratch with reasoning RL turned off, since explicit-constraint adherence is the dominant safety property.
 
 <details>
 <summary>Answers</summary>
