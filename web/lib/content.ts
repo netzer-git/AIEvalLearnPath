@@ -117,6 +117,11 @@ export const SECTION_SLUG_ALIASES: Readonly<Record<string, string>> = {
     "goodhart-sub-thread",
   "the-goodhart-sub-thread-cost-axis-gaming": "goodhart-sub-thread",
   "goodhart-on-rlhf-the-canonical-case": "goodhart-sub-thread",
+  // D19 — Goodhart sub-thread H2 renamed to non-Goodhart name to match
+  // locked goodhart_role: absent on D19. Body content (attack-set
+  // leakage / contamination-on-the-safety-side) is preserved.
+  "goodhart-sub-thread-d6-reprise-applied-to-safety-evals":
+    "when-attack-set-leakage-applies-to-safety-evals",
   // Calibration-section variants → canonical "calibration-{role}"
   "light-calibration-callback-d2-d20": "calibration-callback",
   "calibration-reprise-d2-d15": "calibration-reprises",

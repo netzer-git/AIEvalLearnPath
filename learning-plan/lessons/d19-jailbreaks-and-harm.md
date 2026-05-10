@@ -6,10 +6,41 @@ week: 3
 week_theme: Alignment, safety, robustness
 anchor_benchmark: HarmBench
 harness: benchmark-native (HarmBench runner); Inspect for adjacent jailbreak evals (StrongREJECT, AgentHarm)
-reading_time_minutes: 29
+reading_time_minutes: 33
+prerequisites: [5, 18]
+key_terms:
+  - attack success rate (ASR)
+  - HarmBench attack-method matrix
+  - GCG
+  - PAIR
+  - refusal rate vs. ASR
+  - over-refusal
+  - transfer attack
+  - HarmBench-Llama-2-13B-cls
+goodhart_role: absent
+calibration_role: absent
 ---
 
 # Day 19 — Jailbreaks and harm elicitation: HarmBench and the absorption of toxicity-under-prompting
+
+## TL;DR
+
+A jailbreak is an input designed to elicit a model behaviour that safety training intended to block; jailbreak evaluation is the canonical *adversarial-robustness* surface. **HarmBench (Mazeika et al. 2024)** is the Week 3 anchor — 510 behaviours across 4 functional × 7 semantic categories, 18 attack methods at release (white-box GCG, black-box PAIR, AutoDAN-style genetic, persuasion-based PAP, and transfer baselines), scored as **attack success rate (ASR)** by a fine-tuned Llama-2-13B harm classifier. The methodological move HarmBench locks in is *standardization*: behaviour set, scorer, and aggregation are fixed so that two papers' ASRs are comparable; the variable slot is the attack method.
+
+## Learning objectives
+
+By the end of this lesson, you will be able to:
+
+1. **(L2)** Define a jailbreak as adversarial elicitation against a safety-trained model and distinguish *refusal-rate scoring* from *ASR* as two scoring philosophies for safety evals.
+2. **(L2)** Describe HarmBench's construction — 510 behaviours, 4 functional × 7 semantic categories, 18 attack methods, and the `HarmBench-Llama-2-13B-cls` automated judge — and the role each piece plays in the standardized pipeline.
+3. **(L3)** *Apply* the D5 Wilson-interval reflex to compute the 95% CI half-width on an ASR proportion at a given $p$ and $N$, and decide whether a reported ASR delta is within sampling noise.
+4. **(L4)** *Analyze* the absorption of RealToxicityPrompts (Gehman et al. 2020) into HarmBench by decomposing the differences across three axes: harm space, scorer, and threat model (passive vs. adversarial).
+5. **(L5)** *Evaluate* a vendor's claimed ASR drop after RL on HarmBench-style attacks and identify the held-out / post-cutoff / transfer red-team ASR as the more informative signal.
+6. **(L4)** *Decompose* a production safety scorecard into ASR-on-harmful + over-refusal-on-benign axes and explain why ASR alone underspecifies safety.
+
+## Prerequisites & callback
+
+D5 (statistical hygiene) and D18 (instruction-following) are load-bearing today. **From D5**, ASR is a Bernoulli proportion: the same Wilson-interval calculation that bounds an MMLU-accuracy delta bounds a HarmBench-ASR delta — sampling noise on a 200-item subset at a low base rate is several percentage points, and "ASR fell from 8% to 5%" without an interval is the same kind of headline error D5 named on the capability side. **From D18**, refusal *is* an instruction. The system-prompt rule "do not comply with harmful requests" is structurally the same shape as "answer in three bullet points" — a verifiable rule the response must satisfy — and a jailbreak is, formally, the adversarial override of that instruction. IFEval's verifiable-instruction substrate and HarmBench's refusal-rate / ASR scoring are two slices of the same constraint-satisfaction property; D19 is what happens to that substrate under adversarial pressure.
 
 ## The opening hook
 
@@ -128,15 +159,39 @@ Two pipeline drift sources (D1 reflex applies):
 
 ### Statistical hygiene (D5 reprise)
 
-ASR is a Bernoulli proportion. With $N = 510$ behaviors (one seed each) and a per-item success probability $p$, the standard 95% Wilson-interval half-width is approximately
+ASR is a Bernoulli proportion. The same Wilson half-width that D5 used for accuracy applies here.
 
-$$
-\text{CI}_{95\%} \approx 1.96 \cdot \sqrt{\frac{p(1-p)}{N}}.
-$$
-
-At $p = 0.20$ and $N = 510$: $\sqrt{0.20 \cdot 0.80 / 510} \approx 0.0177$, so the CI half-width is $\approx \pm 3.5$ percentage points. At $p = 0.50$ — the worst-case for proportion variance — and $N = 510$: $\pm 4.3$ pp. At $N = 200$ (standard-only subset) and $p = 0.20$: $\pm 5.5$ pp.
+> **Worked example.** Wilson 95% CI half-width on HarmBench ASR.
+>
+> With $N$ behaviours (one seed each) and per-item success probability $p$, the half-width is
+>
+> $$
+> \text{CI}_{95\%} \approx 1.96 \cdot \sqrt{\frac{p(1-p)}{N}}.
+> $$
+>
+> At $p = 0.20$, $N = 510$ (full text-only set): $\sqrt{0.20 \cdot 0.80 / 510} \approx 0.0177$, half-width $\approx \pm 3.5$ pp.
+> At $p = 0.50$, $N = 510$ (worst-case proportion variance): $\pm 4.3$ pp.
+> At $p = 0.20$, $N = 200$ (standard-only subset): $\pm 5.5$ pp.
+> At $p = 0.08$, $N = 200$: $\pm 3.8$ pp — the operating point that recurs in 2025–26 frontier reporting on the standard subset.
 
 The implication, the same one D5 made for accuracy: differences in reported ASR below ~5 pp on a 200-item subset are usually within sampling noise. Headlines that turn a 28% → 24% drop into a "14% relative improvement in robustness" are over-reading the noise unless the authors report multi-seed runs and a confidence interval.
+
+## ⏵ Check yourself — ASR CI on the standard subset
+
+A paper reports HarmBench standard-subset ASR of 8% on $N = 200$ behaviours (one seed each). Approximate the 95% CI half-width on this proportion, and decide what you should require before treating an apparent 8% → 5% drop in a follow-up paper as a real robustness improvement.
+
+<details>
+<summary>Show answer</summary>
+
+The Wilson half-width at $p = 0.08$ and $N = 200$:
+
+$$
+1.96 \cdot \sqrt{\frac{0.08 \cdot 0.92}{200}} \approx 1.96 \cdot \sqrt{3.68 \times 10^{-4}} \approx 1.96 \cdot 0.0192 \approx 0.0376,
+$$
+
+i.e. $\approx \pm 3.8$ percentage points. The intervals at the two reported point estimates overlap heavily, so the 3-pp drop is within sampling noise for single-seed runs at this $N$. Before reading it as a robustness improvement, require: (i) multiple attack seeds per behaviour for the stochastic methods (PAIR, AutoDAN), (ii) an explicit confidence interval, and (iii) ASR on a held-out / transfer attack set the lab couldn't have trained on. The same D5 reflex that says "differences below the CI half-width on MMLU are noise" applies to ASR by exact analogy.
+
+</details>
 
 ## How RealToxicityPrompts got absorbed
 
@@ -177,6 +232,21 @@ Two scoring philosophies sit underneath safety-leaning evals, and HarmBench pick
 
 Production safety pipelines run *both*: ASR on a harm benchmark like HarmBench plus a *helpfulness benchmark* (or an over-refusal eval like XSTest, Röttger et al. 2024) to bound the refusal-everything trivial solution. A model with low ASR and high over-refusal isn't safe — it's broken in the other direction. D18's IFEval is the instruction-following anchor that catches part of this; the pairing with D19 is the standard frontier-safety scorecard shape.
 
+## ⏵ Check yourself — over-refusal trap
+
+A frontier lab claims a new model achieves 0% ASR on HarmBench standard behaviours after a fresh round of safety RLHF. Name the two questions you must ask before reading this as "the model is safer," and identify which scoring philosophy from this lesson each question targets.
+
+<details>
+<summary>Show answer</summary>
+
+(1) **What is the over-refusal rate?** A model that refuses every prompt achieves 0% ASR by construction; the published number is consistent with both "genuinely robust" and "refuses everything." The XSTest / helpfulness-on-benign-prompts axis bounds the trivial solution. This question is the dual of the *refusal-rate* philosophy: refusal-rate scoring's failure mode is over-refusal, and any safety scorecard reporting only ASR has to import an over-refusal axis from outside.
+
+(2) **What is the ASR on a held-out / transfer attack set the lab couldn't have trained on?** A 0% number on the static HarmBench attack distribution after explicit training against that distribution is consistent with both "genuinely robust" and "overfit to the public attack set." This question targets the *ASR* philosophy from the inside: ASR's failure mode under attack-set leakage is the published-vs-live-red-team gap, and the gap is what the frontier-safety team actually reads.
+
+A defensible safety scorecard reports both axes; ASR alone is structurally underdetermined.
+
+</details>
+
 ## The harness — benchmark-native + Inspect-adjacent
 
 HarmBench ships its own runner at `https://github.com/centerforaisafety/HarmBench`. The repo distributes the 510 behaviors, the Llama-2-13B classifier weights (via Hugging Face: `cais/HarmBench-Llama-2-13b-cls`), reference implementations of the 18 attack methods, and the aggregation pipeline. This is the same pattern as D11 (HumanEval), D12 (SWE-Bench), D13 (MMMU), D14 (RULER): when the benchmark's evaluation logic is non-trivial, the canonical implementation lives with the benchmark rather than in a general-purpose harness.
@@ -193,7 +263,7 @@ The HarmBench paper's headline finding (early-2024 frontier models): no model is
 
 As of mid-2026, frontier proprietary models have published lower ASRs — vendors RL-tune on HarmBench-shaped attack distributions, which deflates measured ASR. Specific 2026 numbers drift weekly and depend heavily on attack subset and seeds. **Verify against vendor system cards or independent third-party red-team reports before quoting a specific 2026 ASR.** What's stable is the *gap* — not the magnitude — between (a) ASR on the static HarmBench attack set and (b) ASR under *novel* attacks generated post-train. The latter is what frontier-safety teams worry about; the former is what gets published.
 
-## Goodhart sub-thread (D6 reprise applied to safety evals)
+## When attack-set leakage applies to safety evals
 
 Goodhart isn't foregrounded on D19 the way it is on D6 / D15 / D17 / D22 / D28, but the sub-thread runs through the lesson: the moment HarmBench's attack distribution becomes a training target, the measured ASR on that distribution stops being a clean robustness signal. This is D6's contamination point applied to safety evals rather than capability evals — and D6's quiz already names the failure mode (the "ASR dropped from 30% to 12% after HarmBench prompts entered red-team training" item is the canonical example). Two specific manifestations to watch for in 2026 safety reporting:
 
@@ -202,25 +272,44 @@ Goodhart isn't foregrounded on D19 the way it is on D6 / D15 / D17 / D22 / D28, 
 
 The same answer D6 gave applies: structural defenses (held-out attack distributions, post-cutoff red-team samples, multi-classifier judging) beat metric-level fixes.
 
-## Forward pointers
+## Cross-references
 
-- **D10 (RAG counterfactual robustness).** Counterfactual robustness with benign edits and explicit warnings is the controlled-lab precursor to indirect prompt injection. D19 generalizes from the *user-typed* attack to the *attacker-controlled-content* attack only in its multimodal (FigStep-style) and contextual subsets; D26 extends this to attacker-controlled retrieval and tool outputs.
-- **D13 (multimodal jailbreaks).** D13's safety note named FigStep — typographic visual jailbreaks that render disallowed text as an image — as the prototype multimodal attack. HarmBench's 110 multimodal behaviors and its multimodal classifier are the standardized scoring infrastructure for that axis.
-- **D17 (situational awareness).** A model that can detect "I am being evaluated on jailbreak resistance right now" and behave differently from how it does in deployment is the deepest jailbreak-eval validity threat. SAD's identity-leverage subsuite measures this directly. If SA is high, *every* jailbreak score reported on a public benchmark has to be read as "the score the model elects to display when it knows it's being evaluated." Apollo's *Frontier Models are Capable of In-Context Scheming* (Meinke et al. 2024) is the closing pointer.
-- **D21 (WMDP).** WMDP measures *dangerous capability proxies* — the things a successful jailbreak could elicit. D19's ASR is "how often does a jailbreak succeed?"; D21's score is "if it succeeds, how dangerous is what it elicits?". The two compose: realized risk ≈ ASR × dangerous-capability-given-elicitation.
-- **D26 (AgentDojo).** Indirect prompt injection in agent environments — the threat surface where the attacker doesn't talk to the model directly but writes into a tool output, retrieved document, or web page the agent ingests. D19's standard behaviors are the user-typed-attack baseline; D26 is the agent-environment generalization.
+**Backward.**
+
+- D-5 — ASR is a Bernoulli proportion; the Wilson 95% CI half-width and the multi-seed reporting practice transfer directly from accuracy. Single-seed sub-200-item ASR deltas under ~5 pp are sampling noise.
+- D-6 — *Contamination on the safety side*: RL against the public attack distribution and the HarmBench classifier is D6's contamination point applied to safety evals. The defence pattern (held-out attacks, post-cutoff red-team, contamination-resistant successor) transfers wholesale.
+- D-13 — FigStep-style typographic jailbreaks sit inside HarmBench's 110 multimodal behaviours; the multimodal sibling classifier (`HarmBench-Llama-2-13b-cls-multimodal-behaviors`) generalizes the scoring infrastructure to image+text attack surfaces.
+- D-18 — refusal *is* a verifiable instruction. IFEval and HarmBench measure two slices of the same constraint-satisfaction substrate; D19 is what happens to that substrate under adversarial pressure.
+
+**Forward.**
+
+- D-10 — RAG counterfactual robustness with benign edits and explicit warnings is the controlled-lab precursor to indirect prompt injection. D19's contextual + multimodal subsets generalize toward attacker-controlled content; D26 extends to attacker-controlled retrieval and tool outputs.
+- D-17 — situational awareness as a jailbreak-eval validity threat. SAD's identity-leverage subsuite measures whether the model behaves differently when it knows it is being evaluated. Apollo's *Frontier Models are Capable of In-Context Scheming* (Meinke et al. 2024) is the closing pointer for this thread.
+- D-21 — WMDP scores *dangerous capability proxies* — the things a successful jailbreak could elicit. Realized risk composes as approximately ASR × dangerous-capability-given-elicitation; D21 is the second factor.
+- D-22 — LLM-as-judge biases (verbosity, position, self-preference). HarmBench's frozen fine-tuned classifier sidesteps these for the harm-detection task and is the constructive contrast to general-purpose judging.
+- D-26 — AgentDojo: indirect prompt injection in agent environments, where the attacker writes into tool outputs / retrieved documents / web pages rather than typing the user turn. D19's standard behaviours are the user-typed-attack baseline; D26 is the agent-environment generalization.
 
 > **Safety researcher's note.** Jailbreaks are the *canonical* adversarial-robustness eval, and the ASR-on-test-set vs. real-world-adversary gap is the central validity question. HarmBench's 510 behaviors and 18 attack methods are a *fixed set* — once a frontier lab knows the set, they can RL-tune against it. The measured ASR after that tuning is closer to "ASR against attacks within the HarmBench distribution" than to "ASR against any motivated attacker." That gap is Goodhart-flavored: the measure was meant to be a proxy for the underlying property (adversarial robustness against *the space* of attacks), and once it became a target the proxy decoupled. Two practices push back. **First**, sample attacks post-cutoff: have a held-out red-team produce novel attacks the lab couldn't have trained on, score those, and report alongside the static benchmark. **Second**, evaluate on *transfer*: attacks optimized against an open-weights model and applied to the closed model under test, since transfer attacks are a closer model of the real-world attacker than re-running optimization on the target. The published ASR is necessary but not sufficient; the *gap* between published-ASR and live-red-team-ASR is the number frontier-safety teams pay closest attention to. This is the same shape as D14's claimed-vs-effective-context gap: the marketed metric (claimed length / static ASR) and the underlying capability (effective length / real-world robustness) diverge once the marketed metric becomes the optimization target, and the field's only structural answer is to keep the *evaluation distribution* moving faster than the training distribution can chase it.
 
 ## Takeaways
 
-1. A jailbreak is an input designed to elicit a model behavior the safety training intended to block. Jailbreak evaluation is the canonical *adversarial-robustness* eval — coupled to capability evaluation (Week 2) but methodologically distinct.
-2. **HarmBench (Mazeika et al. 2024)** is the Week 3 anchor: 510 behaviors across 4 functional × 7 semantic categories, 18 attack methods at release, and a fine-tuned Llama-2-13B harm classifier (≈93% agreement with humans, vs. ~88% for GPT-4-as-judge on the same task).
-3. **Attack success rate (ASR)** is a Bernoulli proportion. On 510 items at $p = 0.20$, the 95% CI half-width is $\approx \pm 3.5$ pp; on 200 items, $\approx \pm 5.5$ pp. Differences below those widths are sampling noise. (D5 reflex.)
-4. **RealToxicityPrompts (Gehman et al. 2020) was absorbed** — toxicity-under-prompting is a special case of harm elicitation, recoverable as the Harassment & Bullying / General Harm semantic categories. HarmBench's classifier replaces the closed Perspective API as the scorer, generalizes from passive web-prompt completion to adversarial elicitation, and from one harm dimension to seven.
-5. ASR-based scoring should be paired with an over-refusal eval (XSTest, helpfulness on benign prompts). A model with low ASR and high over-refusal is broken in the other direction; D18's IFEval is the standard partner.
-6. The Goodhart sub-thread (D6 reprise): once HarmBench's static attack distribution becomes a training target, measured ASR deflates without proportional gains in real-world adversarial robustness. Hold out novel attacks; report transfer ASR; expect the published-vs-live-red-team gap to widen.
-7. Forward thread: D10 (counterfactual robustness as IPI precursor), D13 (multimodal jailbreaks), D17 (SA as a jailbreak-eval validity threat), D21 (WMDP — what successful jailbreaks could elicit), D26 (AgentDojo — agent-environment indirect prompt injection).
+1. A jailbreak is an input designed to elicit a model behaviour the safety training intended to block. Jailbreak evaluation is the canonical *adversarial-robustness* eval — coupled to capability evaluation (Week 2) but methodologically distinct, and refusal-rate vs. ASR are the two scoring philosophies underneath. *(LO 1)*
+2. **HarmBench (Mazeika et al. 2024)** is the Week 3 anchor: 510 behaviours across 4 functional × 7 semantic categories, 18 attack methods at release, and a fine-tuned Llama-2-13B harm classifier (≈93% agreement with humans, vs. ~88% for GPT-4-as-judge on the same task). *(LO 2)*
+3. **Attack success rate (ASR)** is a Bernoulli proportion. On 510 items at $p = 0.20$, the 95% CI half-width is $\approx \pm 3.5$ pp; on 200 items at $p = 0.08$, $\approx \pm 3.8$ pp; on 200 items at $p = 0.20$, $\approx \pm 5.5$ pp. Differences below those widths are sampling noise. *(LO 3)*
+4. **RealToxicityPrompts (Gehman et al. 2020) was absorbed** into HarmBench: one harm dimension generalized to seven semantic categories, the closed Perspective API replaced by a frozen open-weight classifier, and passive web-prompt completion replaced by adversarial elicitation. The base-rate framing remains useful as a separate line item; it is not a jailbreak benchmark in the modern sense. *(LO 4)*
+5. ASR-based scoring should be paired with an over-refusal eval (XSTest, helpfulness on benign prompts). A model with low ASR and high over-refusal is broken in the other direction; D18's IFEval is the standard partner. *(LO 6)*
+6. Once HarmBench's static attack distribution becomes a training target, measured ASR deflates without proportional gains in real-world adversarial robustness. The actionable signal is the gap between published ASR and a held-out / post-cutoff / transfer red-team ASR — hold out novel attacks, report transfer ASR, expect the gap to widen. *(LO 5)*
+
+## Glossary
+
+- **attack success rate (ASR)**: fraction of `(behaviour, attack-method)` pairs on which the attack elicits the targeted harmful behaviour, as judged by an automated harm classifier; HarmBench's headline metric [introduced D-19].
+- **HarmBench attack-method matrix**: the 18 attack methods HarmBench evaluates at release across white-box, black-box, and transfer regimes; cross-paper comparability requires reporting on the same matrix and subset [introduced D-19].
+- **GCG (Greedy Coordinate Gradient)**: white-box attack (Zou et al. 2023) that optimizes a token-level adversarial suffix by greedy + gradient-based search; suffixes are often non-semantic but transfer across models [introduced D-19].
+- **PAIR (Prompt Automatic Iterative Refinement)**: black-box attack (Chao et al. 2023) using an attacker LLM to iteratively rewrite prompts based on the target model's refusals, typically converging in fewer than 20 queries [introduced D-19].
+- **refusal rate vs. ASR**: two scoring philosophies for safety evals — refusal rate scores compliance/refusal on flagged prompts (StrongREJECT-style); ASR scores whether the targeted harmful behaviour was elicited (HarmBench-style). They have dual failure modes: over-refusal vs. classifier false-positives [introduced D-19].
+- **over-refusal**: refusing benign prompts that pattern-match harmful ones; the trivial-solution failure mode of ASR minimization. Measured by XSTest (Röttger et al. 2024) [introduced D-19].
+- **transfer attack**: an adversarial prompt optimized against an open-weights model and applied to a closed model; closer to the real-world attacker than re-running optimization on the target [introduced D-19].
+- **HarmBench-Llama-2-13B-cls**: HarmBench's frozen open-weight Llama-2-13B-Chat fine-tuned harm classifier (~93% agreement with humans on validation); the structural reproducibility upgrade over closed-API Perspective and over zero-shot GPT-4-as-judge for the harm-detection task [introduced D-19].
 
 ## References
 
@@ -253,7 +342,7 @@ The same answer D6 gave applies: structural defenses (held-out attack distributi
 - C. ±10 pp; at $N = 200$ the Wilson half-width is too large to ever distinguish a 3-pp drop from sampling noise.
 - D. The CI is undefined for ASR because it is a ratio of two random quantities, not a single binomial proportion.
 
-**Q3.** What is the **most accurate** description of how RealToxicityPrompts (Gehman et al. 2020) relates to HarmBench (Mazeika et al. 2024) in this curriculum?
+**Q3.** What is the most accurate description of how RealToxicityPrompts (Gehman et al. 2020) relates to HarmBench (Mazeika et al. 2024) in this curriculum?
 
 - A. They measure unrelated properties; both are retained as parallel anchors throughout Week 3 of this curriculum.
 - B. RealToxicityPrompts is an updated version of HarmBench that adds modern attack methods like GCG and PAIR.
