@@ -101,10 +101,11 @@ export const SECTION_SLUG_ALIASES: Readonly<Record<string, string>> = {
     "cross-references",
   "forward-pointer-long-context-safety-surface": "cross-references",
   "forward-pointer-wmdp-and-its-sibling-lessons": "cross-references",
+  "forward-pointer-d24-rewardbench": "cross-references",
   "cross-references-and-forward-pointers": "cross-references",
-  // Goodhart-section variants → canonical "goodhart-foregrounded" /
-  // "goodhart-sub-thread" / "goodhart-callback" depending on role
-  "goodhart-aside-brief": "goodhart-callback",
+  // Goodhart-section variants for foregrounded-role lessons
+  // (each old slug appeared on exactly one lesson, so a global mapping
+  // is unambiguous).
   "goodhart-on-d17-situational-conditioning-as-a-distinct-mechanism":
     "goodhart-foregrounded",
   "goodhart-foregrounded-the-measurement-instrument-as-target":
@@ -113,15 +114,9 @@ export const SECTION_SLUG_ALIASES: Readonly<Record<string, string>> = {
     "goodhart-foregrounded",
   "goodhart-foregrounded-autonomy-measurement-as-selection-pressure":
     "goodhart-foregrounded",
-  "the-goodhart-sub-thread-why-benchmarks-die-faster-than-capability-grows":
-    "goodhart-sub-thread",
+  // Goodhart-sub-thread variants for sub-thread-role lessons.
   "the-goodhart-sub-thread-cost-axis-gaming": "goodhart-sub-thread",
   "goodhart-on-rlhf-the-canonical-case": "goodhart-sub-thread",
-  // D19 — Goodhart sub-thread H2 renamed to non-Goodhart name to match
-  // locked goodhart_role: absent on D19. Body content (attack-set
-  // leakage / contamination-on-the-safety-side) is preserved.
-  "goodhart-sub-thread-d6-reprise-applied-to-safety-evals":
-    "when-attack-set-leakage-applies-to-safety-evals",
   // Calibration-section variants → canonical "calibration-{role}"
   "light-calibration-callback-d2-d20": "calibration-callback",
   "calibration-reprise-d2-d15": "calibration-reprises",
@@ -129,12 +124,102 @@ export const SECTION_SLUG_ALIASES: Readonly<Record<string, string>> = {
 };
 
 /**
+ * Per-day section-slug aliases — for renames that map differently on
+ * different lessons (i.e., the same legacy slug existed on multiple
+ * lessons but the rewrite renamed to different canonical slugs).
+ *
+ * Format: { dayNumber: { legacy-slug: canonical-slug, ... }, ... }.
+ *
+ * `resolveSectionSlug(slug, day)` checks this map first, then falls
+ * back to the global `SECTION_SLUG_ALIASES` table.
+ *
+ * Stage 2.6.
+ */
+export const SECTION_SLUG_ALIASES_BY_DAY: Readonly<
+  Record<number, Readonly<Record<string, string>>>
+> = {
+  // D7: rewrite renamed the Goodhart sub-thread to a content-descriptive
+  // name (locked goodhart_role: absent → no `## Goodhart …` H2).
+  7: {
+    "the-goodhart-sub-thread-why-benchmarks-die-faster-than-capability-grows":
+      "why-benchmarks-die-faster-than-capability-grows",
+  },
+  // D13 and D27 both used `## Goodhart aside (brief)` pre-rewrite but
+  // the rewrites named the new sections differently per their content.
+  13: {
+    "goodhart-aside-brief":
+      "visual-prompt-injection-and-the-multimodal-jailbreak-surface",
+    "goodhart-aside": "visual-prompt-injection-and-the-multimodal-jailbreak-surface",
+  },
+  16: {
+    "goodhart-and-the-ood-persistence-problem": "out-of-distribution-persistence",
+  },
+  18: {
+    "goodhart-sub-thread-rl-on-verifiable-instructions":
+      "verifiable-rewards-and-reward-gaming",
+  },
+  19: {
+    // Sub-agent already added a global entry; keep it here too for the
+    // per-day priority resolution to be explicit.
+    "goodhart-sub-thread-d6-reprise-applied-to-safety-evals":
+      "when-attack-set-leakage-applies-to-safety-evals",
+  },
+  21: {
+    "week-3-in-review": "week-3-review",
+    "week-4-handoff": "week-3-handoff",
+  },
+  26: {
+    "the-goodhart-sub-thread-not-foregrounded-today":
+      "reading-web-agent-numbers-across-papers",
+  },
+  27: {
+    "goodhart-aside-brief": "os-agent-benchmark-fragility",
+    "goodhart-aside": "os-agent-benchmark-fragility",
+  },
+};
+
+/**
  * Resolve a section slug to its canonical form. Used by progress APIs
  * when reading per-section completion records, so legacy slugs (from
  * before the Stage 2.6 rename) still surface.
+ *
+ * Resolution order: per-day override (if `day` provided) → global
+ * alias → input slug unchanged.
  */
-export function resolveSectionSlug(slug: string): string {
+export function resolveSectionSlug(slug: string, day?: number): string {
+  if (day !== undefined) {
+    const perDay = SECTION_SLUG_ALIASES_BY_DAY[day];
+    if (perDay && slug in perDay) return perDay[slug];
+  }
   return SECTION_SLUG_ALIASES[slug] ?? slug;
+}
+
+/**
+ * Apply slug aliases to a `sections` map (one per day) so legacy keys
+ * resolve to the post-Stage-2.6 canonical slugs. Used by `loadProgress`
+ * so existing per-section completion data keeps working after the
+ * curriculum-wide rewrite. New keys take precedence over migrated ones
+ * if a collision occurs.
+ */
+export function migrateSectionSlugs(
+  sections: Record<string, Record<string, string>>,
+): Record<string, Record<string, string>> {
+  const out: Record<string, Record<string, string>> = {};
+  for (const [dayKey, perDayMap] of Object.entries(sections)) {
+    const dayNum = Number.parseInt(dayKey, 10);
+    const migrated: Record<string, string> = {};
+    for (const [legacySlug, ts] of Object.entries(perDayMap)) {
+      const canonical = resolveSectionSlug(legacySlug, dayNum);
+      // Newer (post-rewrite) entries win over migrated ones if both
+      // exist. The data file is read-only at this stage; we don't
+      // persist the migration, just present it through the API.
+      if (!(canonical in migrated)) {
+        migrated[canonical] = ts;
+      }
+    }
+    out[dayKey] = migrated;
+  }
+  return out;
 }
 
 /**
