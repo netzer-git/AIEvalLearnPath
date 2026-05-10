@@ -133,7 +133,7 @@
    keep the markdown rendering predictable across KaTeX, mermaid, and
    rehype-pretty-code output. */
 .lesson-content {
-  font-size: 1.0625rem;
+  font-size: 1.15rem;
   line-height: 1.7;
   color: var(--foreground);
 }
