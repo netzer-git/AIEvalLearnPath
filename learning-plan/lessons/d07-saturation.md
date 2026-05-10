@@ -6,10 +6,41 @@ week: 1
 week_theme: Foundations of LLM evaluation
 anchor_benchmark: GPQA (Diamond)
 harness: lm-evaluation-harness
-reading_time_minutes: 28
+reading_time_minutes: 31
+prerequisites: [1, 5, 6]
+key_terms:
+  - saturation
+  - headroom
+  - signal-to-noise ratio
+  - Google-proof
+  - construction-time difficulty
+  - structural novelty
+  - successor benchmark
+  - item-difficulty floor
+goodhart_role: absent
+calibration_role: absent
 ---
 
 # Day 7 — Benchmark saturation: why benchmarks die
+
+## TL;DR
+
+A benchmark *saturates* when frontier scores climb close enough to 1.0 that headroom shrinks faster than the binomial standard error on a single score, and model-vs-model differences collapse into the noise floor. **GPQA Diamond** (198 expert-validated, Google-proof graduate-science items) was designed to push that ceiling out via construction — and frontier models still moved from ~39% to ~94% on it in roughly 28 months. Saturation is the fourth and final hidden property Week 1 has been unpacking, and it is what closes the loop on reading any eval-paper methods section.
+
+## Learning objectives
+
+By the end of this lesson, you will be able to:
+
+1. **(L2)** Define saturation as headroom-vs-SE collapse, distinguish it from contamination (D6), and state why a clean pipeline does not save a saturated benchmark.
+2. **(L3)** *Compute* the per-model 95% CI for a binomial accuracy near the ceiling on a small benchmark (e.g. GPQA Diamond, $n = 198$, $p \approx 0.94$) and use it to decide whether two reported scores are distinguishable.
+3. **(L4)** *Decompose* a 39% → 94% trajectory on GPQA Diamond into plausible co-drivers — genuine capability gain, contamination-adjacent training data, and format-targeted optimization — and identify which the construction guarantees actually defend against.
+4. **(L4)** Contrast GPQA's *gatekept* construction-time resistance (expert + non-expert pilot) with ARC-AGI's *structural* resistance (per-task novelty), and explain why structural designs typically buy more time per design dollar.
+5. **(L5)** *Evaluate* a leaderboard claim that "Model B (95.1%) beats Model A (93.4%) on GPQA Diamond" and surface the most defensible critique a Week 1 reader is now equipped to make.
+6. **(L4)** *Articulate* the four hidden properties Week 1 has unpacked — pipeline drift, statistical hygiene, contamination, saturation — as the working lens for any 2024+ benchmark paper's introduction.
+
+## Prerequisites & callback
+
+This lesson presupposes three load-bearing concepts already developed in Week 1. **D1's pipeline framing** — that a "score" is a (dataset, scoring rule, reporting convention) triple — is what lets us locate saturation as a property of the *dataset* rather than of the model: even the best harness cannot recover signal from items every frontier model gets right. **D5's statistical-hygiene machinery** — binomial standard error, paired-bootstrap and McNemar CIs over items — supplies the math behind "headroom shrinks faster than SE", and is the toolkit for the worked example below. **D6's contamination forensics** — n-gram overlap, Min-K% Prob, decontamination — names the failure mode saturation is most often confused with, and the one we explicitly distinguish today: a saturated benchmark can be perfectly clean, and a contaminated one can look unsaturated when its ceiling is artificial. Today's anchor closes Week 1 by adding the *fourth* hidden property the headline number conceals.
 
 ## The opening hook
 
@@ -34,7 +65,7 @@ flowchart LR
 
 The shape is sigmoidal in expectation: slow at first, fast in the middle, asymptotic at the top. The asymptote is what kills the benchmark.
 
-## The math: why "near 1.0" hurts more than the gap suggests
+## Why headroom shrinks faster than standard error
 
 Suppose two models score $p_A$ and $p_B$ on a benchmark of $n$ items. Under a binomial null, the standard error on each is roughly $\sqrt{p(1-p)/n}$, and the SE on the *difference* (independent items) is $\sqrt{p_A(1-p_A)/n + p_B(1-p_B)/n}$.
 
@@ -46,9 +77,36 @@ $$
 
 At $p = 0.95$, only **5 points** remain between the model and the ceiling. With a 200-item benchmark, the SE on a single model's score is $\sqrt{0.95 \cdot 0.05 / 200} \approx 0.0154$, so the 95% CI is roughly $\pm 3$ points — *most of the headroom*. Two models scoring 0.93 and 0.96 are statistically indistinguishable on that test, even though the gap "looks" meaningful. The signal-to-noise ratio (SNR) of model differences collapses as $p \to 1$.
 
-This is the formal version of the intuition: **near saturation, you cannot rank models reliably**. Day 5's statistical hygiene machinery (CIs, McNemar's test on paired items) is what tells you the gap is noise; Day 7's framing is *why you keep needing harder benchmarks* even when the harness is correct and the data is clean.
+> **Worked example.** Compute the per-model 95% CI on GPQA Diamond ($n = 198$) at three accuracies — $p = 0.50$, $p = 0.90$, $p = 0.94$ — and watch the SNR collapse against the ceiling.
+>
+> Standard error: $\mathrm{SE}(p) = \sqrt{p(1-p)/n}$. The 95% half-width is $1.96 \cdot \mathrm{SE}$.
+>
+> | $p$ | $p(1-p)$ | $\mathrm{SE}$ | 95% half-width | Headroom $1-p$ | SNR (headroom / half-width) |
+> | --- | --- | --- | --- | --- | --- |
+> | 0.50 | 0.2500 | $\sqrt{0.2500/198} = 0.0355$ | $\pm 6.96$ pts | 0.50 | 7.18 |
+> | 0.90 | 0.0900 | $\sqrt{0.0900/198} = 0.0213$ | $\pm 4.18$ pts | 0.10 | 2.39 |
+> | 0.94 | 0.0564 | $\sqrt{0.0564/198} = 0.0169$ | $\pm 3.31$ pts | 0.06 | 1.81 |
+>
+> The SE column is *shrinking* (good), but the headroom column is shrinking *faster*. At $p = 0.94$, a single model's CI is roughly $\pm 3.3$ points — over half the headroom. Two models scoring 93.4% and 95.1% on Diamond are inside each other's independent CIs; the apparent 1.7-point gap is well below the half-width, and a paired test on the same 198 items (D5's McNemar) is the only way to claim a real ranking.
 
-## Anchor: GPQA (Rein et al. 2023)
+This is the formal version of the intuition: **near saturation, you cannot rank models reliably**. Day 5's statistical-hygiene machinery (CIs, McNemar's test on paired items) is what tells you the gap is noise; Day 7's framing is *why you keep needing harder benchmarks* even when the harness is correct and the data is clean.
+
+## ⏵ Check yourself — saturation math
+
+A new benchmark releases with $n = 500$ items and the frontier scoring 60%. Two years later the frontier sits at 92%. **Compute** the per-model 95% half-width at each point and the ratio of headroom to half-width. By the SNR argument, has the benchmark saturated?
+
+<details>
+<summary>Show answer</summary>
+
+At $p = 0.60$: $\mathrm{SE} = \sqrt{0.60 \cdot 0.40 / 500} = \sqrt{0.00048} \approx 0.0219$, so the 95% half-width is $\pm 4.30$ pts. Headroom is 40 points. Ratio: $40 / 4.30 \approx 9.3$ — comfortably resolvable.
+
+At $p = 0.92$: $\mathrm{SE} = \sqrt{0.92 \cdot 0.08 / 500} = \sqrt{0.000147} \approx 0.0121$, so the 95% half-width is $\pm 2.37$ pts. Headroom is 8 points. Ratio: $8 / 2.37 \approx 3.4$.
+
+The half-width nearly *halved* (good), but the headroom shrank *fivefold*, so the resolvable-rank SNR dropped by ~2.7x. By the operational rule of thumb — "you have left the rank-resolvable regime once the ratio falls below ~3" — this benchmark is on the edge of saturation, even with $n = 500$ and a 92% absolute score that doesn't yet *look* saturated. The right next move is a successor benchmark with stronger construction, not a bigger $n$ on the same one.
+
+</details>
+
+## Anchor: GPQA Diamond (Rein et al. 2023)
 
 **Citation.** Rein, D., Hou, B. L., Stickland, A. C., Petty, J., Pang, R. Y., Dirani, J., Michael, J., & Bowman, S. R. (2023). *GPQA: A Graduate-Level Google-Proof Q&A Benchmark.* arXiv:2311.12022.
 
@@ -101,7 +159,20 @@ Diamond's whole *point* was to be saturation-resistant. The trajectory tells you
 
 That trajectory — 39% → 95% in ~28 months on a benchmark *designed* to resist saturation — is what makes Day 7's lesson urgent. Construction-time difficulty is not a one-shot fix. It buys you a couple of years before the next benchmark is needed. GPQA Diamond's headroom is now small enough that, by the same SNR argument as above, frontier-model rankings on it are increasingly noise-dominated. Successor benchmarks aimed at this regime — Humanity's Last Exam, FrontierMath (Day 25 overlay), and others — already exist.
 
-## The Goodhart sub-thread: why benchmarks die *faster* than capability grows
+## ⏵ Check yourself — Diamond filter
+
+A candidate question survives Rein et al.'s pipeline as follows: both expert validators answer it correctly; among the three non-experts with internet access and 30+ minutes per question, two get it right. Does this question land in **Main**, **Diamond**, both, or neither — and what does its construction tell you about its expected resistance to saturation?
+
+<details>
+<summary>Show answer</summary>
+
+The question lands in **Main** but **not Diamond**. Main requires at least one expert correct; Diamond requires *both* experts correct *and* at most one of the three non-experts correct. Two non-experts correct exceeds Diamond's bound.
+
+What that means structurally: the item is high-quality (experts agree) but *not* Google-proof in Diamond's strict sense — it survived non-experts' search well enough that two of three found the answer in 30 minutes. Items that pass the Main filter but fail the Diamond filter are exactly the ones whose ceiling will rise *fastest* when training data accumulates the kind of explanatory web pages non-experts found. That is why Diamond's 198-item slice resists saturation for longer than the 448-item Main set, even on identical models.
+
+</details>
+
+## Why benchmarks die faster than capability grows
 
 Saturation has two drivers, and only one is "the models got better."
 
@@ -119,7 +190,20 @@ The empirical numbers tell the story. As of mid-2026, frontier reasoning models 
 
 The two designs are complements, not competitors. GPQA tests *knowledge*. ARC-AGI tests *task-novel reasoning*. Both saturate eventually — ARC-AGI-1 was effectively cleared, which is why ARC-AGI-2 exists — but the *clock* on structural-resistance benchmarks runs slower.
 
-## Forward pointer: Week 2 and the contamination-resistant successor pattern
+## ⏵ Check yourself — gatekept vs. structural
+
+You are designing a successor to GPQA Diamond. Your team has a budget for either (a) doubling the expert-validator panel from 2 to 4 PhDs per item, or (b) reformulating the question stem so each item embeds a *novel* sub-task that requires inferring a rule from 2–3 worked sub-cases before answering. **Decompose** which option buys more saturation resistance per unit of construction cost, and why.
+
+<details>
+<summary>Show answer</summary>
+
+Option (b) buys more. Option (a) raises the *quality bar* on items that already passed gatekeeping — it shrinks expert disagreement noise, but it does not change the kind of item the benchmark contains. The frontier-capability clock on those items keeps ticking at roughly the same rate, because models train on graduate-domain explanatory text whether two or four experts validated it.
+
+Option (b) introduces a *structural* novelty per item — the embedded sub-task — that frustrates direct memorization the way ARC-AGI's grid-puzzles do. Even if training data accumulates pages adjacent to the surface domain (chemistry, physics, biology), each item's sub-task has to be inferred at evaluation time from its own few examples. That is why ARC-AGI-1 took longer to clear than GPQA Diamond despite GPQA having explicit Google-proof piloting: structural per-item novelty resists optimization-toward-target in a way that gatekept difficulty alone cannot. Gatekeeping wins time linearly in panel size; structural novelty wins time roughly as long as no general method automates the sub-task class.
+
+</details>
+
+## The successor pattern across Week 2
 
 Saturation and contamination together produce a recurring design pattern across the rest of the curriculum: **contamination-resistant successor benchmarks**. You will see it three times in Week 2 alone:
 
@@ -129,7 +213,24 @@ Saturation and contamination together produce a recurring design pattern across 
 
 Once you internalize the pattern — *original benchmark saturates and/or gets contaminated; the field builds a harder/cleaner successor; that one too eventually saturates* — you can read any 2024+ benchmark paper's introduction in 30 seconds. The first paragraph names a saturated predecessor, the second describes the construction guarantee that's supposed to fix it, the third reports the headroom the new benchmark restores. Week 2 is six lessons of that pattern applied across reasoning, math, RAG, code, SWE, multimodal, and long-context.
 
-## Week 1 in review
+## Cross-references
+
+**Backward.**
+
+- D-1 — extends D1's *pipeline-not-a-number* framing by adding the fourth property (ceiling) the headline number conceals.
+- D-5 — uses D5's binomial-SE and McNemar machinery as the math behind headroom-vs-SE collapse.
+- D-6 — distinguishes saturation from contamination: a clean benchmark can saturate, and a contaminated one can look unsaturated when its ceiling is artificial.
+
+**Forward.**
+
+- D-8 — opens Week 2 with ARC-Challenge, an older, partially saturated reasoning benchmark that survives because it is methodologically clean.
+- D-11 — extends today's *successor-by-construction* pattern with HumanEval → LiveCodeBench's post-cutoff sampling.
+- D-15 — reprises saturation as a TruthfulQA-shaped problem: the construct ("truthfulness") is harder to saturate than knowledge accuracy, and Goodhart returns foregrounded.
+- D-22 — picks up *what happens when the judge is the bottleneck*: LLM-as-judge resists capability saturation but introduces its own measurement-instrument-as-target failure.
+- D-25 — the FrontierMath / AIME overlay returns to construction-time-difficulty as the operational answer for math reasoning.
+- D-28 — the closing METR autonomy suite is structurally the most saturation-resistant benchmark in the curriculum, in part because horizon length is unbounded above by 1.
+
+## Week 1 review
 
 You have now seen the whole stack of framing tools you need to read any eval-paper methods section.
 
@@ -161,31 +262,42 @@ If you can articulate (a) what changes between two papers reporting different sc
 
 > **Safety researcher's note.** Saturation has a specifically safety-relevant edge. Capability benchmarks saturate; *safety* benchmarks often don't, because the failure mode they measure (refusal compliance, adversarial robustness, sycophancy) doesn't live in a 0-to-1 accuracy frame the same way knowledge does. So as capability scores plateau near the ceiling and become noisy, the *safety delta* between models can grow more visible relative to the capability delta. The "capability up, safety flat" pattern from D1's safety-researcher note becomes "capability indistinguishable, safety still distinguishable" — and the policy-relevant signal shifts from "which model is more capable?" to "which model is *adequately* aligned at ceiling capability?". Week 3 (alignment / safety / robustness) is where this question gets concrete.
 
-## Week 2 handoff
+## Week 1 handoff
 
 You are now equipped to read any capability-benchmark paper's methods section. Week 2 stops asking *how to read evaluations* and starts asking *what the evaluations say about model capability* — reasoning (D8 ARC-Challenge), math (D9 GSM8K + MATH), RAG robustness (D10 RGB), code (D11 HumanEval + LiveCodeBench), software engineering (D12 SWE-Bench), multimodal (D13 MMMU), and long context (D14 RULER). The recurring pattern from D7 — *saturated predecessor → contamination-resistant successor* — runs through every one of those days. Week 1's tools are how you tell the difference between a benchmark that is informative and a benchmark that is folkloric.
 
 ## Takeaways
 
-1. Saturation is what happens when a benchmark's headline scores approach 1 and the SNR of model-vs-model differences collapses. Even with a perfect pipeline and clean data, a saturated benchmark cannot rank models reliably.
-2. GPQA Diamond (198 items, biology + physics + chemistry, expert-validated) is the canonical *construction-time* saturation resistance: Google-proof via non-expert+internet piloting, expert-validated for correctness, gatekept for difficulty.
-3. Construction-time resistance buys time but doesn't grant immunity: GPQA Diamond went from ~39% (Nov 2023) to 92–95% (early 2026), and is now near saturation itself.
-4. Saturation has two drivers — genuine capability gain and Goodhart-style optimization-toward-target. The Open LLM Leaderboard's March 2025 retirement (Day 1) is the canonical Goodhart case study.
-5. The field's structural response is *successor benchmarks with stronger construction guarantees*: GPQA's expert gatekeeping, LiveCodeBench's post-cutoff sampling, ARC-AGI's task-novel format. ARC-AGI is the cleanest example of *structural* (not gatekept) resistance.
-6. Week 1 is now complete. You have the four-property framework — pipeline drift, statistical hygiene, contamination, saturation — needed to read any eval-paper methods section critically. Week 2 applies it to capability suites.
+1. Saturation is what happens when a benchmark's headline scores approach 1 and the SNR of model-vs-model differences collapses. Even with a perfect pipeline and clean data, a saturated benchmark cannot rank models reliably. *(LO 1)*
+2. The per-model 95% half-width on a binomial accuracy is $1.96 \sqrt{p(1-p)/n}$; near $p = 0.94$ on $n = 198$ it is $\pm 3.3$ points — over half the headroom — so paired tests on the same items, not independent CIs, are the only way to claim a real ranking. *(LO 2)*
+3. GPQA Diamond (198 items, biology + physics + chemistry, expert-validated) is the canonical *construction-time* saturation resistance: Google-proof via non-expert+internet piloting, expert-validated for correctness, gatekept for difficulty. *(LO 1)*
+4. The 39% → 94% Diamond trajectory is the joint signature of three co-drivers — genuine capability gain, contamination-adjacent training data, and format-targeted optimization. Construction guarantees defend against the second well and the third partially; they do not defend against the first. *(LO 3)*
+5. ARC-AGI's *structural* per-task novelty resists saturation longer than GPQA's *gatekept* difficulty for the same dollar of construction effort, which is why structural designs are the right reference point when asking how a successor benchmark could be built more durably. *(LO 4)*
+6. Week 1 is now complete. The four-property framework — pipeline drift, statistical hygiene, contamination, saturation — is the working lens for any 2024+ capability-benchmark paper, and is what the leaderboard claim "Model B (95.1%) > Model A (93.4%) on GPQA Diamond" fails on its third and fourth properties. *(LO 5, LO 6)*
+
+## Glossary
+
+- **saturation**: a benchmark's headline scores cluster near 1.0 such that headroom shrinks faster than the binomial standard error and model-vs-model differences fall into the noise floor [introduced D-7].
+- **headroom**: the distance $1 - p$ between a model's accuracy and the ceiling — the regime in which model rankings are still resolvable [introduced D-7].
+- **signal-to-noise ratio (SNR)**: ratio of the typical model-vs-model gap to the standard error on that gap; collapses as $p \to 1$ [introduced D-7].
+- **Google-proof**: GPQA's construction guarantee — items survive the pilot only if PhD-level non-experts with unrestricted internet access and 30+ minutes per question fail at near-chance levels [introduced D-7].
+- **construction-time difficulty**: resistance built into a benchmark *at dataset-construction time* — expert gatekeeping (GPQA), post-cutoff sampling (LiveCodeBench), per-item task novelty (ARC-AGI) — as opposed to harness-time fixes [introduced D-7].
+- **structural novelty**: the per-item resistance of benchmarks like ARC-AGI, where each item requires inferring a unique rule from a few examples; contrasts with gatekept-difficulty designs [introduced D-7].
+- **successor benchmark**: the field's recurring response to a saturated predecessor — MMLU-Pro, GPQA Diamond, LiveCodeBench, ARC-AGI-2 — with stronger construction guarantees [introduced D-7].
+- **item-difficulty floor**: the practical lower bound on per-item difficulty achievable under a given construction process; it sets how long a benchmark can resist saturation before a successor is needed [introduced D-7].
 
 ## References
 
 - **Anchor.** Rein, D., Hou, B. L., Stickland, A. C., Petty, J., Pang, R. Y., Dirani, J., Michael, J., & Bowman, S. R. (2023). *GPQA: A Graduate-Level Google-Proof Q&A Benchmark.* arXiv:2311.12022. https://arxiv.org/abs/2311.12022
-- **Successor design — structural novelty.** Chollet, F. (2019). *On the Measure of Intelligence.* arXiv:1911.01547. https://arxiv.org/abs/1911.01547
-- **ARC-AGI-2.** Chollet, F., et al. (2025). *ARC-AGI-2: A New Challenge for Frontier AI Reasoning Systems.* arXiv:2505.11831. https://arxiv.org/abs/2505.11831
-- **Successor design — post-cutoff sampling.** Jain, N., Han, K., Gu, A., Li, W.-D., Yan, F., Zhang, T., Wang, S., Sen, A., Stoica, I., & Sun, Y. (2024). *LiveCodeBench: Holistic and Contamination Free Evaluation of Large Language Models for Code.* arXiv:2403.07974. https://arxiv.org/abs/2403.07974 (Forward reference for D11.)
-- **Goodhart context.** Open LLM Leaderboard retirement, Hugging Face, March 2025 — see D1 references.
-- **Frontier-model SOTA tracking.** Public leaderboards: Epoch AI GPQA Diamond (https://epoch.ai/benchmarks/gpqa-diamond), Artificial Analysis GPQA Diamond (https://artificialanalysis.ai/evaluations/gpqa-diamond), and vendor system cards. Specific 2026 numbers drift weekly; cite primary system cards rather than leaderboard snapshots.
+- **Harness.** Gao, L., et al. *lm-evaluation-harness* (EleutherAI). https://github.com/EleutherAI/lm-evaluation-harness
+- **Secondary.** Chollet, F. (2019). *On the Measure of Intelligence.* arXiv:1911.01547. https://arxiv.org/abs/1911.01547 — the structural-novelty design philosophy.
+- **Secondary.** Chollet, F., et al. (2025). *ARC-AGI-2: A New Challenge for Frontier AI Reasoning Systems.* arXiv:2505.11831. https://arxiv.org/abs/2505.11831 — the contemporary structural-resistance benchmark.
+- **Secondary.** Jain, N., Han, K., Gu, A., Li, W.-D., Yan, F., Zhang, T., Wang, S., Sen, A., Stoica, I., & Sun, Y. (2024). *LiveCodeBench: Holistic and Contamination Free Evaluation of Large Language Models for Code.* arXiv:2403.07974. https://arxiv.org/abs/2403.07974 — post-cutoff successor design (forward reference for D11).
+- **Secondary.** Public leaderboards for frontier-model SOTA tracking: Epoch AI GPQA Diamond (https://epoch.ai/benchmarks/gpqa-diamond), Artificial Analysis GPQA Diamond (https://artificialanalysis.ai/evaluations/gpqa-diamond), and vendor system cards. Specific 2026 numbers drift weekly; cite primary system cards rather than leaderboard snapshots.
 
 ## Quiz
 
-**Q1.** Why does the standard error on a model's score *not* protect you from saturation?
+**Q1.** Which of the following is the **most defensible reading** of why a small standard error on a model's accuracy *fails* to protect you from saturation?
 
 - A. SE goes to zero as $p \to 1$, but the model's true skill becomes unmeasurable in absolute terms.
 - B. SE is dominated by tokenizer choice and prompt format, not by item count or scoring rule.
@@ -206,21 +318,21 @@ You are now equipped to read any capability-benchmark paper's methods section. W
 - C. The question writer is anonymous and reviewers cannot see the source domain.
 - D. Items are released only after a specified post-training cutoff date for retrieval evaluation.
 
-**Q4.** A model's GPQA Diamond score moves from 39% (late 2023) to 94% (early 2026). Which of the following is **not** a plausible co-explanation?
+**Q4.** **Decompose** the GPQA Diamond trajectory from 39% (late 2023) to 94% (early 2026) into plausible co-drivers. Which of the following is **not** one of them?
 
 - A. Genuine capability gains in graduate-level science reasoning.
 - B. Training data picking up problems and explanations adjacent to GPQA items.
 - C. RL with rewards correlated to multiple-choice exam-style problem distributions.
 - D. The set of GPQA Diamond items was secretly expanded each year, raising the ceiling.
 
-**Q5.** Why is ARC-AGI a useful conceptual contrast to GPQA Diamond, even though it's not the D28 anchor?
+**Q5.** Why is ARC-AGI a useful conceptual *contrast* to GPQA Diamond, even though it is not the D28 anchor?
 
 - A. ARC-AGI is multilingual and tokenizer-agnostic, while GPQA is English-only and tokenizer-sensitive.
 - B. ARC-AGI's resistance is *structural* — each task requires inferring a novel rule from few examples — not gatekept by an expert panel.
 - C. ARC-AGI uses log-likelihood scoring with normalized choice ranking, which GPQA's free-form rubric can't support.
 - D. ARC-AGI is part of the Open LLM Leaderboard's v3 reasoning suite alongside GPQA Diamond.
 
-**Q6.** A reviewer claims that "Model A scores 93.4% and Model B scores 95.1% on GPQA Diamond, so Model B is better." On a 198-item benchmark, what is the most precise critique?
+**Q6.** A reviewer claims that "Model A scores 93.4% and Model B scores 95.1% on GPQA Diamond, so Model B is better." **Compute** the per-model 95% CI at $p \approx 0.94$ on $n = 198$ items and pick the option that correctly diagnoses the comparison.
 
 - A. The two models should be compared on MMLU-Pro and HELM scenario coverage with bootstrap CIs over scenarios.
 - B. At $p \approx 0.94$ on 198 items, per-model 95% CI is about $\pm 3$ points; a paired test (e.g., McNemar) is needed.
@@ -230,7 +342,7 @@ You are now equipped to read any capability-benchmark paper's methods section. W
 <details>
 <summary>Answers</summary>
 
-1. **C** — the headroom-vs-SE argument from "The math: why 'near 1.0' hurts more than the gap suggests."
+1. **C** — the headroom-vs-SE argument from "Why headroom shrinks faster than standard error."
 2. **B** — the non-expert + internet + 30-minute pilot is what makes GPQA *Google-proof* in the technical sense; graduate-level difficulty (A) is necessary but not sufficient.
 3. **B** — the Diamond filter requires both experts correct *and* non-expert agreement bounded; Main is looser.
 4. **D** — the Diamond set is fixed at 198 items. A, B, and C are all genuine co-drivers (real capability + contamination + Goodhart-style optimization toward exam-format problems).
