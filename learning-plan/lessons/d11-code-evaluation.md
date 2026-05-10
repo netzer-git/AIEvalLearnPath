@@ -6,10 +6,40 @@ week: 2
 week_theme: Capability benchmarks
 anchor_benchmark: HumanEval (+ LiveCodeBench overlay)
 harness: benchmark-native (human-eval) + benchmark-native (LiveCodeBench)
-reading_time_minutes: 28
+reading_time_minutes: 32
+prerequisites: [1, 6]
+key_terms:
+  - pass@k
+  - exec-based scoring
+  - unbiased pass@k estimator
+  - HumanEval+
+  - LiveCodeBench
+  - release-date tagging
+  - contamination-resistant successor
+goodhart_role: sub-thread
+calibration_role: absent
 ---
 
 # Day 11 — Code generation: pass@k, exec-based scoring, and contamination-resistant successors
+
+## TL;DR
+
+Code is the cleanest pedagogical target for the *metric* side of capability evaluation: the model's output is fed to a Python interpreter and run against unit tests, so the per-sample score is a boolean with no judge in the loop. The data side is the opposite story — HumanEval (Chen et al. 2021), 164 hand-written Python tasks anchored by the `pass@k` unbiased estimator, has been heavily contaminated by 2024 (Riddell et al. 2024), and LiveCodeBench (Jain et al. 2024) is the structural successor whose release-date-tagged competitive-programming problems give *per-item* contamination guarantees rather than statistical ones.
+
+## Learning objectives
+
+By the end of this lesson, you will be able to:
+
+1. **(L2)** State the components of HumanEval (164 hand-authored Python tasks, function-signature + docstring prompts, ~7.7 hidden tests per problem) and what makes execution-based scoring distinctive among capability metrics.
+2. **(L3)** *Apply* Chen et al.'s unbiased `pass@k` estimator to a concrete $(n, c, k)$ triple and reproduce the headline number, distinguishing it from the biased plug-in.
+3. **(L4)** Decompose the EvalPlus (Liu et al. 2023) and Riddell et al. (2024) critiques as targeting orthogonal legs of the (dataset, scoring rule, reporting convention) triple.
+4. **(L4)** *Analyze* LiveCodeBench's contamination defense and explain why release-date tagging is a structural rather than metric-level fix.
+5. **(L5)** *Evaluate* a 2026 model card claim of "HumanEval pass@1 = 95%" and surface the most-defensible follow-up questions before treating it as a measurement.
+6. **(L4)** Frame the HumanEval → LiveCodeBench arc as the same Goodhart-collapse-then-redesign pattern foregrounded on D6, instantiated on code.
+
+## Prerequisites & callback
+
+Day 1 introduced the (dataset, scoring rule, reporting convention) pipeline; today fills each box with a code-specific instantiation — Python sandbox in place of log-likelihood, exec-vs-tests in place of letter argmax, pass@k in place of macro-averaged accuracy. Day 6 named **contamination** as the leak-from-pretraining failure mode that turns a benchmark's headline number into an estimate of memorization-plus-residual rather than generalization; HumanEval is the canonical instance of that pathology on a code benchmark, and the post-cutoff sampling defense LiveCodeBench introduces is exactly the structural countermeasure D6 forecasted. Treat both as load-bearing for everything below: pass@k mechanics live in the D1 pipeline, and the contamination story is a direct extension of D6 with code-specific numbers attached.
 
 ## The opening hook
 
@@ -73,6 +103,14 @@ $$
 \text{pass@}k := \mathop{\mathbb{E}}_{\text{problems}} \left[ 1 - \frac{\binom{n - c}{k}}{\binom{n}{k}} \right]
 $$
 
+> **Worked example.** Sample $n = 200$ completions on a given problem, observe $c = 40$ correct. Compute pass@1 and pass@10 under the unbiased estimator and compare to the biased plug-in.
+
+Unpacking on this case:
+
+- **pass@1**: $1 - \binom{160}{1}/\binom{200}{1} = 1 - 160/200 = 0.20$. At $k = 1$ the formula collapses to the empirical fraction $c/n$.
+- **pass@10**: $1 - \binom{160}{10}/\binom{200}{10}$. Computing the ratio stably as $\prod_{i=0}^{9}(160 - i)/(200 - i) \approx 0.107$ gives pass@10 $\approx 0.893$.
+- **Plug-in for comparison**: $1 - (1 - c/n)^{10} = 1 - 0.8^{10} \approx 0.893$. Numerically close at $n = 200$, but the bias is non-zero in general — and it grows as $n$ shrinks toward $k$.
+
 The intuition is hypergeometric. Of the $n$ samples, $c$ are correct and $n - c$ are wrong. The probability that a uniformly-random subset of size $k$ misses *every* correct sample is $\binom{n-c}{k} / \binom{n}{k}$ (choose $k$ from the wrong-only pool, divide by total ways to choose $k$). One minus that is the probability that at least one of the $k$ samples in the subset is correct — which is *the per-problem pass@k for this problem given $n$ samples observed*. Average over the 164 problems for the headline.
 
 **Why naive `c / n` is not pass@k.** The naive estimator $\hat{p}_{\text{naive}} = c / n$ estimates the probability that *one* sampled completion is correct (i.e., pass@1). It does **not** estimate pass@k for $k > 1$, and the function $f(p) = 1 - (1 - p)^k$ that maps $p$ to "probability at least one of $k$ i.i.d. samples is correct" is non-linear, so $\mathbb{E}[1 - (1-\hat{p})^k] \neq 1 - (1-\mathbb{E}[\hat{p}])^k$ in general. Chen et al. point out specifically that the plug-in estimator $1 - (1 - c/n)^k$ is **biased**: it systematically overestimates pass@k because $f$ is concave in $p$ (Jensen's inequality, in the right direction here). The hypergeometric formula above is exactly the unbiased correction.
@@ -102,7 +140,20 @@ The product form avoids overflow on large binomials. Standard practice is $n = 2
 
 Chen et al. note that the sampling temperature that maximizes pass@1 is *lower* than the temperature that maximizes pass@100. Intuitively: pass@1 wants the single most-confident completion (low entropy), but pass@100 wants 100 *diverse* completions that collectively cover the solution space (higher entropy buys coverage). The Codex paper recommends temperature $\approx 0.2$ for pass@1 and $\approx 0.8$ for pass@100; mid-range $k$ uses an intermediate temperature. **A pass@k number reported without its sampling temperature is under-specified.** This is the code-eval analog of "n-shot and prompt template" being under-specified for MMLU (Day 1).
 
-## The HumanEval contamination story
+## ⏵ Check yourself — pass@k arithmetic
+
+A model is sampled $n = 10$ times on a HumanEval problem and $c = 4$ samples pass all unit tests. **Compute** pass@3 for this problem under the unbiased estimator, and decide whether the biased plug-in $1 - (1 - c/n)^k$ is closer to or farther from the unbiased value at this $(n, c)$ than at $n = 200$ with the same $c/n$ ratio.
+
+<details>
+<summary>Show answer</summary>
+
+Apply the unbiased estimator with $n = 10$, $c = 4$, $k = 3$: $\binom{n-c}{k}/\binom{n}{k} = \binom{6}{3}/\binom{10}{3} = 20/120 = 1/6$, so pass@3 $= 1 - 1/6 \approx 0.833$.
+
+The biased plug-in is $1 - (1 - 0.4)^3 = 1 - 0.216 = 0.784$. The bias is $\approx 0.05$ here — *farther* from the unbiased value than the same $c/n = 0.2$ ratio would be at $n = 200$, where the gap is essentially zero. The hypergeometric correction shrinks as $n \to \infty$: when $n$ is barely larger than $k$, the "without replacement" structure of pass@k (you cannot draw the same correct sample twice in a size-$k$ subset of $n$) matters arithmetically; at $n = 200$ it is negligible. Standard practice fixes $n = 200$ for stable pass@1 / pass@10 / pass@100 reports for exactly this reason.
+
+</details>
+
+## HumanEval contamination
 
 HumanEval's authors took care to hand-write the items so they wouldn't be in pretraining at the time of the Codex paper (2021). Two things happened in the four years since:
 
@@ -135,13 +186,13 @@ flowchart LR
 
 By 2024, HumanEval had **saturated**: frontier models score 95%+ pass@1 (per public leaderboards as of 2026, with some reports above 97% — drift caveat from D7 applies; treat exact numbers as time-varying). That saturation is partly real capability and partly contamination-driven inflation; the two are not separable from outside the labs without held-out replicates.
 
-### EvalPlus: the *test-coverage* critique, separate from contamination
+### EvalPlus: the test-coverage critique, separate from contamination
 
 Before getting to LiveCodeBench, one more critique of HumanEval that is worth keeping distinct from contamination. Liu et al. (2023), *Is Your Code Generated by ChatGPT Really Correct?* (NeurIPS 2023, arXiv:2305.01210), point out that HumanEval's ~7.7 tests per problem are **insufficient to actually verify functional correctness**: many wrong solutions pass all of HumanEval's tests because the tests don't cover edge cases. The EvalPlus toolkit augments HumanEval with **~80× more tests per problem** (auto-generated via type-aware mutation + LLM-driven seeding), producing **HumanEval+**. On HumanEval+, frontier-model pass@1 scores drop by **roughly 19–28 percentage points** vs. plain HumanEval, and the *ranking* of models can flip — WizardCoder and Phind-CodeLlama beat ChatGPT on HumanEval+, despite losing on plain HumanEval.
 
 The HumanEval+ critique is *not* the contamination critique. It is the orthogonal point that **HumanEval's tests are a weak oracle** — passing them is necessary but not sufficient for correctness. A practitioner reporting HumanEval numbers in 2026 should be reporting HumanEval+ alongside, the way Day 1's MMLU practitioner should be reporting `acc` *and* `acc_norm`. EvalPlus addresses the *scoring rule* leg of the (dataset, scoring rule, reporting convention) triple; LiveCodeBench addresses the *dataset* leg.
 
-## Anchor (overlay): LiveCodeBench (Jain et al. 2024)
+## LiveCodeBench (overlay)
 
 **Citation.** Jain, N., Han, K., Gu, A., Li, W.-D., Yan, F., Zhang, T., Wang, S., Solar-Lezama, A., Sen, K., & Stoica, I. (2024). *LiveCodeBench: Holistic and Contamination Free Evaluation of Large Language Models for Code.* arXiv:2403.07974.
 
@@ -194,32 +245,75 @@ A side-by-side, mapped to the (dataset, scoring rule, reporting convention) trip
 
 The pattern from D7 — *saturated predecessor, contamination-resistant successor* — is exactly this table. Same execution-based scoring methodology, structurally-different data pipeline.
 
-## Forward pointer
+## ⏵ Check yourself — applying the release-date filter
 
-**D12 (SWE-Bench)** pushes code evaluation past the function-synthesis frame entirely: the unit of evaluation becomes a real GitHub issue with a real multi-file patch, scored by the real test suite the project ships. HumanEval and LiveCodeBench evaluate "can the model write a function?" — SWE-Bench Verified evaluates "can the model navigate a codebase, find the bug, write the fix, and not break existing tests?" That is the agentic frontier of code eval; pass@k mechanics carry over but the dataset, scoring rule, and reporting convention all upgrade. **D25 (reasoning-model / inference-time-scaling evaluation)** revisits competitive-programming evals — AIME, FrontierMath, and the Codeforces/ICPC-style problems that LiveCodeBench Pro now uses for Elo-rated reasoning-model leaderboards — under the cost-axis Pareto framing that pass@1 vs. pass@1024 vs. cons@N raises.
+A team evaluates Model X on LiveCodeBench. Model X has a publicly-stated training-data cutoff of **October 2023**. The team reports a pass@1 of 0.62 on **all LiveCodeBench problems released between May 2023 and May 2024**. **Apply** the release-date filter from the construction above and decide whether this report is contamination-clean as written, and what minimal change makes it so.
+
+<details>
+<summary>Show answer</summary>
+
+The report is **not** contamination-clean as written. The eval window (May 2023 → May 2024) overlaps the training-data cutoff (October 2023) by about five months. Problems released between May and October 2023 could have been in training; problems released after October 2023 could not. The pooled pass@1 of 0.62 is a mixture of contamination-exposed and contamination-clean items, and the contribution of each is unknown without per-item release-date information.
+
+The minimal change: **filter to problems released strictly after the training cutoff**, i.e., October 2023 → May 2024. The resulting subset gives a per-item contamination guarantee. The load-bearing property is that LiveCodeBench tags every item with its release date, so the filter is mechanical — exactly the structural defense the design buys, distinct from any metric-level fix.
+
+</details>
+
+## Goodhart sub-thread
+
+The HumanEval → LiveCodeBench arc is this lesson's instance of the Goodhart pattern foregrounded on D6. The mechanism is the same one D6 names — test items leak into pretraining, the headline number stops measuring generalization and starts measuring memorization-plus-residual — and the defense is the same shape D6 forecasted: rebuild the dataset, not the metric. Two specifics worth carrying forward:
+
+- **EvalPlus is a metric-level defense; LiveCodeBench is a dataset-level defense.** They address orthogonal failure modes — weak oracle vs. leaked items — and do not substitute for each other. A frontier-model report in 2026 should ideally show both: HumanEval+ (or contest-grade tests) for oracle strength, and a post-cutoff subset for contamination cleanliness.
+- **Goodhart on code is the easy case.** GitHub is in pretraining wholesale. Any benchmark whose canonical form sits as a public file in a public repo will leak; the rate at which it leaks scales with leaderboard popularity (D6). The structural answer — release-date tagging plus continuous benchmark updates — is the cleanest exemplar of Goodhart-resistance-by-design we will see in the curriculum, and it is why the same shape recurs: ARC-AGI's private split, FrontierMath's gatekept items (D25), MMLU-Pro's expanded option set (D6). Code is the case where the leak rate is highest, so the defense has to be sharpest.
+
+The other foregrounded Goodhart days — D6 (leakage, the canonical case), D15 (incentive shape), D17 (situational conditioning), D22 (measurement-instrument-as-target), D28 (selection pressure) — each instantiate a *different* decoupling mechanism. D11 is a sub-thread because the mechanism here is exactly D6's; the lesson's job is to show what the leakage mechanism looks like with code-specific numbers attached.
 
 > **Safety researcher's note.** `pass@k` aggregation has a specific safety-relevant pathology that does not show up in MMLU-style accuracy metrics. The naive "model wins if any of $k$ samples passes" framing rewards generating many candidates and selecting the one that passes — which is a perfectly reasonable eval signal for capability, but is *also* the structure of an attack on test-suite-based oracles. If a model can generate adversarial test cases that the reference solution does not pass (or the reference solution does pass but for reasons the human-written test suite does not capture), pass@k inflates without genuine capability gain. Riddell et al. (2024) and the EvalPlus line of work both implicitly trust the reference test suite as a strong oracle; that trust is exactly what HumanEval+ shows is unwarranted on plain HumanEval. For agent and reasoning models that sample $k = 100$ or $k = 1024$ at inference time (D25), the failure mode "model finds a way to pass the tests that does not generalize" becomes a non-trivial threat surface — including, for capable enough systems, the reward-hacking variant where the model edits or learns to game the test harness itself. The mitigation isn't a different scalar metric; it's adversarial test-case generation (EvalPlus-style) plus held-out test suites the model never sees, plus per-item exec sandboxing that resists tampering. The cleanest framing: pass@k is an honest measure of *coverage under a fixed oracle*, but the oracle's strength is a separate axis that benchmark reports almost never quantify.
 
+## Cross-references
+
+**Backward.**
+
+- D-1 — picks up the (dataset, scoring rule, reporting convention) pipeline framing; today instantiates each box with a code-specific component (Python sandbox / pass@k estimator / mean-over-problems).
+- D-2 — picks up MC scoring as the contrast: log-likelihood scoring on enumerated options vs. exec-based scoring on free-form generations with checkable answers. The bias-in-the-plug-in story here is the code-eval analog of the length-bias-in-`acc` story there.
+- D-6 — picks up contamination as the load-bearing failure mode; HumanEval is the canonical instance of D6's leak-from-pretraining pattern on a code benchmark, and LiveCodeBench's release-date tagging is the structural-vs-metric defense D6 forecasted.
+- D-7 — picks up *saturation* as the visible leaderboard consequence; HumanEval at 95%+ pass@1 is the saturated predecessor and LiveCodeBench is the saturation- and contamination-resistant successor by the same diagnosis.
+
+**Forward.**
+
+- D-12 — picks up code eval past function synthesis: SWE-Bench Verified runs on real GitHub issues with multi-file patches and project-shipped tests. Pass@k mechanics carry over but the dataset, scoring rule, and reporting convention all upgrade.
+- D-22 — picks up the load-bearing property that exec scoring sidesteps the judge-as-instrument failure mode; D-22 turns to evals where no executable oracle is available and the judge becomes the optimization target.
+- D-25 — picks up competitive-programming evals (LiveCodeBench Pro Elo, AIME, FrontierMath) under inference-time-scaling, where the cost-axis Pareto framing of pass@1 vs. pass@1024 vs. cons@N replaces the single-$k$ report.
+
 ## Takeaways
 
-1. Code evaluation is the cleanest example of **execution-based scoring**: the model's output is run in a sandbox against unit tests, and the score is a boolean per sample. No judge, no semantic threshold, no rubric.
-2. **`pass@k`** (Chen et al. 2021) reports the probability that at least one of $k$ samples is correct, estimated unbiasedly from $n \geq k$ samples per problem as $1 - \binom{n-c}{k}/\binom{n}{k}$, averaged over problems. The naive plug-in $1 - (1 - c/n)^k$ is **biased** (overestimates).
-3. A `pass@k` number is under-specified without its **sampling temperature**: pass@1 wants low temperature (~0.2), pass@100 wants higher temperature (~0.8) for diversity.
-4. **HumanEval (164 hand-written Python tasks, MIT-licensed)** is the canonical code-LLM benchmark and the locus where pass@k was defined. As of 2026 it is heavily contaminated (Riddell et al. 2024) and saturated at 95%+ pass@1.
-5. **HumanEval+ (Liu et al. 2023, EvalPlus)** is an orthogonal critique: ~80× more tests catches wrong-but-passes-the-tests solutions, dropping pass@1 by 19–28 pp and re-ranking models. Strengthens the *scoring oracle*; doesn't address contamination.
-6. **LiveCodeBench (Jain et al. 2024)** is the structural-contamination-resistance successor: post-cutoff problem sourcing from LeetCode/AtCoder/Codeforces with per-problem release-date tags. Four scenarios (code generation, self-repair, code execution, test output prediction). Restores headroom and gives *per-item* contamination guarantees rather than statistical ones.
-7. The HumanEval → LiveCodeBench arc is the same Goodhart-collapse-then-redesign pattern as MMLU → MMLU-Pro (D6) and the GPQA-saturation framing (D7), instantiated on code. Day 12 (SWE-Bench) extends it from function synthesis to multi-file agentic code eval.
+1. Code evaluation is the cleanest example of **execution-based scoring**: the model's output is run in a sandbox against unit tests, and the per-sample score is a boolean. No judge, no semantic threshold, no rubric. *(LO 1)*
+2. **`pass@k`** (Chen et al. 2021) reports the probability that at least one of $k$ samples is correct, estimated unbiasedly from $n \geq k$ samples per problem as $1 - \binom{n-c}{k}/\binom{n}{k}$, averaged over problems. The naive plug-in $1 - (1 - c/n)^k$ is **biased** (overestimates), with bias that shrinks as $n \to \infty$. *(LO 2)*
+3. A `pass@k` number is under-specified without its **sampling temperature**: pass@1 wants low temperature (~0.2), pass@100 wants higher temperature (~0.8) for diversity. *(LO 5)*
+4. **HumanEval (164 hand-written Python tasks, MIT-licensed)** is the canonical code-LLM benchmark and the locus where pass@k was defined. As of 2026 it is heavily contaminated (Riddell et al. 2024) and saturated at 95%+ pass@1. *(LO 1, LO 5)*
+5. **HumanEval+ (Liu et al. 2023, EvalPlus)** is an orthogonal critique: ~80× more tests catches wrong-but-passes-the-tests solutions, dropping pass@1 by 19–28 pp and re-ranking models. Strengthens the *scoring oracle*; doesn't address contamination. *(LO 3)*
+6. **LiveCodeBench (Jain et al. 2024)** is the structural-contamination-resistance successor: post-cutoff problem sourcing from LeetCode/AtCoder/Codeforces with per-problem release-date tags. Four scenarios (code generation, self-repair, code execution, test output prediction). Restores headroom and gives *per-item* contamination guarantees rather than statistical ones. *(LO 4)*
+7. The HumanEval → LiveCodeBench arc is the same Goodhart-collapse-then-redesign pattern as MMLU → MMLU-Pro (D6) and the GPQA-saturation framing (D7), instantiated on code. Day 12 (SWE-Bench) extends it from function synthesis to multi-file agentic code eval. *(LO 6)*
+
+## Glossary
+
+- **pass@k**: the probability that at least one of $k$ i.i.d. samples from a model passes a problem's hidden test suite, averaged over problems. Estimated unbiasedly from $n \geq k$ samples per problem as $1 - \binom{n-c}{k}/\binom{n}{k}$ [introduced D-11].
+- **exec-based scoring**: evaluating a code-generation output by running it in a sandbox against unit tests; the per-sample score is a boolean (passes-all-tests vs. doesn't), with no judge, semantic threshold, or rubric in the loop [introduced D-11].
+- **unbiased pass@k estimator**: the hypergeometric-correction form of pass@k from Chen et al. 2021 that avoids the systematic over-estimation of the plug-in $1 - (1 - c/n)^k$ (Jensen's inequality on the concave $f(p) = 1 - (1-p)^k$); collapses to $c/n$ at $k = 1$ [introduced D-11].
+- **HumanEval+ / EvalPlus**: Liu et al. 2023's augmentation of HumanEval with ~80× more auto-generated tests per problem; addresses the *scoring oracle* (test coverage), not contamination. Pass@1 typically drops 19–28 pp vs. plain HumanEval and rankings can flip [introduced D-11].
+- **release-date tagging**: LiveCodeBench's per-item annotation of problem release date on its source platform; filtering to items released after a model's training cutoff yields a per-item contamination guarantee that is mechanical rather than statistical [introduced D-11].
+- **contamination-resistant successor**: a benchmark redesigned so that contamination is structurally absent or demonstrably bounded — by private splits (ARC-AGI, FrontierMath), expanded option sets and recency (MMLU-Pro), or post-cutoff sampling (LiveCodeBench). Distinguished from a *better metric* on the same data [introduced D-6 · reused].
+- **contamination**: a test item or near-paraphrase appearing in the training data; verbatim, paraphrase, indirect, and post-training flavors leak at different rates and need different forensics [introduced D-6 · reused].
 
 ## References
 
-- **Anchor (HumanEval, pass@k).** Chen, M., Tworek, J., Jun, H., Yuan, Q., et al. (2021). *Evaluating Large Language Models Trained on Code.* arXiv:2107.03374. https://arxiv.org/abs/2107.03374
-- **Anchor overlay (LiveCodeBench).** Jain, N., Han, K., Gu, A., Li, W.-D., Yan, F., Zhang, T., Wang, S., Solar-Lezama, A., Sen, K., & Stoica, I. (2024). *LiveCodeBench: Holistic and Contamination Free Evaluation of Large Language Models for Code.* arXiv:2403.07974. https://arxiv.org/abs/2403.07974
-- **HumanEval contamination evidence.** Riddell, M., Ni, A., & Cohan, A. (2024). *Quantifying Contamination in Evaluating Code Generation Capabilities of Language Models.* ACL 2024. arXiv:2403.04811. https://arxiv.org/abs/2403.04811
-- **HumanEval+ / EvalPlus (test-coverage critique).** Liu, J., Xia, C. S., Wang, Y., & Zhang, L. (2023). *Is Your Code Generated by ChatGPT Really Correct? Rigorous Evaluation of Large Language Models for Code Generation.* NeurIPS 2023. arXiv:2305.01210. https://arxiv.org/abs/2305.01210
-- **Reference implementation (HumanEval, `pass_at_k`).** OpenAI. *human-eval* (MIT). https://github.com/openai/human-eval
-- **HumanEval dataset card.** Hugging Face. *openai/openai_humaneval* (MIT). https://huggingface.co/datasets/openai/openai_humaneval
-- **LiveCodeBench live leaderboard.** https://livecodebench.github.io/leaderboard.html
-- **Forward — SWE-Bench (D12 anchor).** Jimenez, C. E., et al. (2023). *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?* arXiv:2310.06770.
+- **Anchor.** Chen, M., Tworek, J., Jun, H., Yuan, Q., et al. (2021). *Evaluating Large Language Models Trained on Code.* arXiv:2107.03374. https://arxiv.org/abs/2107.03374
+- **Harness.** OpenAI. *human-eval* (MIT) — reference `pass_at_k` implementation and Python execution sandbox. https://github.com/openai/human-eval
+- **Harness.** LiveCodeBench team. *LiveCodeBench codebase + live leaderboard.* https://livecodebench.github.io/leaderboard.html
+- **Secondary.** Jain, N., Han, K., Gu, A., Li, W.-D., Yan, F., Zhang, T., Wang, S., Solar-Lezama, A., Sen, K., & Stoica, I. (2024). *LiveCodeBench: Holistic and Contamination Free Evaluation of Large Language Models for Code.* arXiv:2403.07974. https://arxiv.org/abs/2403.07974
+- **Secondary.** Riddell, M., Ni, A., & Cohan, A. (2024). *Quantifying Contamination in Evaluating Code Generation Capabilities of Language Models.* ACL 2024. arXiv:2403.04811. https://arxiv.org/abs/2403.04811
+- **Secondary.** Liu, J., Xia, C. S., Wang, Y., & Zhang, L. (2023). *Is Your Code Generated by ChatGPT Really Correct? Rigorous Evaluation of Large Language Models for Code Generation.* NeurIPS 2023. arXiv:2305.01210. https://arxiv.org/abs/2305.01210
+- **Secondary.** Hugging Face. *openai/openai_humaneval dataset card* (MIT). https://huggingface.co/datasets/openai/openai_humaneval
+- **Secondary.** Jimenez, C. E., et al. (2023). *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?* arXiv:2310.06770. (Forward — D-12 anchor.)
 
 ## Quiz
 
@@ -237,7 +331,7 @@ The pattern from D7 — *saturated predecessor, contamination-resistant successo
 - C. It is only biased when $n < k$, since the hypergeometric estimator is undefined for $n < k$.
 - D. It is unbiased; Chen et al. 2021 use it as the canonical estimator in the human-eval reference repo.
 
-**Q3.** A practitioner reports "Model X achieves pass@100 = 0.85 on HumanEval." Which piece of information is **most necessary** to interpret this number, beyond what's stated?
+**Q3.** A practitioner reports "Model X achieves pass@100 = 0.85 on HumanEval." Which is the **most defensible** single piece of information to demand before treating this number as a measurement, beyond what's stated?
 
 - A. The exact Python version used in the sandbox, since CPython 3.11's bytecode changes can affect timing-sensitive unit tests.
 - B. The sampling temperature used during decoding.
@@ -270,7 +364,7 @@ The pattern from D7 — *saturated predecessor, contamination-resistant successo
 
 1. **D** — at $k = 1$ the unbiased estimator collapses to $c/n$ (since $\binom{n-c}{1}/\binom{n}{1} = (n-c)/n$), so all three expressions are algebraically identical: $40/200 = 0.20$. The pedagogical point is that pass@1 is the simplest case and the formulas all agree there; the divergence between estimators only matters at $k > 1$.
 2. **B** — by Jensen's inequality, for a concave $f$, $\mathbb{E}[f(\hat{p})] \leq f(\mathbb{E}[\hat{p}])$, so the plug-in overestimates the expectation. Chen et al. 2021 explicitly call this out and derive the hypergeometric correction.
-3. **B** — the temperature-sensitivity point from "Sampling temperature: why you do not use the same temperature for every $k$." A pass@100 reported at temperature 0.2 is a different (and worse) measurement than one at temperature 0.8. This is the code-eval analog of "n-shot and prompt template" being load-bearing for MMLU.
+3. **B** — the temperature-sensitivity point from "Sampling temperature: why you do not use the same temperature for every $k$." A pass@100 reported at temperature 0.2 is a different (and worse) measurement than one at temperature 0.8, so the most defensible single demand is the sampling temperature. This is the code-eval analog of "n-shot and prompt template" being load-bearing for MMLU.
 4. **A** — apply the unbiased estimator with $n = 5$, $c = 3$, $k = 2$: $\binom{n-c}{k}/\binom{n}{k} = \binom{2}{2}/\binom{5}{2} = 1/10$, so pass@2 $= 1 - 1/10 = 0.9$. (Distractor B is the *biased* plug-in $1 - (1 - c/n)^k = 0.84$ — close to the right answer, which is exactly the kind of small bias the unbiased estimator removes. Distractor C is pass@1, not pass@2. Distractor D miscomputes by using $\binom{c}{k}$ instead of $\binom{n-c}{k}$, a common direction-of-counting error.)
 5. **B** — post-cutoff release-date tagging is the load-bearing structural property. (A) is wrong: LiveCodeBench uses execution-based scoring, not a judge. (C) is wrong: problems are language-flexible but typically Python. (D) describes ARC-AGI's design, not LiveCodeBench's.
 6. **B** — the EvalPlus critique is that the *test suite* is a weak oracle (scoring rule); the Riddell et al. critique is that the *items* leaked into training (dataset). They are orthogonal; a HumanEval+ report on a contamination-free held-out item set would address both.

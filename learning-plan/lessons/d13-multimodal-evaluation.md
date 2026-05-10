@@ -6,10 +6,41 @@ week: 2
 week_theme: Capability benchmarks
 anchor_benchmark: MMMU
 harness: VLMEvalKit (benchmark-native MMMU runner mapped through it)
-reading_time_minutes: 28
+reading_time_minutes: 31
+prerequisites: [1]
+key_terms:
+  - multimodal LLM
+  - perception-vs-reasoning axis
+  - multi-discipline reasoning
+  - MMMU-Pro
+  - VLMEvalKit
+  - visual prompt injection
+  - FigStep
+  - text-only solvability
+goodhart_role: absent
+calibration_role: absent
 ---
 
 # Day 13 — Multimodal evaluation: vision + language reasoning
+
+## TL;DR
+
+Multimodal evaluation is the same (dataset, scoring rule, reporting convention) pipeline from D-1, applied to a wider input modality — images, sometimes audio or video — with two new degrees of freedom (image preprocessing and image-token interleaving). The first decade of multimodal benchmarks (VQA, ScienceQA) measured *perception*; today's anchor — **MMMU** (Yue et al. 2023/2024), 11,550 college-level items across 6 disciplines, 30 subjects, and 30 heterogeneous image types — measures *perception-conditioned reasoning*, and **MMMU-Pro** (Yue et al. 2024) is its already-deployed harder successor. A score on either is unfalsifiable until you say which split, which preprocessing, and (for Pro) which setting.
+
+## Learning objectives
+
+By the end of this lesson, you will be able to:
+
+1. **(L2)** State the perception-vs-reasoning axis and locate VQA, ScienceQA, MathVista, and MMMU on it.
+2. **(L2)** Describe MMMU's construction principle — 6 disciplines × 30 subjects × 30 heterogeneous image types — and recall the canonical 150 / 900 / 10,500 dev/val/test split structure.
+3. **(L3)** *Apply* MMMU-Pro's reported 16.8–26.9-point gap to interpret a model's MMMU-vs-Pro score pair as in-distribution or anomalous.
+4. **(L4)** *Decompose* the new degrees of freedom a multimodal pipeline introduces relative to D-1's text-only pipeline (image preprocessing, image-token interleaving, modality routing) and identify which axis a given two-paper disagreement most plausibly hangs on.
+5. **(L5)** *Evaluate* a model card's MMMU score against the pipeline questions a Week-2 reader is now equipped to ask before treating it as a measurement.
+6. **(L4)** Read FigStep-style typographic jailbreaks as a third axis — *visual-channel safety* — that neither MMMU nor a text-only refusal benchmark measures.
+
+## Prerequisites & callback
+
+Today's lesson is load-bearing on **D-1**'s pipeline framing — that an evaluation is a *(dataset, scoring rule, reporting convention) pipeline* rather than a number — and reuses it directly. Multimodal evaluation does not redefine the pipeline; it widens the input stage of the *same* pipeline, adding two new pipeline-drift sources (image preprocessing, image-token interleaving) on top of the four D-1 named (n-shot, prompt template, scoring rule, subset). The Week-2 capability-benchmark thread the lesson sits inside also reuses D-7's saturation framing (MMMU has its own MMMU-Pro arc) and D-1's *capability overhang* move (visual-channel safety is a second overhang axis). Everything about reading "Model X scored 84.7% on MMMU" inherits the D-1 reflex: ask **what pipeline?** before "is that good?".
 
 ## The opening hook
 
@@ -56,6 +87,17 @@ flowchart LR
 - **Reasoning-heavy benchmarks** ask questions that *require* extracting structured information from a non-photographic image (a diagram, chart, equation, score, scan) and then performing multi-step domain reasoning over it. MMMU and MathVista (Lu et al. 2023, arXiv:2310.02255) are the two canonical anchors here.
 
 The pedagogical move for the rest of the lesson: MMMU doesn't beat VQA on perception. It beats VQA on *what you have to do once you've perceived the image*. A model that crushes ImageNet but has only a 7B language backbone will fail MMMU not because it can't see, but because it can't think after it sees.
+
+## ⏵ Check yourself — sorting benchmarks
+
+A 2026 paper reports a 13B open-weights VLM scoring **78%** on VQA, **74%** on ScienceQA, and **31%** on MMMU. **Decompose** the spread along the perception-vs-reasoning axis and identify what it tells you, and does not tell you, about the model's vision encoder.
+
+<details>
+<summary>Show answer</summary>
+
+The spread is consistent with a model whose vision-and-language stack handles short-answer perception (VQA: object/attribute recognition) and image-supplemented K–12 science MCQ (ScienceQA: ~49% of items have an image at all, and most diagrams are clearly labelled) but lacks the *domain-knowledge backbone* for college-level multi-discipline reasoning (MMMU: chemistry, medicine, music notation, etc.). The 78% / 74% pair tells you the *vision encoder* is competent — the model can perceive the image. The 31% on MMMU does not tell you the vision encoder is broken; it tells you that perception is at most ~10% of the work on MMMU and the remaining ~90% is domain reasoning over what was perceived. A bigger language backbone, not a better vision encoder, is the load-bearing fix.
+
+</details>
 
 ## Anchor: MMMU (Yue et al. 2023/2024)
 
@@ -137,6 +179,17 @@ MMMU-Pro is the same authors' response to two failure modes:
 
 The result: **3,460 questions** across the same 6 disciplines, with reported scores 16.8–26.9 points lower than each model's MMMU score. As of 2026, MMMU-Pro is the contamination-and-saturation-hardened multimodal anchor, and the score-to-quote when MMMU itself is too saturated to discriminate. This is the same successor pattern D7 named: original benchmark saturates → harder variant restores headroom.
 
+## ⏵ Check yourself — Pro gap math
+
+A 2026 system card reports the model scoring **86.4%** on MMMU validation and **64.1%** on MMMU-Pro. **Compute** the absolute and relative gaps, place them inside or outside the published 16.8–26.9-point Pro-vs-original range, and identify what the comparison is — and is not — evidence for.
+
+<details>
+<summary>Show answer</summary>
+
+Absolute gap: $86.4 - 64.1 = 22.3$ points. Relative gap: $22.3 / 86.4 \approx 25.8\%$. The 22.3-point absolute drop sits *inside* the published 16.8–26.9-point Pro-vs-original window across models, so the magnitude alone is unremarkable — it is the construction-driven difficulty bump (text-only-solvable items removed, options 4 → 10, vision-only setting added), not a model fault. What the comparison **is** evidence for: the model is performing roughly in line with frontier expectations on the harder Pro setting. What it **is not** evidence for: that the model is "a 22-point worse multimodal model on Pro" in any deeper sense than the construction guarantees. The same model scoring 64.1% on Pro and 86.4% on the easier MMMU is the published pattern; both numbers, with their split labels, are needed to read the model card honestly.
+
+</details>
+
 ## Multimodal contrast benchmarks
 
 A short tour of the surrounding multimodal eval landscape, useful as foils:
@@ -190,30 +243,51 @@ response = requests.post(
 
 The `content` array interleaves text and image — that ordering is one of the prompt-template degrees of freedom MMMU implementations have to fix to be reproducible.
 
-## Forward pointers
+## Visual prompt injection and the multimodal jailbreak surface
 
-- **D14 (RULER, long-context).** Long-context evaluation is conceptually adjacent: another axis along which the input grows beyond what older benchmarks measured. *Multimodal long-context* — videos, multi-image documents, OS-level screen recordings — is a separate axis that compounds D13's reasoning-on-images load with D14's needle-in-haystack retrieval load. Most current benchmarks attack one or the other; benchmarks that attack both (e.g., Video-MME, LongVideoBench) sit downstream of both lessons.
-- **D27 (OSWorld, OS-level agents).** When an agent operates a computer, *every observation is a screenshot*. The agent's perception-and-reasoning loop on UI screenshots — buttons, dialogs, file managers, embedded text — is the agent-side specialization of D13's multimodal evaluation. MMMU's framing ("the image carries domain-structured information that requires both perception and reasoning") is the right scaffold for thinking about why OSWorld agents fail: not because they can't see the screen, but because they can't reason about what they're seeing under the constraints of a multi-step plan.
+The moment you add an image input to an evaluated system, you have added an attack surface that purely text-evaluated safety scores do not measure. Two multimodal-specific failure modes (neither of which exists in text-only LLMs):
 
-## Goodhart aside (brief)
+1. **Visual prompt injection / embedded-text attacks.** An adversary embeds text instructions into an image — sometimes visibly (FigStep-style typography that converts a refused text request into an image of that request), sometimes subtly (small adversarial text rendered in image corners), sometimes via steganography (instructions in pixel statistics invisible to humans). The model OCRs and follows. FigStep (Gong et al. 2023, arXiv:2311.05608) reports a **>82% attack success rate** on six open-source LVLMs by simply rendering the disallowed prompt as a screenshot.
+2. **Cross-modal indirect prompt injection.** A multimodal agent retrieves an image (from the web, from a user upload, from a tool's output) that contains attacker-controlled instructions — the agent reads the image as a benign observation but the model treats the embedded text as a directive. This is the multimodal extension of the indirect-prompt-injection threat model that D-26 (AgentDojo) and D-27 (OSWorld, screenshot-as-observation) make concrete.
 
-MMMU saturation has the same Goodhart shape as D7: original benchmark widely cited → labs train on it (intentionally or via crawled adjacent material) → score climbs faster than capability → MMMU-Pro published as the harder successor. The pattern is now stable enough that "expect a `-Pro` variant within ~18 months of any popular benchmark" is a useful prior. We're not foregrounding Goodhart on D13, but the MMMU → MMMU-Pro arc is one more datapoint for the recurring thread.
+A model that scores 85% on MMMU and 99% on a text-only refusal benchmark may still be 50% jailbreakable via embedded-image text — and you cannot read that off any of the headline numbers in this lesson alone. A frontier multimodal jailbreak suite therefore needs *both* axes — text-channel attacks *and* visual-channel attacks. HarmBench's 2024+ multimodal-attack subsets (D-19) are the right place to look for that compound surface.
 
-> **Safety researcher's note.** Multimodal evaluation has its own jailbreak surface, and it is genuinely worse than the text-only one. Two failure modes that don't exist in text-only LLMs:
->
-> 1. **Visual prompt injection / embedded-text attacks.** An adversary embeds text instructions into an image — sometimes visibly (FigStep-style typography that converts a refused text request into an image of that request), sometimes subtly (small adversarial text rendered in image corners), sometimes via steganography (instructions in pixel statistics invisible to humans). The model OCRs and follows. FigStep reports >82% attack success rate on six open-source LVLMs by simply rendering the disallowed prompt as a screenshot.
-> 2. **Cross-modal indirect prompt injection.** A multimodal agent retrieves an image (from the web, from a user upload, from a tool's output) that contains attacker-controlled instructions — the agent reads the image as a benign observation but the model treats the embedded text as a directive. This is the multimodal extension of the indirect-prompt-injection threat model that D26 (AgentDojo, indirect-PI) and D27 (OSWorld, screenshot-as-observation) make concrete.
->
-> The connection back to D19 (HarmBench): a frontier multimodal jailbreak suite needs both axes — text-channel attacks *and* visual-channel attacks. HarmBench's 2024+ extensions and its multimodal-attack subsets are the right place to look. The general lesson for D13 is that the moment you add an image input, you've added an attack surface that purely text-evaluated safety scores don't measure. A model that scores 85% on MMMU and 99% on a text-only refusal benchmark may still be 50% jailbreakable via embedded-image text — and you can't read that off any of the headline numbers in this lesson alone.
+The pedagogical point parallels D-1's *capability overhang* note: just as MMLU is a capability number that does not move with safety alignment, MMMU is a *visual-capability* number that does not move with *visual-channel safety* — and the visual-channel safety axis itself is largely unmeasured by the text-only refusal benchmarks model cards quote.
+
+## Cross-references
+
+**Backward.**
+- D-1 — picks up the (dataset, scoring rule, reporting convention) pipeline framing as the load-bearing scaffold; multimodal eval is the same pipeline applied to a wider input modality, with two new degrees of freedom (image preprocessing, image-token interleaving).
+- D-1 — picks up the *capability overhang* framing; visual-channel safety is the multimodal extension of the capability-vs-alignment delta.
+- D-6 — leakage-flavored pattern: MMMU → MMMU-Pro is the multimodal datapoint for the recurring "popular benchmark gets a `-Pro` successor within ~18 months" trajectory the contamination lesson named.
+- D-7 — saturation framing for the 56% → ~85% MMMU trajectory; same successor-benchmark arc as GPQA → harder construction, different modality.
+
+**Forward.**
+- D-14 — long-context evaluation as the adjacent input-axis growth story; multimodal long-context (Video-MME, LongVideoBench) compounds D-13's perception-conditioned-reasoning load with D-14's needle-in-haystack retrieval load.
+- D-19 — HarmBench is the right place to look for compound (text + visual) jailbreak suites; the FigStep / embedded-text family above is one half of that surface.
+- D-22 — LLM-as-judge mechanics that open-ended multimodal benchmarks (MM-Vet) lean on for free-form scoring, with the foregrounded-Goodhart tradeoffs intact.
+- D-26 — AgentDojo / indirect prompt injection: the cross-modal extension where attacker-controlled images become the indirect-PI surface for a multimodal agent.
+- D-27 — OSWorld: every observation is a screenshot, so D-13's perception-conditioned-reasoning load is the load OSWorld agents pay on every step of a multi-step OS plan.
 
 ## Takeaways
 
-1. Multimodal evaluation moved from *perception* (VQA, ImageNet) to *perception-conditioned reasoning* (MMMU, MathVista). MMMU's construction principle is heterogeneous image types (30) crossed with college-level domain reasoning (6 disciplines, 30 subjects, 183 subfields).
-2. The pipeline gains two new degrees of freedom relative to D1: image preprocessing (resolution, tiling, aspect ratio) and image-token interleaving (where the image goes in the prompt). Both are pipeline-drift sources that VLMEvalKit standardizes.
-3. MMMU's split is 150 dev / 900 validation / 10,500 test. Most published numbers are validation-split; check before comparing.
-4. Paper baselines: human expert 76.2/82.6/88.6% (low/medium/best), GPT-4V 56%, Gemini Ultra 59%. As of 2026, frontier scores ~84–86% on validation — within a point of the best human expert. Verify yourself against primary system cards.
-5. MMMU-Pro (2024) is the harder successor: text-only-solvable items removed, options expanded 4 → 10, vision-only setting added. Frontier scores on Pro are 16.8–26.9 points lower than on MMMU.
-6. The multimodal jailbreak surface (visual prompt injection, embedded-text attacks, cross-modal indirect-PI) is real and not measured by capability benchmarks alone. D19, D26, D27 are where this gets concrete.
+1. Multimodal evaluation moved from *perception* (VQA, ImageNet) to *perception-conditioned reasoning* (MMMU, MathVista). MMMU's construction principle is heterogeneous image types (30) crossed with college-level domain reasoning (6 disciplines, 30 subjects, 183 subfields). *(LO 1)*
+2. MMMU's split is 150 dev / 900 validation / 10,500 test, and most published numbers are validation-split; check the split label before comparing two papers' headlines. *(LO 2)*
+3. Paper baselines: human expert 76.2 / 82.6 / 88.6% (worst / medium / best), GPT-4V 56%, Gemini Ultra 59%. As of 2026, frontier scores ~84–86% on validation — within a point of the best human expert. Verify against primary system cards. *(LO 5)*
+4. The pipeline gains two new degrees of freedom relative to D-1: image preprocessing (resolution, tiling, aspect ratio) and image-token interleaving (where the image goes in the prompt). Both are pipeline-drift sources that VLMEvalKit standardizes. *(LO 4)*
+5. MMMU-Pro (2024) is the harder successor: text-only-solvable items removed, options expanded 4 → 10, vision-only setting added. Frontier scores on Pro are 16.8–26.9 points lower than on MMMU; a same-model gap inside that window is in-distribution, not a fault. *(LO 3)*
+6. The multimodal jailbreak surface (visual prompt injection, embedded-text attacks, cross-modal indirect-PI) is a third axis distinct from capability scores and text-only refusal scores. D-19, D-26, D-27 are where this gets concrete. *(LO 6)*
+
+## Glossary
+
+- **multimodal LLM (VLM / LMM / LVLM)**: a model that accepts non-text inputs (images, sometimes audio or video) alongside text and emits text. Architectural variants split into adapter-style (separate vision encoder + projection) and native-multimodal (image tokens trained from scratch as first-class inputs) [introduced D-13].
+- **perception-vs-reasoning axis**: the spectrum on which multimodal benchmarks sit — perception-heavy items (recognize the object) vs. reasoning-heavy items (reason in a domain after extracting structured information from a non-photographic image). VQA is the perception archetype; MMMU is the reasoning archetype [introduced D-13].
+- **multi-discipline reasoning**: MMMU's construction principle — heterogeneous image types (charts, chemical structures, medical scans, music notation, …) crossed with college-level domain knowledge across 6 disciplines, 30 subjects, and 183 subfields. The construction guarantee is that no single image-modality skill carries the benchmark [introduced D-13].
+- **text-only solvability**: a multimodal item that can be answered correctly without the image. MMMU-Pro's first construction-time filter removes such items by running text-only models against MMMU and rejecting the items they pass [introduced D-13].
+- **MMMU-Pro**: the contamination-and-saturation-hardened MMMU successor — text-only-solvable items removed, candidate options expanded 4 → 10 (random baseline 25% → 10%), and a vision-only setting added in which the question text is rendered into the image. Reported scores 16.8–26.9 points below each model's MMMU score [introduced D-13].
+- **VLMEvalKit**: the multimodal analogue of `lm-evaluation-harness` (D-1) — the OpenCompass-ecosystem harness that standardizes image preprocessing, prompt templates, answer extraction, and aggregation across 220+ VLMs and 80+ benchmarks (MMMU, MMMU-Pro, MathVista, MM-Vet, …) [introduced D-13].
+- **visual prompt injection**: image-channel attack where adversary-controlled instructions are embedded in the image (visible typography, adversarial text in corners, or steganographic payloads) and the model OCR-reads-and-follows them. Adds a third axis (visual-channel safety) to the capability-vs-text-refusal pair [introduced D-13].
+- **FigStep**: typographic-prompt visual jailbreak (Gong et al. 2023) that converts a refused text request into an image of the same request, reportedly achieving >82% attack success on six open-source LVLMs [introduced D-13].
 
 ## References
 
@@ -229,7 +303,7 @@ MMMU saturation has the same Goodhart shape as D7: original benchmark widely cit
 
 ## Quiz
 
-**Q1.** What single property best distinguishes MMMU from VQA (Antol et al. 2015)?
+**Q1.** Which of the following is the **best statement of** the construction property that distinguishes MMMU from VQA (Antol et al. 2015)?
 
 - A. MMMU is multilingual across 30 source languages with parallel translations, while VQA is English-only with no localization variants.
 - B. MMMU is exclusively multiple-choice with a fixed four-option format, while VQA is purely open-ended with free-form short-answer scoring.
@@ -243,14 +317,14 @@ MMMU saturation has the same Goodhart shape as D7: original benchmark widely cit
 - C. ScienceQA is contaminated through its inclusion in pretraining web crawls, while MMMU's textbook-sourced items remain uncontaminated.
 - D. The model uses chain-of-thought decoding on ScienceQA but defaults to direct-answer mode on MMMU's MCQ format.
 
-**Q3.** What is the canonical MMMU split structure?
+**Q3.** **Compute** MMMU's total item count from the canonical dev / val / test split sizes. Which line below states the split correctly?
 
 - A. 1,000 / 5,000 / 5,500 split across dev / val / test, totalling 11,500 items.
 - B. 150 / 900 / 10,500 (dev / val / test) — totalling 11,550 items.
 - C. 198 (Diamond) / 250 (Main) — like GPQA, with no additional dev split.
 - D. There is no held-out test split; all 11,550 items are public on HuggingFace.
 
-**Q4.** Which of the following is **not** one of the three changes MMMU-Pro introduces relative to MMMU?
+**Q4.** **Decompose** MMMU-Pro's three structural changes relative to MMMU. Which option below is **not** one of them?
 
 - A. Filter out items that text-only models can solve without the image.
 - B. Expand candidate options from 4 to 10, dropping the random baseline.
@@ -264,7 +338,7 @@ MMMU saturation has the same Goodhart shape as D7: original benchmark widely cit
 - C. MMMU-Pro is multilingual across 12 target languages with parallel translations, and Model X is English-only — so the gap is a localization artefact.
 - D. The MMMU score must therefore be on the held-out test split rather than the public validation set, which inflates results by ~20 points.
 
-**Q6.** A multimodal model scores 87% on a text-only refusal benchmark and 84% on MMMU. A red-teamer reports that 60% of refused requests succeed when re-rendered as an image (FigStep-style typographic jailbreak). What does this reveal about the safety profile that the two headline scores don't?
+**Q6.** A multimodal model scores 87% on a text-only refusal benchmark and 84% on MMMU. A red-teamer reports that 60% of refused requests succeed when re-rendered as an image (FigStep-style typographic jailbreak). Which option **best explains** what the two headline scores miss?
 
 - A. The text-only refusal benchmark is contaminated through web crawls that included its disallowed prompts during the model's safety alignment training.
 - B. The MMMU validation score is overestimated by roughly 10 points because image-tiling drift across the 900-item split inflates accuracy.
