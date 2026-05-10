@@ -91,6 +91,12 @@ const rehypeWrapSections: Plugin<[], Root> = () => {
                 },
                 {
                   type: "element",
+                  tagName: "span",
+                  properties: { className: ["lesson-section-badge"] },
+                  children: [{ type: "text", value: "read ✓" }],
+                },
+                {
+                  type: "element",
                   tagName: "button",
                   properties: {
                     type: "button",
@@ -111,6 +117,56 @@ const rehypeWrapSections: Plugin<[], Root> = () => {
       }
     }
     flush();
+
+    // After all sections are assembled, append a "Mark section read"
+    // footer button to each one. We do this in a second pass so the
+    // button lands at the very end of each section's child list — the
+    // primary forward-flow action a reader takes when they finish a
+    // section. The summary's `.section-check` (added above) stays as
+    // the badge + un-mark toggle.
+    for (const node of out) {
+      if (
+        node.type !== "element" ||
+        (node as Element).tagName !== "details"
+      )
+        continue;
+      const detailsEl = node as Element;
+      const props = detailsEl.properties as Record<string, unknown> | undefined;
+      const slug = props?.["data-section-slug"];
+      if (typeof slug !== "string") continue;
+      const footer: Element = {
+        type: "element",
+        tagName: "div",
+        properties: { className: ["section-footer"] },
+        children: [
+          {
+            type: "element",
+            tagName: "button",
+            properties: {
+              type: "button",
+              className: ["section-mark-read"],
+              "data-section-slug": slug,
+              "aria-label": "Mark section as read",
+            },
+            children: [
+              {
+                type: "element",
+                tagName: "span",
+                properties: { className: ["section-mark-read-icon"] },
+                children: [{ type: "text", value: "✓" }],
+              },
+              {
+                type: "element",
+                tagName: "span",
+                properties: { className: ["section-mark-read-label"] },
+                children: [{ type: "text", value: "Mark section read" }],
+              },
+            ],
+          },
+        ],
+      };
+      detailsEl.children = [...detailsEl.children, footer];
+    }
 
     tree.children = out;
   };

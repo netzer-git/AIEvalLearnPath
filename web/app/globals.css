@@ -520,6 +520,86 @@
   color: oklch(0.4 0 0);
 }
 
+/* "read ✓" badge inside the summary — only visible when the section is
+   marked complete. Sits between the H2 and the .section-check toggle. */
+.lesson-section-badge {
+  display: none;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-mint);
+  background: color-mix(in oklch, var(--accent-mint), transparent 80%);
+  border: 1px solid var(--accent-mint-border);
+  border-radius: 9999px;
+  padding: 0.15rem 0.55rem;
+  line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.lesson-section--done > .lesson-section-summary .lesson-section-badge {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Bottom-of-section "Mark section read" button (added by
+   rehypeWrapSections, wired by SectionTracker). Primary forward-flow
+   action — collapses the section and moves the reader on. */
+.section-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border);
+}
+.section-mark-read {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-mint-border);
+  background: var(--accent-mint-soft);
+  color: var(--accent-mint);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease;
+}
+.section-mark-read:hover {
+  background: color-mix(in oklch, var(--accent-mint-soft), var(--accent-mint) 25%);
+  border-color: var(--accent-mint);
+  color: oklch(0.16 0 0);
+}
+.section-mark-read[data-completed="true"] {
+  background: transparent;
+  color: var(--muted-foreground);
+  border-color: var(--border);
+}
+.section-mark-read[data-completed="true"] .section-mark-read-icon {
+  color: var(--accent-mint);
+}
+.section-mark-read[data-completed="true"]:hover {
+  color: var(--foreground);
+  border-color: var(--foreground);
+}
+.section-mark-read-icon {
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.section-mark-read[data-completed="true"] .section-mark-read-label::before {
+  content: "Re-open section";
+}
+.section-mark-read[data-completed="true"] .section-mark-read-label {
+  font-size: 0;
+}
+.section-mark-read[data-completed="true"] .section-mark-read-label::before {
+  font-size: 0.85rem;
+}
+
 /* ============================================================ */
 /*  Pastel accents — applied sparingly for completion, quiz,    */
 /*  safety-researcher's notes, and section dividers.            */
@@ -730,6 +810,27 @@
   align-items: center;
   gap: 0.75rem;
   font-size: 0.95rem;
+}
+.complete-strip-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+.complete-back-link {
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.4rem 0.85rem;
+  transition: color 0.15s ease, border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.complete-back-link:hover {
+  color: var(--foreground);
+  border-color: var(--foreground);
+  background: var(--muted);
 }
 .complete-strip--loading {
   color: var(--muted-foreground);

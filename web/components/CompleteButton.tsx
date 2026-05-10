@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 type Status =
@@ -114,14 +115,19 @@ export default function CompleteButton({ day }: { day: number }) {
 
   if (status.kind === "complete") {
     return (
-      <div className="complete-strip complete-strip--done">
-        <span className="complete-strip-icon" aria-hidden>✓</span>
-        <span className="complete-strip-text">
-          Completed {formatDate(status.completedAt)}
-          {status.readingSeconds > 0 && (
-            <> · took {formatMinutes(status.readingSeconds)}</>
-          )}
-        </span>
+      <div className="complete-strip-group">
+        <div className="complete-strip complete-strip--done">
+          <span className="complete-strip-icon" aria-hidden>✓</span>
+          <span className="complete-strip-text">
+            Completed {formatDate(status.completedAt)}
+            {status.readingSeconds > 0 && (
+              <> · took {formatMinutes(status.readingSeconds)}</>
+            )}
+          </span>
+        </div>
+        <Link href="/" className="complete-back-link">
+          ← Back to lesson index
+        </Link>
       </div>
     );
   }
