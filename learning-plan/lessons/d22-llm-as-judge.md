@@ -6,10 +6,41 @@ week: 4
 week_theme: Frontier evaluation methods
 anchor_benchmark: WildBench
 harness: Inspect
-reading_time_minutes: 30
+reading_time_minutes: 33
+prerequisites: [3, 5]
+key_terms:
+  - LLM-as-a-judge
+  - WB-Score
+  - WB-Reward
+  - K-character length penalty
+  - position bias
+  - verbosity bias
+  - self-preference bias
+  - bandwagon bias
+goodhart_role: foregrounded
+calibration_role: absent
 ---
 
 # Day 22 — LLM-as-a-judge: WildBench, MT-Bench, and the judge as the next Goodhart target
+
+## TL;DR
+
+LLM-as-a-judge is the modern methodology for scoring open-ended outputs: a strong model is prompted with a user query and a candidate response and asked to score or compare. Today's anchor — **WildBench** (Lin et al. 2024), 1,024 real-user prompts from WildChat scored by **WB-Score** (pointwise) and **WB-Reward** (pairwise vs. three baselines) with an explicit **K-character length penalty** — is the 2026 less-saturated successor to MT-Bench's 80-item methodology origin and Arena-Hard-Auto's human-preference-derived overlay. The lesson foregrounds the Goodhart mechanism that distinguishes today from D6/D15/D17: **the measurement instrument itself becomes the optimization target**.
+
+## Learning objectives
+
+By the end of this lesson, you will be able to:
+
+1. **(L2)** Distinguish single-judge pointwise (WB-Score) from pairwise (WB-Reward) scoring and explain why pairwise is the position-bias-sharper number.
+2. **(L2)** Describe WildBench's construction (1,024 WildChat-derived prompts, dual-judge checklists, K-character length penalty, three baseline references) and contrast it with MT-Bench's 80-item methodology origin and Arena-Hard-Auto's 500 human-preference-derived prompts.
+3. **(L3)** *Apply* the swap-rate definition to compute position-bias exposure for a judge on a paired sample, and *apply* the K-character length penalty to a worked verbose-response case.
+4. **(L4)** *Decompose* a judge-based benchmark report into the four canonical biases (position, verbosity, self-preference, bandwagon) and identify which mitigations target which bias.
+5. **(L5)** *Evaluate* a single-judge same-family benchmark report and judge whether the headline number is defensible without cross-family panels and length-controlled scoring.
+6. **(L4)** *Frame* D22's measurement-instrument-as-target Goodhart mechanism as structurally distinct from D6 (data leakage), D15 (incentive structure), and D17 (situational conditioning), and explain why the defense moves to the judge model itself.
+
+## Prerequisites & callback
+
+This lesson is load-bearing on two prior days. **D3** introduced the gap between letter-match scoring and prose scoring — once the answer is open-ended, EM/F1/BLEU/ROUGE all fail in known ways and the grader becomes a *similarity function* — and forward-pointed to D22 as the modern alternative. Today is that alternative: replace the regex-shaped grader with a strong-LLM grader, and inherit a *second* stochastic box's worth of failure modes in exchange. **D5** framed statistical hygiene — sampling noise, confidence intervals, cross-lab comparability — and that framing is sharper here than on any MC benchmark in the curriculum. Judges are *ungrounded* scorers: there is no answer key, only a model's opinion of one. CI hygiene on judge-based scores is non-optional, and judge-call sample size, position-balanced runs, and cross-family panels are the sources of tightness the D5 machinery rests on. If you do not already hold the D3 framing — open-ended scoring is a similarity-function problem with no clean exact-match — and the D5 framing — a tight CI on a biased estimator is a precise estimate of a biased quantity — today will read as a list of benchmarks rather than as a diagnosis.
 
 ## The opening hook
 
@@ -109,6 +140,21 @@ Pairwise (WB-Reward, against the strong baseline, judge sees both responses):
 - *With* length penalty (default $K$): B is ~3× longer than A while not being substantively better on the checklist; the "Slightly better" rolls to **Tie**, WB-Reward $= 0$.
 
 The gap between the two pairwise numbers — $+50$ vs $0$ — is the verbosity-bias component made legible. The whole point of WildBench's design is that this gap is *reported* rather than hidden.
+
+## ⏵ Check yourself — apply the K-penalty
+
+Suppose a 4-baseline pair-aggregated WildBench run reports WB-Reward $= +14$ with the default K-character length penalty applied and WB-Reward $= +35$ with $K = \infty$ (penalty disabled). *Decompose* what the +21-point gap measures, and *compute* what fraction of "Slightly Better" outcomes plausibly rolled to Tie under the penalty if each affected $+50$ becomes $0$.
+
+<details>
+<summary>Show answer</summary>
+
+The +21-point gap is the **verbosity-bias component** of the headline number made legible. WildBench's K-penalty doesn't subtract a continuous score — it converts "Slightly Better" / "Slightly Worse" outcomes that favored the longer response by more than $K$ characters into Tie. Each conversion shifts that comparison's contribution from $\pm 50$ to $0$.
+
+To estimate the affected fraction: each rolled-to-Tie comparison shifts the average by $50/N$ where $N$ is the number of comparisons in the aggregate. A 21-point shift in the *headline* means roughly $21/50 \approx 0.42$ of the items per baseline drifted from a length-favored "Slightly Better" to Tie. (The estimate is approximate because some "Slightly Worse" cases also flip in the opposite direction; the WildBench leaderboard reports both numbers precisely so you can read the full breakdown rather than estimate.)
+
+The point of the K-penalty is not that one number is "right" and the other "wrong" — it is that the *gap* is the verbosity component, and reporting both numbers makes the bias surface auditable. A model's headline jumping +21 points the moment you disable the length defense is a strong signal that its training run was selecting on length rather than on per-checklist quality.
+
+</details>
 
 ## Methodology origin: MT-Bench (Zheng et al. 2023)
 
@@ -213,37 +259,20 @@ The four above are the canonical ones; the literature has extended the list:
 
 A 2026 judge-eval report that names only the canonical four and stops is incomplete. The full bias surface is broader, and judging-the-judge work (Shi et al. 2024, Ye et al. 2024) is now its own subfield.
 
-## Goodhart foregrounded — the measurement instrument as target
+## ⏵ Check yourself — swap rate
 
-This is the fourth Goodhart-foregrounded lesson in the curriculum. Restate the law:
+Define a judge $J$'s **swap rate** on a sample of pairs $\{(a_i, b_i)\}_{i=1}^{N}$ as the fraction of items where the judgment changes when the response order is reversed. Wang et al. 2023 ran ChatGPT-as-judge on 80 queries and observed that Vicuna-13B "beat" ChatGPT on 66 of 80 queries when placed in the favored slot. *Compute* the smallest swap rate consistent with that observation if every reversal that flipped the decision flipped it from a Vicuna win to a ChatGPT win, and explain what value above $0.5$ would imply.
 
-> When a measure becomes a target, it ceases to be a good measure.
+<details>
+<summary>Show answer</summary>
 
-The D22 mechanism is **the measurement instrument itself becoming the optimization target**. When models are RL-tuned on judge-derived signals — RLAIF directly using a judge as reward (Bai et al. 2022, *Constitutional AI*; Lee et al. 2023, RLAIF), or indirectly through reward models trained on judge-labeled preferences (D24) — the judge's biases become the optimization gradient. A model trained against a verbosity-biased judge gets verbose. A model trained against a self-preference-biased judge of family $F$ converges toward producing $F$-style outputs. The judge's *systematic errors* propagate into the model's *output distribution*.
+If Vicuna won 66/80 in the favored slot, and we treat the *true* relative ability as "ChatGPT $\geq$ Vicuna" (the original framing — ChatGPT was the stronger model on this distribution at the time), then those 66 Vicuna wins are the wins we expect to flip when the pair is swapped. The minimum swap rate consistent with that observation is $\geq 66/80 = 0.825$.
 
-The mechanism is structurally distinct from the three prior Goodhart lessons:
+Two readings follow. First, a swap rate above $0.5$ means position carries more decision-relevant signal than content — the judge is closer to a coin-flip-on-position than to a content-aware comparator. Second, the standard mitigation (run every pair both ways and average — *balanced position calibration*) doubles judge cost per item but eliminates the first-order positional confound. WildBench's pairwise pipeline does this; Arena-Hard-Auto does this; a custom judge eval that does not is reporting numbers with a known systematic error.
 
-| Lesson | Goodhart mechanism | What leaks | Target of optimization |
-| :--- | :--- | :--- | :--- |
-| **D6** (MMLU-Pro) | **Data leakage** | Test items into pretraining set | Score, via memorization of leaked items |
-| **D15** (TruthfulQA) | **Incentive structure of the rubric** | Refusal-shaped strings count as truthful | Score, via aggressive abstention on contested-fact items |
-| **D17** (SAD) | **Situational conditioning** | Model classifier over input contexts | Behavior conditional on "looks like eval" |
-| **D22** (LLM-as-judge) | **Measurement instrument as target** | Judge biases (verbosity, position, self-preference, bandwagon) | Output distribution that *games the judge*, not output distribution that satisfies the underlying user |
+The Wang et al. number is the field's most-cited single demonstration that a single-call pairwise judge with no balancing is not a measurement, it is a measurement *plus* a position prior of unknown sign and unknown magnitude.
 
-Three properties make D22's mechanism distinct.
-
-1. **The leak is in the grader, not the test set or the rubric.** D6's defense is to rebuild the test set (MMLU → MMLU-Pro). D15's defense is to rebuild the reward shape (FActScore, atomic-fact decomposition). D17's defense is to make eval indistinguishable from deployment. D22's defense has to operate on *the judge model*: ensemble across families, measure swap-rate, apply length penalty, audit with judge-the-judge frameworks. The location of the defense moves.
-2. **The optimization gradient is automated and at scale.** RLAIF can apply a judge to millions of generations per training run. If the judge has a 5-point-on-the-scale verbosity bias, the model learns to be verbose to recover those 5 points, *every gradient step*. The judge bias is not a measurement noise term — it is a coherent training signal pointing in a specific wrong direction.
-3. **Self-preference closes the loop.** The most uncomfortable case: a lab's frontier model, $M$, is also a (or *the*) standard judge for benchmarks $M$'s next version is being trained against. $M$-as-judge prefers $M$-style outputs (Panickssery et al. 2024). Training the next model with $M$ as judge selects for $M$-style output. The lab's model, the lab's judge, the lab's reward signal — all from the same family. The eval, the optimizer, and the optimizee are not three independent systems.
-
-The defense story is correspondingly different from D6/D15/D17. The 2026 working answers:
-
-- **Multi-judge cross-family ensembling.** Average GPT-4, Claude, Gemini judgments. WildBench uses GPT-4-Turbo + Claude-3-Opus for checklists for exactly this reason. Multi-judge does not eliminate position or verbosity bias (those are correlated across families) but it does cut self-preference at the lab-of-origin granularity.
-- **Length-controlled scoring.** AlpacaEval-LC, WildBench's K-penalty, and Arena-Hard-Auto's length controls are different implementations of the same insight: report scores at fixed length, or convert "slight wins by length" to ties.
-- **Balanced position calibration.** Run every pair both ways, average. Doubles cost; eliminates first-order position bias.
-- **Judge-the-judge audits.** Independent benchmarks of judge reliability — Shi et al. 2024 (*Judging the Judges*), Ye et al. 2024 (*Justice or Prejudice*), Tan et al. 2025 (*Judge Reliability Harness*) — measure how much a given judge's biases shift specific decisions, and they are now standard companion artifacts to any judge-based benchmark report.
-
-The deeper point: **D22's Goodhart mechanism is the one most directly coupled to RLHF's training loop.** D6's leak happens in pretraining; D15's happens in fine-tuning reward design; D17's happens in deployment-vs-eval distribution shift. D22's leak is the only one where the *current* training run uses a *current* version of the eval *every gradient step*. That makes it the highest-bandwidth Goodhart channel in the curriculum, and the one whose defenses are most operationally load-bearing for any lab using AI-feedback at scale.
+</details>
 
 ## Inspect harness coverage
 
@@ -289,42 +318,107 @@ The set of judges in standard use shifts every release cycle, and the right refl
 
 The D7 drift caveat applies in full: any specific judge-benchmark number cited here will be wrong by some release cycle from now, and the methodology is what carries forward.
 
-## Cross-references and forward pointers
+## ⏵ Check yourself — same-family judging
 
-- **D3 (open-ended scoring) → D22.** D3 forward-pointed to D22 as the modern alternative to BLEU/ROUGE for open-ended scoring. The full picture: BLEU/ROUGE → BERTScore/COMET → reward models → LLM-as-judge is the historical sequence, with each step trading more compute and more bias for better correlation with human judgment. D22 is the current frontier of automated open-ended scoring; D24 (RewardBench) measures the reward-model layer one level up the RLHF pipeline.
-- **D6, D15, D17 (Goodhart trio) → D22.** Four of the five Goodhart-foregrounded lessons; the comparison table above is the load-bearing summary. The mechanisms are distinct and the defenses are different.
-- **D20 (sycophancy) → D22.** A judge that is itself sycophantic propagates sycophancy into the reward signal. Measuring judge sycophancy is a distinct task from measuring model-under-test sycophancy and is part of the bias-audit surface.
-- **D23 (Chatbot Arena, next lesson) — pairwise human preference at scale.** D23 is the contrast: keep the *human* in the loop. Arena-Hard-Auto (covered today) is the auto-judge derivative of Chatbot Arena's human preference data; D23 is where we read the original. The pedagogical point is precisely the contrast: D22's biases are judge biases; D23's biases are human-rater biases; the two are *correlated but not identical*, and reading them together is how you triangulate ground truth on open-ended quality.
-- **D24 (RewardBench, two lessons forward) — reward-model evaluation, full calibration reprise.** Reward models inherit judge biases (verbosity especially) and a reward model trained on judge-labeled preferences is one level removed from the judge but one level closer to the optimization target. D24 closes the calibration thread (D2 → D15 → D20 → D24) and the judge-as-target Goodhart story together.
+A 2026 frontier lab whose flagship is **Model M** publishes a benchmark report scored with **Model M itself** as the single pairwise judge. Two competitor models from other families are reported one and three points lower than M on the same benchmark. *Evaluate* the most-defensible reading of those headline numbers, and identify which of the four canonical judge biases is most directly pointed at by this configuration.
+
+<details>
+<summary>Show answer</summary>
+
+The most-defensible reading is that the *direction* of the result is consistent with self-preference-bias inflation, not with a clean ranking of capability. Panickssery, Bowman & Feng (2024) establish a linear correlation between a model's self-recognition capability and the strength of its self-preference bias — frontier judges can identify their own outputs and rate them up. Single-judge same-family is the *exact* configuration where the bias has the largest effect on the headline.
+
+The 2026 working response is the cross-family panel: average a GPT-4-class, Claude-class, and Gemini-class judge over the same items. Multi-judge does not eliminate position or verbosity bias (those are correlated across families) but it cuts self-preference at the lab-of-origin granularity. The deployment-relevant version of the result: a single same-family judge number is now a flag for skepticism, and a one- to three-point gap of that shape is consistent with self-preference inflation in the noise band rather than with a real capability differential.
+
+</details>
+
+## Goodhart foregrounded
+
+This is the fourth Goodhart-foregrounded lesson in the curriculum. Restate the law:
+
+> When a measure becomes a target, it ceases to be a good measure.
+
+The D22 mechanism is **the measurement instrument itself becoming the optimization target**. When models are RL-tuned on judge-derived signals — RLAIF directly using a judge as reward (Bai et al. 2022, *Constitutional AI*; Lee et al. 2023, RLAIF), or indirectly through reward models trained on judge-labeled preferences (D24) — the judge's biases become the optimization gradient. A model trained against a verbosity-biased judge gets verbose. A model trained against a self-preference-biased judge of family $F$ converges toward producing $F$-style outputs. The judge's *systematic errors* propagate into the model's *output distribution*.
+
+The mechanism is structurally distinct from the three prior Goodhart lessons:
+
+| Lesson | Goodhart mechanism | What leaks | Target of optimization |
+| :--- | :--- | :--- | :--- |
+| **D6** (MMLU-Pro) | **Data leakage** | Test items into pretraining set | Score, via memorization of leaked items |
+| **D15** (TruthfulQA) | **Incentive structure of the rubric** | Refusal-shaped strings count as truthful | Score, via aggressive abstention on contested-fact items |
+| **D17** (SAD) | **Situational conditioning** | Model classifier over input contexts | Behavior conditional on "looks like eval" |
+| **D22** (LLM-as-judge) | **Measurement instrument as target** | Judge biases (verbosity, position, self-preference, bandwagon) | Output distribution that *games the judge*, not output distribution that satisfies the underlying user |
+
+Three properties make D22's mechanism distinct.
+
+1. **The leak is in the grader, not the test set or the rubric.** D6's defense is to rebuild the test set (MMLU → MMLU-Pro). D15's defense is to rebuild the reward shape (FActScore, atomic-fact decomposition). D17's defense is to make eval indistinguishable from deployment. D22's defense has to operate on *the judge model*: ensemble across families, measure swap-rate, apply length penalty, audit with judge-the-judge frameworks. The location of the defense moves.
+2. **The optimization gradient is automated and at scale.** RLAIF can apply a judge to millions of generations per training run. If the judge has a 5-point-on-the-scale verbosity bias, the model learns to be verbose to recover those 5 points, *every gradient step*. The judge bias is not a measurement noise term — it is a coherent training signal pointing in a specific wrong direction.
+3. **Self-preference closes the loop.** The most uncomfortable case: a lab's frontier model, $M$, is also a (or *the*) standard judge for benchmarks $M$'s next version is being trained against. $M$-as-judge prefers $M$-style outputs (Panickssery et al. 2024). Training the next model with $M$ as judge selects for $M$-style output. The lab's model, the lab's judge, the lab's reward signal — all from the same family. The eval, the optimizer, and the optimizee are not three independent systems.
+
+The defense story is correspondingly different from D6/D15/D17. The 2026 working answers:
+
+- **Multi-judge cross-family ensembling.** Average GPT-4, Claude, Gemini judgments. WildBench uses GPT-4-Turbo + Claude-3-Opus for checklists for exactly this reason. Multi-judge does not eliminate position or verbosity bias (those are correlated across families) but it does cut self-preference at the lab-of-origin granularity.
+- **Length-controlled scoring.** AlpacaEval-LC, WildBench's K-penalty, and Arena-Hard-Auto's length controls are different implementations of the same insight: report scores at fixed length, or convert "slight wins by length" to ties.
+- **Balanced position calibration.** Run every pair both ways, average. Doubles cost; eliminates first-order position bias.
+- **Judge-the-judge audits.** Independent benchmarks of judge reliability — Shi et al. 2024 (*Judging the Judges*), Ye et al. 2024 (*Justice or Prejudice*), Tan et al. 2025 (*Judge Reliability Harness*) — measure how much a given judge's biases shift specific decisions, and they are now standard companion artifacts to any judge-based benchmark report.
+
+The deeper point: **D22's Goodhart mechanism is the one most directly coupled to RLHF's training loop.** D6's leak happens in pretraining; D15's happens in fine-tuning reward design; D17's happens in deployment-vs-eval distribution shift. D22's leak is the only one where the *current* training run uses a *current* version of the eval *every gradient step*. That makes it the highest-bandwidth Goodhart channel in the curriculum, and the one whose defenses are most operationally load-bearing for any lab using AI-feedback at scale.
 
 > **Safety researcher's note.** D22 is the curriculum's introduction to the chunk of the safety surface that emerges *after* you decide to use AI to evaluate AI at scale. The reflex to read a single LLM-judge number as "this model is better" is exactly what this lesson is built to disrupt. Three operational habits are load-bearing for safety-leaning practitioners. First, **never report a judge-based number from a single judge in the same family as the model under test** — self-preference bias is real, measured, and mechanical; cross-family panels are now standard, and a single-judge same-family report is a flag. Second, **report the length-penalty-on and length-penalty-off numbers** (or AlpacaEval-LC alongside the raw win rate). Verbosity bias is the most common axis on which RLAIF pipelines drift, and the gap between the two numbers is the most legible signal you have on it. Third, **treat any benchmark whose judge is also being optimized against as a closed-loop benchmark** (the D21 RMU framing applies). A judge that grades a model whose training signal includes that judge is a different epistemic object from a judge that grades a model trained without it. The 2026 working hypothesis — and the one D24 will sharpen — is that the most reliable judge-based numbers are the ones produced by a judge family that is *not* being trained against. As soon as a frontier lab starts using its own model as a judge for its own training signal, the headline number from that judge stops being an independent measurement and becomes a snapshot of the lab's RLAIF setpoint. That is the highest-bandwidth Goodhart channel this curriculum will name.
 
+## Cross-references
+
+**Backward.**
+
+- D-3 — picks up the *open-ended scoring* problem D3 named: BLEU/ROUGE → BERTScore/COMET → reward models → LLM-as-judge is the historical sequence, with each step trading more compute and more bias for better correlation with human judgment. Today is the current frontier of automated open-ended scoring.
+- D-5 — picks up the *statistical-hygiene* framing: judges are ungrounded scorers, so CI tightness is bought through judge-call sample size, balanced position calibration, and cross-family panels rather than through more items.
+- D-6 — picks up the *foregrounded Goodhart* pattern from the data-leakage variant; today is the *measurement-instrument-as-target* variant, paired with D6, D15, and D17 as four distinct Goodhart mechanisms among the five foregrounded lessons in the curriculum.
+- D-15 — picks up the *incentive-structure* Goodhart variant (TruthfulQA's reference set rewarding refusal-shaped strings); today's mechanism sits one level up the loop, in the grader itself rather than in the rubric.
+- D-17 — picks up the *situational-conditioning* Goodhart variant; a model that has learned to recognise judge-graded items is one step short of a model that conditions its output distribution on "this is a judge prompt."
+- D-20 — sycophancy in the *judge* propagates into the reward signal; measuring judge sycophancy is a distinct task from measuring model-under-test sycophancy and is part of the bias-audit surface.
+
+**Forward.**
+
+- D-23 — Chatbot Arena keeps the *human* in the loop; Arena-Hard-Auto (covered today) is the auto-judge derivative of that data, and D23 is where we read the original. The biases are *correlated but not identical* across the two — judge biases ≠ human-rater biases — and triangulating across them is how you read open-ended-quality numbers.
+- D-24 — RewardBench evaluates the reward-model layer one step above the judge; reward models trained on judge-labeled preferences inherit verbosity and self-preference biases directly. D24 closes the calibration thread (D2 → D15 → D20 → D24) and the judge-as-target Goodhart story together.
+- D-25 — reasoning models are RL-tuned against verifiable signals *and* judge-derived signals; the judge-as-target dynamic on free-form steps is one of the structural reasons CoT-graded benchmarks behave differently from final-answer benchmarks.
+
 ## Takeaways
 
-1. **LLM-as-judge** is the modern methodology for scoring open-ended outputs. The pipeline has *two* stochastic models: the model under test, and the grader. Every property of an LLM that we treat as a problem in the model under test (prompt sensitivity, calibration drift, situational awareness) applies to the grader as well.
-2. **WildBench (Lin et al. 2024)** is the modern, less-saturated anchor: **1,024 real-user tasks** drawn from WildChat, scored with **WB-Score** (pointwise 1–10 rescaled to $\pm$) and **WB-Reward** (pairwise vs. three baselines, 5-point scale), with explicit **K-character length-bias mitigation** that converts marginal length-driven wins to ties.
-3. **MT-Bench (Zheng et al. 2023)** is the methodology's origin: 80 multi-turn questions in 8 categories, with the headline empirical finding that GPT-4 reaches >80% agreement with humans — the same level humans reach with each other. The 80% is on MT-Bench's specific item distribution, not a general property of LLM-as-judge.
-4. **Arena-Hard-Auto (Li et al. 2024)** is the auto-judge derived from human-preference data: 500 prompts (2 each from 250 difficulty-filtered Arena clusters), GPT-4-Turbo as judge, reported 87.4% separability and 89.1% agreement with Chatbot Arena rankings — far higher than MT-Bench's protocol-matched figures.
-5. **Four canonical judge biases:** position (Wang et al. 2023), verbosity (Saito et al. 2023), self-preference (Panickssery et al. 2024), bandwagon — plus a longer tail (style, sycophancy, anchor, refusal). Standard mitigations: balanced position calibration, length penalty, multi-judge cross-family ensembling, prompt-cue stripping. All four biases survive in frontier 2026 judges to varying degrees.
-6. **Goodhart on D22 is *measurement instrument as target*** — structurally distinct from D6 (data leakage), D15 (rubric incentive shape), D17 (situational conditioning). The judge's biases become the optimization gradient when models are RL-tuned against judge-derived signals. The defense moves from the test set / rubric / input distribution to *the judge model itself*: cross-family panels, length controls, judge-the-judge audits.
-7. **Inspect** (UK AISI) ships first-class judge support: `model_graded_qa()` and `model_graded_fact()` with optional multi-judge majority-vote ensembling. Cross-family panels, balanced position calibration, and length-penalty post-processing are standard practice in 2026 published benchmarks.
+1. **LLM-as-judge** is the modern methodology for scoring open-ended outputs. The pipeline has *two* stochastic models: the model under test, and the grader. Every property of an LLM that we treat as a problem in the model under test (prompt sensitivity, calibration drift, situational awareness) applies to the grader as well. *(LO 1)*
+2. **WildBench (Lin et al. 2024)** is the modern, less-saturated anchor: **1,024 real-user tasks** drawn from WildChat, scored with **WB-Score** (pointwise 1–10 rescaled to $\pm$) and **WB-Reward** (pairwise vs. three baselines, 5-point scale), with explicit **K-character length-bias mitigation** that converts marginal length-driven wins to ties. *(LO 2)*
+3. **MT-Bench (Zheng et al. 2023)** is the methodology's origin: 80 multi-turn questions in 8 categories, with the headline empirical finding that GPT-4 reaches >80% agreement with humans — the same level humans reach with each other. The 80% is on MT-Bench's specific item distribution, not a general property of LLM-as-judge. **Arena-Hard-Auto (Li et al. 2024)** is the auto-judge derived from human-preference data: 500 prompts, 87.4% separability and 89.1% agreement with Chatbot Arena rankings — far higher than MT-Bench's protocol-matched figures. *(LO 2)*
+4. **Four canonical judge biases:** position (Wang et al. 2023), verbosity (Saito et al. 2023), self-preference (Panickssery et al. 2024), bandwagon — plus a longer tail (style, sycophancy, anchor, refusal). Standard mitigations: balanced position calibration, length penalty, multi-judge cross-family ensembling, prompt-cue stripping. All four biases survive in frontier 2026 judges to varying degrees. *(LO 3, LO 4)*
+5. **Goodhart on D22 is *measurement instrument as target*** — structurally distinct from D6 (data leakage), D15 (rubric incentive shape), D17 (situational conditioning). The judge's biases become the optimization gradient when models are RL-tuned against judge-derived signals. The defense moves from the test set / rubric / input distribution to *the judge model itself*: cross-family panels, length controls, judge-the-judge audits. *(LO 6)*
+6. **Reporting practice.** Single-judge same-family numbers without balanced position calibration or length controls are the 2026 standard flag for skepticism. Report cross-family panel scores, with-K and without-K WildBench gaps, and at least one auto-judge–vs–human-preference cross-check (Arena-Hard-Auto vs. Chatbot Arena). *(LO 5)*
+7. **Inspect** (UK AISI) ships first-class judge support: `model_graded_qa()` and `model_graded_fact()` with optional multi-judge majority-vote ensembling. Cross-family panels, balanced position calibration, and length-penalty post-processing are standard practice in 2026 published benchmarks. *(LO 4)*
+
+## Glossary
+
+- **LLM-as-a-judge**: methodology in which a strong model is prompted with a user query and a candidate response and asked to score or compare; replaces regex/exact-match scoring once the answer is open-ended. The pipeline has two stochastic models — the one under test and the grader [introduced D-22].
+- **WB-Score**: WildBench's pointwise 1–10 score from a single judge call, rescaled as $(Y - 5) \times 2$ so borderline maps to $0$ and unusable to $-8$ [introduced D-22].
+- **WB-Reward**: WildBench's pairwise score against three reference baselines on a 5-point scale ($\pm 100$, $\pm 50$, $0$); WB-Reward-Mix averages across the three [introduced D-22].
+- **K-character length penalty**: WildBench mechanism that converts "Slightly Better" / "Slightly Worse" pairwise outcomes favoring the longer response by more than $K$ characters into Tie; setting $K = \infty$ disables the penalty. The published leaderboard reports both with-penalty and without-penalty numbers so the verbosity-bias component is legible [introduced D-22].
+- **position bias / swap rate**: in pairwise judging, the systematic preference for one slot independent of content; quantified as the fraction of items whose judgment flips when the pair is reversed. Mitigated by balanced position calibration (run both orders, average) [introduced D-22].
+- **verbosity bias**: judges (and reward models — D-24) systematically prefer longer responses on equal-quality content. Canonical mitigation lineages: AlpacaEval-LC (length-controlled win rate, Dubois et al. 2024) and WildBench's K-penalty [introduced D-22].
+- **self-preference bias**: a judge from family $F$ scores responses generated by family $F$ higher than equivalent-quality responses from other families; Panickssery, Bowman & Feng (2024) establish a linear correlation between self-recognition capability and bias strength. Mitigated by cross-family judge panels [introduced D-22].
+- **bandwagon bias**: a judge defers to a stated majority opinion in the prompt ("75% of users prefer X"); inherited from RLHF rater preference for stated norms. Mitigated by stripping popularity / preamble cues [introduced D-22].
 
 ## References
 
 - **Anchor.** Lin, B. Y., Deng, Y., Chandu, K., Brahman, F., Ravichander, A., Pyatkin, V., Dziri, N., Le Bras, R., & Choi, Y. (2024). *WildBench: Benchmarking LLMs with Challenging Tasks from Real Users in the Wild.* arXiv:2406.04770. <https://arxiv.org/abs/2406.04770>
-- **Anchor — leaderboard + code.** AI2 WildBench Leaderboard. <https://huggingface.co/spaces/allenai/WildBench> ; <https://github.com/allenai/WildBench>
-- **WildChat (source corpus).** Zhao, W., Ren, X., Hessel, J., Cardie, C., Choi, Y., & Deng, Y. (2024). *WildChat: 1M ChatGPT Interaction Logs in the Wild.* ICLR 2024. arXiv:2405.01470. <https://arxiv.org/abs/2405.01470>
-- **Methodology origin.** Zheng, L., Chiang, W.-L., Sheng, Y., Zhuang, S., Wu, Z., Zhuang, Y., Lin, Z., Li, Z., Li, D., Xing, E. P., Zhang, H., Gonzalez, J. E., & Stoica, I. (2023). *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena.* NeurIPS 2023 Datasets & Benchmarks Track. arXiv:2306.05685. <https://arxiv.org/abs/2306.05685>
-- **Arena-Hard-Auto.** Li, T., Chiang, W.-L., Frick, E., Dunlap, L., Wu, T., Zhu, B., Gonzalez, J. E., & Stoica, I. (2024). *From Crowdsourced Data to High-Quality Benchmarks: Arena-Hard and BenchBuilder Pipeline.* arXiv:2406.11939. <https://arxiv.org/abs/2406.11939> — and LMSYS blog: <https://www.lmsys.org/blog/2024-04-19-arena-hard/>.
-- **Position bias.** Wang, P., Li, L., Chen, L., Cai, Z., Zhu, D., Lin, B., Cao, Y., Liu, Q., Liu, T., & Sui, Z. (2023). *Large Language Models are not Fair Evaluators.* ACL 2024. arXiv:2305.17926. <https://arxiv.org/abs/2305.17926>
-- **Verbosity bias.** Saito, K., Wachi, A., Wataoka, K., & Akimoto, Y. (2023). *Verbosity Bias in Preference Labeling by Large Language Models.* arXiv:2310.10076. <https://arxiv.org/abs/2310.10076>
-- **Self-preference bias.** Panickssery, A., Bowman, S. R., & Feng, S. (2024). *LLM Evaluators Recognize and Favor Their Own Generations.* arXiv:2404.13076. <https://arxiv.org/abs/2404.13076>
-- **Length-controlled win rate.** Dubois, Y., Galambosi, B., Liang, P., & Hashimoto, T. B. (2024). *Length-Controlled AlpacaEval: A Simple Way to Debias Automatic Evaluators.* arXiv:2404.04475. <https://arxiv.org/abs/2404.04475>
-- **Judging the judges (systematic position-bias study).** Shi, L., Ma, W., et al. (2024). *Judging the Judges: A Systematic Investigation of Position Bias in LLM-as-a-Judge.* arXiv:2406.07791. <https://arxiv.org/abs/2406.07791>
-- **Justice or Prejudice (broader bias quantification).** Ye, J., Wang, Y., Huang, Y., et al. (2024). *Justice or Prejudice? Quantifying Biases in LLM-as-a-Judge.* arXiv:2410.02736. <https://arxiv.org/abs/2410.02736>
-- **RLAIF / Constitutional AI (judge as training signal).** Bai, Y., Kadavath, S., Kundu, S., et al. (2022). *Constitutional AI: Harmlessness from AI Feedback.* arXiv:2212.08073. <https://arxiv.org/abs/2212.08073> — and Lee, H., Phatale, S., et al. (2023). *RLAIF: Scaling Reinforcement Learning from Human Feedback with AI Feedback.* arXiv:2309.00267. <https://arxiv.org/abs/2309.00267>
-- **Inspect harness — model-graded scorers.** UK AI Security Institute. *Inspect — Scorers documentation.* <https://inspect.aisi.org.uk/scorers.html>
-- **Inspect Evals (community task collection).** <https://github.com/UKGovernmentBEIS/inspect_evals>
+- **Anchor (leaderboard + code).** AI2 WildBench Leaderboard. <https://huggingface.co/spaces/allenai/WildBench> ; <https://github.com/allenai/WildBench>
+- **Harness.** UK AI Security Institute. *Inspect — Scorers documentation.* <https://inspect.aisi.org.uk/scorers.html>
+- **Harness (community tasks).** *Inspect Evals — community task collection.* <https://github.com/UKGovernmentBEIS/inspect_evals>
+- **Secondary.** Zhao, W., Ren, X., Hessel, J., Cardie, C., Choi, Y., & Deng, Y. (2024). *WildChat: 1M ChatGPT Interaction Logs in the Wild.* ICLR 2024. arXiv:2405.01470. <https://arxiv.org/abs/2405.01470> — source corpus for WildBench's prompt distribution.
+- **Secondary.** Zheng, L., Chiang, W.-L., Sheng, Y., Zhuang, S., Wu, Z., Zhuang, Y., Lin, Z., Li, Z., Li, D., Xing, E. P., Zhang, H., Gonzalez, J. E., & Stoica, I. (2023). *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena.* NeurIPS 2023 Datasets & Benchmarks Track. arXiv:2306.05685. <https://arxiv.org/abs/2306.05685> — methodology origin.
+- **Secondary.** Li, T., Chiang, W.-L., Frick, E., Dunlap, L., Wu, T., Zhu, B., Gonzalez, J. E., & Stoica, I. (2024). *From Crowdsourced Data to High-Quality Benchmarks: Arena-Hard and BenchBuilder Pipeline.* arXiv:2406.11939. <https://arxiv.org/abs/2406.11939> — and LMSYS blog: <https://www.lmsys.org/blog/2024-04-19-arena-hard/>.
+- **Secondary.** Dubois, Y., Galambosi, B., Liang, P., & Hashimoto, T. B. (2024). *Length-Controlled AlpacaEval: A Simple Way to Debias Automatic Evaluators.* arXiv:2404.04475. <https://arxiv.org/abs/2404.04475> — length-controlled win rate, the AlpacaEval-lineage verbosity-bias mitigation.
+- **Secondary.** Bai, Y., Kadavath, S., Kundu, S., et al. (2022). *Constitutional AI: Harmlessness from AI Feedback.* arXiv:2212.08073. <https://arxiv.org/abs/2212.08073> — and Lee, H., Phatale, S., et al. (2023). *RLAIF: Scaling Reinforcement Learning from Human Feedback with AI Feedback.* arXiv:2309.00267. <https://arxiv.org/abs/2309.00267> — the judge-as-training-signal lineage.
+- **Goodhart.** Wang, P., Li, L., Chen, L., Cai, Z., Zhu, D., Lin, B., Cao, Y., Liu, Q., Liu, T., & Sui, Z. (2023). *Large Language Models are not Fair Evaluators.* ACL 2024. arXiv:2305.17926. <https://arxiv.org/abs/2305.17926> — position-bias evidence.
+- **Goodhart.** Saito, K., Wachi, A., Wataoka, K., & Akimoto, Y. (2023). *Verbosity Bias in Preference Labeling by Large Language Models.* arXiv:2310.10076. <https://arxiv.org/abs/2310.10076> — verbosity-bias evidence.
+- **Goodhart.** Panickssery, A., Bowman, S. R., & Feng, S. (2024). *LLM Evaluators Recognize and Favor Their Own Generations.* arXiv:2404.13076. <https://arxiv.org/abs/2404.13076> — self-preference-bias evidence.
+- **Goodhart.** Shi, L., Ma, W., et al. (2024). *Judging the Judges: A Systematic Investigation of Position Bias in LLM-as-a-Judge.* arXiv:2406.07791. <https://arxiv.org/abs/2406.07791> — judge-the-judge audits.
+- **Goodhart.** Ye, J., Wang, Y., Huang, Y., et al. (2024). *Justice or Prejudice? Quantifying Biases in LLM-as-a-Judge.* arXiv:2410.02736. <https://arxiv.org/abs/2410.02736> — broader bias quantification.
 
 ## Quiz
 
@@ -335,7 +429,7 @@ The D7 drift caveat applies in full: any specific judge-benchmark number cited h
 - C. 500 prompts mined from Chatbot Arena traffic via BERTopic + UMAP + HDBSCAN clustering, scored by GPT-4-Turbo pairwise against a fixed reference and aggregated under a Bradley-Terry model for the leaderboard ranking.
 - D. ~12,000 graduate-level questions across 14 STEM and humanities disciplines with 10 answer choices each, evaluated under exact-match scoring on a held-out test partition.
 
-**Q2.** Wang et al. (2023), *Large Language Models are not Fair Evaluators*, demonstrated that:
+**Q2.** Wang et al. (2023), *Large Language Models are not Fair Evaluators*, **compute** the swap rate of ChatGPT-as-judge across 80 paired queries to quantify position bias. Their headline empirical result was that:
 
 - A. ChatGPT-as-judge preferred Vicuna-13B on 66 of 80 queries when Vicuna's response was placed in the favored slot — swapping the pair flips many decisions, exposing systematic position bias.
 - B. GPT-4 used as a pairwise judge on MT-Bench's 80 expert-authored multi-turn questions reaches over 80% agreement with human raters — the same level of inter-annotator agreement humans reach with each other on the same expert-curated 8-category item distribution.

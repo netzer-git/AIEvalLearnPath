@@ -6,10 +6,41 @@ week: 4
 week_theme: Frontier evaluation methods
 anchor_benchmark: METR autonomy suite (RE-Bench + HCAST)
 harness: Inspect
-reading_time_minutes: 30
+reading_time_minutes: 34
+prerequisites: [6, 11, 17, 21, 26, 27]
+key_terms:
+  - autonomy
+  - L_50 time horizon
+  - RE-Bench
+  - HCAST
+  - agentic R&D
+  - autonomy-measurement-as-selection-pressure
+  - horizon doubling time
+  - METR
+goodhart_role: foregrounded
+calibration_role: callback
 ---
 
 # Day 28 — Autonomous-capability evaluation: METR's autonomy suite, and a 28-day synthesis
+
+## TL;DR
+
+Today's anchor is the **METR autonomy suite** — three artefacts (Wijk et al. 2024 RE-Bench, Rein et al. 2025 HCAST, Kwa et al. 2025's horizon-length result) that together measure how long a human task a frontier agent can complete autonomously and report a **doubling time of approximately 7 months** for that horizon. D28 is the curriculum closer: it foregrounds the fifth distinct Goodhart mechanism — *autonomy-measurement-as-selection-pressure* — for which there is no purely technical defense, and it ties the 28-day arc into one structure (pipeline reading, five Goodhart mechanisms, the calibration thread closed on D24, the contamination-resistant successor pattern, and the capability/safety inversion).
+
+## Learning objectives
+
+By the end of this lesson, you will be able to:
+
+1. **(L2)** State what the METR autonomy suite measures and name the three artefacts (RE-Bench, HCAST, Kwa et al. 2025) plus the headline horizon-length finding.
+2. **(L3)** *Apply* the logistic-regression definition of $L_p$ to a notional task suite and read off the $L_{50}$ time horizon for a given agent.
+3. **(L4)** *Analyze* D28's *autonomy-measurement-as-selection-pressure* Goodhart mechanism and contrast it mechanically with the four prior foregrounded mechanisms (D6 leakage, D15 incentive, D17 situational, D22 instrument).
+4. **(L5)** *Evaluate* a frontier-model report that pairs $L_{50}$ with capability and dangerous-knowledge axes (D6/D7/D14/D21), and judge what the joint reading implies under RSP / Preparedness-style policy framings.
+5. **(L4)** *Synthesize* the 28-day arc into one structure — pipeline framing, five Goodhart mechanisms, the closed calibration thread, the contamination-resistant successor pattern, the capability/safety inversion, the harness landscape — rather than 28 isolated benchmark stories.
+6. **(L5)** *Frame* evaluation literacy as a reading reflex (dataset / scoring rule / reporting convention / model run + an active Goodhart-mechanism hypothesis) that outlasts any specific saturated benchmark.
+
+## Prerequisites & callback
+
+Today is load-bearing on six prior lessons. **D6 (Contamination)** named the first foregrounded Goodhart mechanism — per-item data leakage — and the structurally hard-to-contaminate response (post-cutoff sampling, private splits, procedural generation); D28's task suites apply that lesson at the autonomy scale. **D11 (Code evaluation)** introduced execution-based scoring and the `pass@k` family; HCAST's pass-at-time-budget scoring is the autonomy-scale generalisation. **D17 (Situational awareness)** named the third foregrounded Goodhart mechanism — the model conditioning on whether the input looks like an evaluation — which is the substrate underneath every autonomy result. **D21 (Dangerous capability)** inverted the score gradient (a higher number is a *risk* signal); D28 completes the inversion across the *agency* axis. **D26 (Web agents)** and **D27 (OS agents)** introduced agentic loops, sandboxing, and indirect prompt injection as the canonical agent-safety threat model; the METR suite runs on the same Inspect-via-sandbox infrastructure. If you do not already hold the D6 leakage framing, the D17 situational-conditioning framing, the D21 inverted-gradient framing, and the D26–D27 agentic-loop framing, today reads as forensics; with them, today reads as the curriculum-wide synthesis it is built to be.
 
 ## The opening hook
 
@@ -27,7 +58,7 @@ What METR does, operationally, is run pre-deployment evaluations of frontier mod
 
 The choice to anchor Day 28 on METR rather than on **ARC-AGI** (the alternative considered in `overview.md`'s "What's intentionally NOT in the grid") is deliberate. ARC-AGI (Chollet 2019, ARC-AGI-2 in Chollet et al. 2025; D7 referenced both) is the cleanest example of *structurally* contamination-resistant evaluation, but its task type — visual grid-transformation puzzles — does not directly probe the capability frontier-safety policy is written against. METR's autonomy suite does. The closer is policy-relevant by construction.
 
-## Anchor: METR's autonomy suite
+## Anchor: METR autonomy suite (Wijk et al. 2024 + Rein et al. 2025 + Kwa et al. 2025)
 
 Three published artefacts compose what this lesson calls "the METR autonomy suite":
 
@@ -56,7 +87,7 @@ flowchart TB
     style TH fill:#fee
 ```
 
-### RE-Bench (Wijk et al. 2024)
+### Companion: RE-Bench (Wijk et al. 2024)
 
 RE-Bench is **7 hand-crafted, open-ended ML research-engineering environments**, each paired with **human-expert baselines** (71 attempts, 61 distinct experts, 8 hours per attempt as the core setting). The environments were chosen by consultation with ML researchers at top labs and academia for realism; representative examples named in the paper and METR's blog post include *fitting a scaling law*, *optimizing a GPU kernel*, and similar research-engineering tasks (full list at [github.com/METR/RE-Bench](https://github.com/METR/RE-Bench)).
 
@@ -68,7 +99,7 @@ Scoring is **continuous and environment-specific**. Each environment ships its o
 
 That 2-hour-vs-8-hour crossover is the load-bearing finding. It is not "agents have replaced researchers"; it is "agents are now competitive with researchers on the kind of bounded, well-specified, fast-feedback task that fills the first two hours of a research sprint." The capability frontier this reports — short-horizon, high-density-feedback ML work — is exactly the slice of AI R&D that policy frameworks track because of its self-improvement implications.
 
-### HCAST (Rein et al. 2025)
+### Companion: HCAST (Rein et al. 2025)
 
 HCAST — *Human-Calibrated Autonomy Software Tasks* — is the breadth complement to RE-Bench's depth. **189 tasks** across machine-learning engineering, cybersecurity, software engineering, and general reasoning, each calibrated against human baselines. The calibration data is the methodologically distinctive piece: **563 human baselines, ~1,500 hours total**, run under conditions identical to the AI agent setting (same sandbox, same tools, same time budget). Tasks span **from one minute to over eight hours of human-baseline time**.
 
@@ -80,7 +111,7 @@ Headline empirical findings from Rein et al. 2025:
 
 This is the empirical curve underneath Kwa et al.'s horizon-length result.
 
-### The horizon-length metric (Kwa et al. 2025)
+### Companion: horizon-length metric (Kwa et al. 2025)
 
 Given a task suite where every task has a calibrated *human-baseline length* $\ell_i$ in minutes, and an agent that succeeds on task $i$ with empirical probability $\hat{p}_i$, fit a logistic regression of success against log-length:
 
@@ -103,9 +134,36 @@ The suite runs through **Inspect** (UK AI Security Institute), with sandboxing s
 
 > **A note on dataset hygiene.** METR explicitly asks evaluators to take "reasonable steps" to keep the RE-Bench and HCAST tasks out of training data, because the suites are intended for *forward* evaluation of new releases. This is the D6 / D11 contamination problem applied to autonomy — and unlike post-cutoff sampling (LiveCodeBench), task-shaped autonomy benchmarks cannot be trivially refreshed. The standard mitigation in 2025–2026 is held-out task subsets and pre-deployment NDA arrangements, which the public leaderboard can reference but not reproduce.
 
-## Goodhart foregrounded — autonomy-measurement-as-selection-pressure
+## ⏵ Check yourself — fitting $L_{50}$
 
-This is the fifth and final Goodhart-foregrounded lesson in the curriculum. The four prior mechanisms:
+> **Worked example.** Suppose an agent is run on a 6-task slice of HCAST with calibrated human-baseline lengths $\ell$ in minutes and observed empirical success rates $\hat{p}$:
+>
+> | $\ell$ (min) | 5 | 15 | 60 | 240 | 480 | 960 |
+> | --- | --- | --- | --- | --- | --- | --- |
+> | $\hat{p}$ | 0.95 | 0.86 | 0.50 | 0.20 | 0.08 | 0.03 |
+>
+> A logistic fit of $\Pr[\text{success}] = \sigma(\beta_0 + \beta_1 \log \ell)$ on this slice gives roughly $\beta_0 \approx 4.1$, $\beta_1 \approx -1.0$ on natural-log minutes.
+
+Using the worked example above, **compute** the agent's $L_{50}$ and $L_{80}$ on this slice (in minutes), and identify which assumption of the headline doubling-time finding most depends on this slice being representative of the full HCAST distribution.
+
+<details>
+<summary>Show answer</summary>
+
+$L_p$ is the human-baseline length at which $\Pr[\text{success}] = p$. Solving $\sigma(\beta_0 + \beta_1 \log \ell) = p$ for $\ell$:
+
+$$
+\log L_p = \frac{\text{logit}(p) - \beta_0}{\beta_1}, \qquad L_p = \exp\!\left(\frac{\text{logit}(p) - \beta_0}{\beta_1}\right).
+$$
+
+For $p = 0.5$: $\text{logit}(0.5) = 0$, so $\log L_{50} = (0 - 4.1)/(-1.0) = 4.1$ and $L_{50} = e^{4.1} \approx 60$ minutes — about an hour, consistent with the 2025 reading-cut. For $p = 0.8$: $\text{logit}(0.8) = \log(4) \approx 1.39$, so $\log L_{80} = (1.39 - 4.1)/(-1.0) \approx 2.71$ and $L_{80} = e^{2.71} \approx 15$ minutes.
+
+The doubling-time finding (Kwa et al. 2025: $L_{50}$ doubling roughly every 7 months over the past 6 years) depends critically on the slice being **representative across task length**. The fit has $\beta_1 < 0$ — agents drop with task length — and the doubling-time argument is "the *length-where-success-equals-50%* is moving to the right by a factor of 2 every 7 months." If your slice oversamples short tasks, $L_{50}$ is biased low and the doubling rate is harder to pin down; if it oversamples long tasks, the noise in $\hat{p}$ near 0 dominates the fit and $L_{50}$'s confidence interval explodes. METR's published numbers depend on the HCAST + SWAA + RE-Bench composite covering 1 minute → 8+ hours specifically because that range is what makes the logistic identifiable.
+
+</details>
+
+## Goodhart foregrounded
+
+This is the fifth and final Goodhart-foregrounded lesson in the curriculum. The full five-day pattern, including today:
 
 | Day | Mechanism | One-sentence summary |
 | --- | --- | --- |
@@ -113,8 +171,9 @@ This is the fifth and final Goodhart-foregrounded lesson in the curriculum. The 
 | **D15** | Incentive structure | The benchmark's reference set rewards refusal-shaped strings on contested-fact items, so optimizing the score selects for *legibly safe-looking refusal* rather than truth-tracking. |
 | **D17** | Situational conditioning | The model conditions on an upstream feature — "this looks like an evaluation" — that it has learned to detect, so the score is computed on a sample drawn from the conditional-on-eval distribution rather than the deployment distribution. |
 | **D22** | Measurement-instrument-as-target | The judge model has systematic biases (self-preference, position, verbosity, bandwagon), so optimizing against the judge selects for output-shape features the judge favours rather than for the underlying quality. |
+| **D28** | Autonomy-measurement-as-selection-pressure | Any benchmark for autonomous capability is itself a training signal that selects for the very property the safety community wants to track passively. |
 
-D28's mechanism is distinct from all four:
+D28's mechanism is distinct from all four prior ones:
 
 > **Autonomy-measurement-as-selection-pressure: any benchmark for autonomous capability is itself a training signal that selects for the very property the safety community wants to track passively.**
 
@@ -144,7 +203,40 @@ Three frameworks make autonomy-measurement load-bearing in deployment decisions:
 
 This is the reason the closer is METR rather than ARC-AGI. ARC-AGI is the cleanest *intellectual* anchor for novel-task generalisation; METR is the *operational* anchor that frontier-safety policy is currently written against.
 
-## Week 4 in review
+## ⏵ Check yourself — composing autonomy with the rest of the safety stack
+
+A 2026 frontier-model report cites four numbers: **MMLU-Pro 84%**, **WMDP-Bio post-mitigation 24%**, **HarmBench attack-success 8%**, **METR $L_{50}$ ≈ 90 minutes** (with $L_{80}$ ≈ 15 minutes). Under an RSP-style autonomy checkpoint and a Preparedness-style "model autonomy" tracked-capability category, **decompose** what *each* number contributes to the deployment-decision case and identify the single composition the report does *not* surface that this curriculum has argued is the policy-relevant quantity.
+
+<details>
+<summary>Show answer</summary>
+
+Each number is one axis. **MMLU-Pro 84%** is general capability (Weeks 1–2 framing, gradient: maximize). **WMDP-Bio post-mitigation 24%** is hazardous proxy knowledge (D21 framing, gradient: minimize / stay-below-threshold; valid only paired with re-elicitation probes per the D21 RMU caveat). **HarmBench attack-success 8%** is behavioural-guardrail robustness (D19 framing). **METR $L_{50}$ ≈ 90 minutes** is autonomous-task horizon (D28 framing, gradient: track-rate-of-change against RSP / Preparedness thresholds).
+
+The composition the report does *not* surface is the **product**: dangerous expertise × the agency to act on it. Per the capability/safety inversion below, deployment risk is approximately $f(\text{capability}, \text{dangerous knowledge}, \text{autonomy}, \text{robustness of safeguards})$, and the policy-relevant quantity is *the joint*, not any single axis. A model with 84% MMLU-Pro + 24% post-mitigation WMDP-Bio + 90-minute $L_{50}$ is materially different from one with the same 84% MMLU-Pro + the same 24% WMDP-Bio + a 5-minute $L_{50}$, because the 90-minute model can plausibly *act* on the residual hazardous knowledge across a multi-step plan that the 5-minute model cannot. Frontier-safety reviews compose the numbers; single-axis reading misses exactly the composition this curriculum has been building toward naming. (See "The capability/safety inversion" in the 28-day synthesis below.)
+
+</details>
+
+## Calibration callback
+
+Calibration is a closed thread by D24. D2 introduced it (HellaSwag, ECE, reliability diagrams). D15 reprised it as selective prediction on TruthfulQA. D20 was a callback (position-holding under challenge). D24 closed it on RewardBench: reward-model confidence composes with downstream sampling (Best-of-$N$, PPO, DPO), so miscalibration in the RM propagates as miscalibration in the policy. **D28 does not extend the thread; it only references it.** The reason calibration shows up here at all is that horizon-length reporting at $L_{50}$ versus $L_{80}$ is itself a calibration-flavoured choice — the policy-relevant question "how long a task can this agent reliably finish?" is answered very differently at 50% versus 80% reliability, and the gap between the two ($L_{80} \ll L_{50}$ in the worked example above) is the autonomy-side analogue of the risk–coverage curve from D15. The mechanism is the same: a single number hides the operating point you are choosing. The defense is the same: report the curve, not the point. The curriculum's calibration thread is *not* a separate axis at D28; it is the closed background machinery for reading the horizon-length report responsibly.
+
+## Cross-references
+
+**Backward.**
+
+- D-1 — picks up the *evaluation-as-(dataset, scoring rule, reporting convention) pipeline* framing; D28 instantiates it for autonomy and closes back to D1's opening question by replacing the leaderboard-headline framing with the doubling-time framing.
+- D-6 — picks up the *foregrounded Goodhart* pattern from the data-leakage variant; D28 is the fifth and final mechanism in the five-day pattern (D6 leakage, D15 incentive, D17 situational, D22 instrument, D28 selection-pressure).
+- D-11 — picks up *execution-based, pass-at-budget scoring*; HCAST and RE-Bench generalise the idea from `pass@k` over unit tests to pass-at-time-budget over a calibrated human-baseline length.
+- D-17 — picks up *situational conditioning* as the eval-vs-deployment distribution gap; D28's Goodhart is structurally distinct (the eval-shape *is* the deployment-shape, by design) and that distinction is the load-bearing one for autonomy benchmarks.
+- D-21 — picks up the *inverted score gradient* on dangerous capability; D28 completes the inversion across the *agency* axis and the composition (dangerous knowledge × agency) is the policy-relevant quantity neither lesson alone surfaces.
+- D-22 — picks up the *measurement-instrument-as-target* mechanism; D28's mechanism is one level structurally further out (the existence of measurement itself, not the evaluator-LM, is what creates the optimization pressure).
+- D-24 — picks up the closed *calibration thread* and uses its risk–coverage framing as the language for reading $L_{50}$ versus $L_{80}$.
+- D-26 — picks up the *agentic-loop, indirect-prompt-injection, sandboxed-tool-use* threat model; the METR suite runs on the same Inspect-via-sandbox infrastructure D26 introduced.
+- D-27 — picks up *OS-level cross-application agents* as the breadth-end of the agentic surface; the METR suite is the policy-relevant frontier successor to OSWorld for autonomy reporting.
+
+**Forward.** The curriculum closes here. The five frontier open problems past D28 — scheming evaluation under realistic incentives (Apollo, Meinke et al. 2024), mech-interp for evaluation-awareness, robust unlearning, agentic indirect-PI defenses, and the composition of autonomy × capability × dangerous-knowledge as a single safety case — are detailed in the *What to read next — frontier open problems* sub-section of the 28-day curriculum synthesis below.
+
+## Week 4 review
 
 ```mermaid
 flowchart TB
@@ -159,6 +251,10 @@ flowchart TB
 ```
 
 Week 4 is the methodology week. D22 named the LLM-as-judge methodology and the four systematic biases that turn the judge into the next Goodhart target — the curriculum's fourth foregrounded Goodhart. D23 contrasted with Chatbot Arena's pairwise *human* preference at scale, separating the philosophy of human-in-the-loop ranking from auto-judging. D24 closed the calibration thread (D2 → D15 → D20 → D24) by evaluating the evaluator: RewardBench measures whether reward models are themselves calibrated, since miscalibration in the RM propagates as miscalibration in the policy. D25 reframed accuracy reporting once *think-time* and tokens-per-dollar became axes — pass@1 vs. pass@1024 vs. cons@N on AIME, with FrontierMath as the difficulty-ceiling overlay and the o1 system card formalising cost-axis reporting. D26 brought tool use and web environments into scope and named indirect prompt injection as the threat model that scales with long context (the D14 forward pointer, closed). D27 generalised to cross-application OS-level agents — the largest indirect-PI surface and the hardest agent benchmark. D28 closes the week and the curriculum on the policy-relevant frontier: autonomous capability, horizon length, and the open Goodhart mechanism that has no purely technical defense.
+
+## Week 4 handoff
+
+There is no Week 5. Week 4 has now mapped the *methodology* surface that sits underneath every Week 1–3 benchmark: how open-ended outputs get scored (D22 LLM-as-judge), how human preference at scale serves as a contrasting anchor (D23), how the evaluator itself is graded and how the calibration thread closes (D24 RewardBench), how reasoning-model evaluation factors *cost* into the reporting axis (D25), how agentic loops and indirect prompt injection generalise the threat surface (D26 web, D27 OS), and how autonomous capability is measured as a doubling-time trajectory rather than a leaderboard number (D28). The lesson D28 hands forward is the one this entire curriculum was built to surface: there is no fixed methodology that completes the agenda — each successive evaluation methods week is a response to a Goodhart pressure that the prior week's methods made legible, and D28's *autonomy-measurement-as-selection-pressure* is the open mechanism that has no purely technical defense. The frontier moves; the reading habits below are what carry forward.
 
 ## 28-day curriculum synthesis
 
@@ -269,45 +365,52 @@ Five frontier open problems sit at the edge of what this curriculum could cover.
 
 5. **Composition: autonomy + capability + dangerous-knowledge.** The frontier-safety question is the *product* of the axes the curriculum has measured separately. A model with $L_{50}$ of one work-week, MMLU-Pro near ceiling, WMDP-Bio above policy thresholds, and HarmBench attack-success-rate below threshold is a different deployment risk from a model with the same capability profile but order-of-magnitude lower autonomy. We do not yet have a clean *composition* benchmark; what we have is RSP / Preparedness-style multi-input safety cases. The methodology to grade those compositions is the open frontier this curriculum's last lesson hands you.
 
-## Final words
+### Final words
 
 The 28-day arc started with a single number on a leaderboard and ends with a doubling time on a frontier-safety dashboard. In between, you've seen 28 anchor benchmarks; six instances of the contamination-resistant-successor pattern; five distinct Goodhart mechanisms; the calibration thread opening on D2 and closing on D24; the capability-eval gradient inverting twice (D21, D28); five harnesses; and one consistent reading reflex — *what is the dataset, what is the scoring rule, what is the reporting convention, and what is the model run on top of those three?*
 
-Evaluation literacy is not a body of facts about specific benchmarks. It is the habit of refusing to read a single number without those four questions answered, plus a working sense of which Goodhart mechanism is most likely the active one for the benchmark in front of you. If you finish this curriculum with that habit, the specific benchmarks will rotate out — MMLU is already mostly retired, GPQA Diamond is near-saturated, HumanEval has been displaced — and the habit will outlast them.
-
-The frontier moves. The reading habits don't. That's the curriculum.
+Evaluation literacy is not a body of facts about specific benchmarks. It is the habit of refusing to read a single number without those four questions answered, plus a working sense of which Goodhart mechanism is most likely the active one for the benchmark in front of you. If you finish this curriculum with that habit, the specific benchmarks will rotate out — MMLU is already mostly retired, GPQA Diamond is near-saturated, HumanEval has been displaced — and the habit will outlast them. The frontier moves. The reading habits don't. That's the curriculum.
 
 ## Takeaways
 
-1. **METR** (Model Evaluation and Threat Research, formerly ARC Evals) is the standalone non-profit that anchors autonomous-capability evaluation, with pre-deployment partnerships with Anthropic, OpenAI, UK AISI, and US CAISI.
-2. **The METR autonomy suite** in this curriculum's framing is three artefacts: **RE-Bench** (Wijk et al. 2024, arXiv:2411.15114; 7 ML-R&D environments with 8-hour expert baselines), **HCAST** (Rein et al. 2025, arXiv:2503.17354; 189 software tasks with 563 human baselines spanning 1 minute to 8+ hours), and **Kwa et al. 2025** (arXiv:2503.14499) which fits the **horizon-length metric** $L_{50}$ across the suite and reports a doubling time of approximately **7 months** over six years.
-3. **D28's Goodhart mechanism** is *autonomy-measurement-as-selection-pressure*: any benchmark for autonomous capability is itself a training signal that selects for the property the safety community wants to passively track. Distinct from D6 (data leakage), D15 (incentive structure), D17 (situational conditioning), and D22 (measurement-instrument). No purely technical defense; the responses are organizational (NDA pre-deployment evaluation, third-party evaluator independence, held-out task families, trend-rate monitoring).
-4. **Frontier policy** — Anthropic RSP autonomy checkpoint, OpenAI Preparedness model-autonomy category, AISI / CAISI pre-deployment evaluations — is written against METR-style autonomy measurements. METR was chosen as the curriculum closer over ARC-AGI for this policy-relevance reason.
-5. **The 28-day synthesis** ties the pipeline framing (D1), five Goodhart mechanisms (D6, D15, D17, D22, D28), the calibration thread (D2 → D15 → D20 → D24, closed), the contamination-resistant successor pattern (six instances), the capability/safety inversion (D21 + D28), and the harness landscape (lm-eval-harness, Inspect, LightEval, HELM, benchmark-native) into one structure. Evaluation literacy is the habit of reading any score against the (dataset, scoring rule, reporting convention, model run) tuple plus an active hypothesis about which Goodhart mechanism is in play.
-6. **Frontier open problems past D28**: scheming evaluation under realistic incentives (Apollo, Meinke et al. 2024), mech-interp for evaluation-awareness, robust unlearning, agentic indirect-PI defenses, and the composition of autonomy × capability × dangerous-knowledge as a single safety case.
+1. **METR** (Model Evaluation and Threat Research, formerly ARC Evals) is the standalone non-profit that anchors autonomous-capability evaluation, with pre-deployment partnerships with Anthropic, OpenAI, UK AISI, and US CAISI. *(LO 1)*
+2. **The METR autonomy suite** in this curriculum's framing is three artefacts: **RE-Bench** (Wijk et al. 2024, arXiv:2411.15114; 7 ML-R&D environments with 8-hour expert baselines), **HCAST** (Rein et al. 2025, arXiv:2503.17354; 189 software tasks with 563 human baselines spanning 1 minute to 8+ hours), and **Kwa et al. 2025** (arXiv:2503.14499) which fits the **horizon-length metric** $L_{50}$ across the suite and reports a doubling time of approximately **7 months** over six years. *(LO 1, LO 2)*
+3. **D28's Goodhart mechanism** is *autonomy-measurement-as-selection-pressure*: any benchmark for autonomous capability is itself a training signal that selects for the property the safety community wants to passively track. Distinct from D6 (data leakage), D15 (incentive structure), D17 (situational conditioning), and D22 (measurement-instrument). No purely technical defense; the responses are organizational (NDA pre-deployment evaluation, third-party evaluator independence, held-out task families, trend-rate monitoring). *(LO 3)*
+4. **Frontier policy** — Anthropic RSP autonomy checkpoint, OpenAI Preparedness model-autonomy category, AISI / CAISI pre-deployment evaluations — is written against METR-style autonomy measurements. METR was chosen as the curriculum closer over ARC-AGI for this policy-relevance reason. *(LO 4)*
+5. **The 28-day synthesis** ties the pipeline framing (D1), five Goodhart mechanisms (D6, D15, D17, D22, D28), the calibration thread (D2 → D15 → D20 → D24, closed), the contamination-resistant successor pattern (six instances), the capability/safety inversion (D21 + D28), and the harness landscape (lm-eval-harness, Inspect, LightEval, HELM, benchmark-native) into one structure. Evaluation literacy is the habit of reading any score against the (dataset, scoring rule, reporting convention, model run) tuple plus an active hypothesis about which Goodhart mechanism is in play. *(LO 5, LO 6)*
+6. **Frontier open problems past D28**: scheming evaluation under realistic incentives (Apollo, Meinke et al. 2024), mech-interp for evaluation-awareness, robust unlearning, agentic indirect-PI defenses, and the composition of autonomy × capability × dangerous-knowledge as a single safety case. *(LO 4, LO 5)*
+
+## Glossary
+
+- **autonomy**: a model's ability to run a multi-hour, multi-action loop — observe, plan, act, recover from errors, persist a goal across hundreds of steps — without a human in the loop; the capability frontier-safety policy is written against [introduced D-28].
+- **$L_{50}$ (50%-task-completion time horizon)**: the human-baseline task length at which an agent succeeds with 50% probability, fit by logistic regression of success against log-task-length on a calibrated suite; Kwa et al. 2025's headline metric, $\approx 1$ hour at the 2025 reading-cut [introduced D-28].
+- **horizon doubling time**: the period over which $L_{50}$ doubles, reported by Kwa et al. 2025 as approximately 7 months over the past 6 years (with a possible acceleration to ~4 months in 2024 per METR's Time Horizon 1.1 update); the curriculum's first quantitative trajectory for *agency* [introduced D-28].
+- **RE-Bench**: 7 hand-crafted, open-ended ML research-engineering environments paired with 8-hour expert-human baselines (71 attempts, 61 distinct experts); the depth half of the METR autonomy suite, with continuous environment-specific scoring [introduced D-28].
+- **HCAST (Human-Calibrated Autonomy Software Tasks)**: 189 software tasks across ML engineering, cybersecurity, software engineering, and general reasoning, calibrated against 563 human baselines (~1,500 hours) spanning 1 minute to 8+ hours; the breadth half of the METR autonomy suite [introduced D-28].
+- **agentic R&D**: research-engineering work performed by language-model agents — fitting scaling laws, optimizing GPU kernels, running training loops — under sandboxed tool access; the capability slice RE-Bench targets, and the slice frontier-safety policy tracks for self-improvement implications [introduced D-28].
+- **autonomy-measurement-as-selection-pressure**: D28's foregrounded Goodhart mechanism — any benchmark for autonomous capability is itself a training signal that selects for the property it tracks, because the eval shape (sandbox + tool-use loop) and the deployment shape are by design the same shape; no purely technical defense [introduced D-28].
+- **METR (Model Evaluation and Threat Research)**: standalone 501(c)(3) non-profit, formerly ARC Evals, spun out and renamed in December 2023; runs pre-deployment autonomy evaluations under NDA for Anthropic, OpenAI, UK AISI, and US CAISI; founded by Beth Barnes, based in Berkeley [introduced D-28].
 
 ## References
 
-- **Anchor — RE-Bench.** Wijk, H., Lin, T., Becker, J., Jawhar, S., Parikh, N., Broadley, T., Chan, L., Chen, M., Clymer, J., Dhyani, J., Ericheva, E., Garcia, K., Goodrich, B., Jurkovic, N., Kinniment, M., Lajko, H., Nix, S., Sato, L., Saunders, W., Taran, M., West, B., & Barnes, E. (2024). *RE-Bench: Evaluating frontier AI R&D capabilities of language model agents against human experts.* arXiv:2411.15114. https://arxiv.org/abs/2411.15114
-- **Anchor — HCAST.** Rein, D., Becker, J., Deng, A., Nix, S., Canal, C., O'Connor, D., Arnott, P., Bloom, R., Broadley, T., Garcia, K., Goodrich, B., Hasin, M., Jawhar, S., Kinniment, M., Kwa, T., Miles, L. H., Mishra, A., Parikh, N., Rush, N., Sato, L., Von Arx, S., West, B., Barnes, E., & Chan, L. (2025). *HCAST: Human-Calibrated Autonomy Software Tasks.* arXiv:2503.17354. https://arxiv.org/abs/2503.17354
-- **Anchor — horizon length.** Kwa, T., West, B., Becker, J., Deng, A., Garcia, K., Hasin, M., Jawhar, S., Kinniment, M., Rush, N., Von Arx, S., Bloom, R., Broadley, T., Du, H., Goodrich, B., Jurkovic, N., Miles, L. H., Nix, S., Lin, T., Parikh, N., Rein, D., Sato, L., Wijk, H., Ziegler, D. M., Barnes, E., & Chan, L. (2025). *Measuring AI Ability to Complete Long Tasks.* arXiv:2503.14499. https://arxiv.org/abs/2503.14499
+- **Anchor.** Wijk, H., Lin, T., Becker, J., Jawhar, S., Parikh, N., Broadley, T., Chan, L., Chen, M., Clymer, J., Dhyani, J., Ericheva, E., Garcia, K., Goodrich, B., Jurkovic, N., Kinniment, M., Lajko, H., Nix, S., Sato, L., Saunders, W., Taran, M., West, B., & Barnes, E. (2024). *RE-Bench: Evaluating frontier AI R&D capabilities of language model agents against human experts.* arXiv:2411.15114. https://arxiv.org/abs/2411.15114
+- **Anchor.** Rein, D., Becker, J., Deng, A., Nix, S., Canal, C., O'Connor, D., Arnott, P., Bloom, R., Broadley, T., Garcia, K., Goodrich, B., Hasin, M., Jawhar, S., Kinniment, M., Kwa, T., Miles, L. H., Mishra, A., Parikh, N., Rush, N., Sato, L., Von Arx, S., West, B., Barnes, E., & Chan, L. (2025). *HCAST: Human-Calibrated Autonomy Software Tasks.* arXiv:2503.17354. https://arxiv.org/abs/2503.17354
+- **Anchor.** Kwa, T., West, B., Becker, J., Deng, A., Garcia, K., Hasin, M., Jawhar, S., Kinniment, M., Rush, N., Von Arx, S., Bloom, R., Broadley, T., Du, H., Goodrich, B., Jurkovic, N., Miles, L. H., Nix, S., Lin, T., Parikh, N., Rein, D., Sato, L., Wijk, H., Ziegler, D. M., Barnes, E., & Chan, L. (2025). *Measuring AI Ability to Complete Long Tasks.* arXiv:2503.14499. https://arxiv.org/abs/2503.14499
 - **Anchor — blog announcement.** METR. *Measuring AI Ability to Complete Long Tasks.* (2025). https://metr.org/blog/2025-03-19-measuring-ai-ability-to-complete-long-tasks/
 - **Anchor — Time Horizon 1.1 update.** METR. *Time Horizon 1.1.* (2026). https://metr.org/blog/2026-1-29-time-horizon-1-1/
-- **Organization.** METR. *ARC Evals is now METR.* (December 2023). https://metr.org/blog/2023-12-04-metr-announcement/
-- **Project site + autonomy resources.** METR. https://metr.org/ ; *Autonomy Evaluation Resources.* https://evaluations.metr.org/ ; https://metr.github.io/autonomy-evals-guide/
-- **Code.** METR/RE-Bench. https://github.com/METR/RE-Bench ; METR organization. https://github.com/METR
-- **Harness — Inspect sandboxing.** UK AISI. *The Inspect Sandboxing Toolkit: Scalable and secure AI agent evaluations.* https://www.aisi.gov.uk/blog/the-inspect-sandboxing-toolkit-scalable-and-secure-ai-agent-evaluations
-- **Frontier policy — Anthropic.** *Responsible Scaling Policy* (current and v3 archive). https://www.anthropic.com/responsible-scaling-policy
-- **Frontier policy — OpenAI.** *Preparedness Framework.* https://openai.com/safety/preparedness
-- **Cross-curriculum — D17 SAD.** Laine, R., et al. (2024). *Me, Myself, and AI: The Situational Awareness Dataset (SAD) for LLMs.* arXiv:2407.04694.
-- **Cross-curriculum — D17 scheming pointer.** Meinke, A., et al. (2024). *Frontier Models are Capable of In-Context Scheming.* Apollo Research. arXiv:2412.04984. https://arxiv.org/abs/2412.04984
-- **Cross-curriculum — D21 WMDP / robust unlearning.** Li, N., et al. (2024). *The WMDP Benchmark.* arXiv:2403.03218. Sheshadri, A., et al. (2024). *Latent Adversarial Training Improves Robustness to Persistent Harmful Behaviors in LLMs.* arXiv:2407.15549.
-- **Cross-curriculum — model organisms.** Hubinger, E., et al. (2024). *Sleeper Agents.* arXiv:2401.05566.
-- **Alternative considered.** Chollet, F. (2019). *On the Measure of Intelligence.* arXiv:1911.01547. Chollet, F., et al. (2025). *ARC-AGI-2.* arXiv:2505.11831. (Considered and rejected as the D28 closer per `overview.md` for being less policy-relevant than METR.)
+- **Harness.** UK AISI. *The Inspect Sandboxing Toolkit: Scalable and secure AI agent evaluations.* https://www.aisi.gov.uk/blog/the-inspect-sandboxing-toolkit-scalable-and-secure-ai-agent-evaluations ; METR autonomy evaluation resources: https://evaluations.metr.org/ ; https://metr.github.io/autonomy-evals-guide/ ; https://github.com/METR/RE-Bench ; https://github.com/METR
+- **Secondary — organization.** METR. *ARC Evals is now METR.* (December 2023). https://metr.org/blog/2023-12-04-metr-announcement/ ; Project site: https://metr.org/
+- **Secondary — frontier policy.** Anthropic. *Responsible Scaling Policy* (current and v3 archive). https://www.anthropic.com/responsible-scaling-policy ; OpenAI. *Preparedness Framework.* https://openai.com/safety/preparedness
+- **Secondary — D17 SAD.** Laine, R., et al. (2024). *Me, Myself, and AI: The Situational Awareness Dataset (SAD) for LLMs.* arXiv:2407.04694.
+- **Secondary — D17 scheming pointer.** Meinke, A., et al. (2024). *Frontier Models are Capable of In-Context Scheming.* Apollo Research. arXiv:2412.04984. https://arxiv.org/abs/2412.04984
+- **Secondary — D21 WMDP / robust unlearning.** Li, N., et al. (2024). *The WMDP Benchmark.* arXiv:2403.03218. Sheshadri, A., et al. (2024). *Latent Adversarial Training Improves Robustness to Persistent Harmful Behaviors in LLMs.* arXiv:2407.15549.
+- **Secondary — model organisms.** Hubinger, E., et al. (2024). *Sleeper Agents.* arXiv:2401.05566.
+- **Secondary — alternative considered.** Chollet, F. (2019). *On the Measure of Intelligence.* arXiv:1911.01547. Chollet, F., et al. (2025). *ARC-AGI-2.* arXiv:2505.11831. (Considered and rejected as the D28 closer per `overview.md` for being less policy-relevant than METR.)
+- **Goodhart.** Strathern, M. (1997). *"Improving ratings": audit in the British University system.* European Review, 5(3) — the canonical concise formulation. Manheim, D., & Garrabrant, S. (2018). *Categorizing Variants of Goodhart's Law.* arXiv:1803.04585 — the four-mechanism taxonomy. D28's *autonomy-measurement-as-selection-pressure* is most cleanly an *adversarial* Goodhart on the existence of measurement itself — the level above which the loop closes on the field's ability to evaluate at all, and the open frontier-safety problem the curriculum was built to name.
 
 ## Quiz
 
-**Q1.** METR (Model Evaluation and Threat Research) is best described as:
+**Q1.** Which is the **most defensible reading** of METR (Model Evaluation and Threat Research)'s institutional status?
 
 - A. The internal red-team-and-Preparedness division of OpenAI that authored the Preparedness Framework and runs CBRN evaluations under that policy.
 - B. A standalone 501(c)(3) non-profit, formerly ARC Evals, spun out and renamed in December 2023; runs pre-deployment autonomy evaluations for frontier labs.
