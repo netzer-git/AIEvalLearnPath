@@ -1293,6 +1293,298 @@
 }
 
 /* ============================================================ */
+/*  Stage 2.6 — pedagogical-section callouts                    */
+/*                                                              */
+/*  rehypeTagPedagogicalSections (web/lib/markdown.ts) tags     */
+/*  selected <details class="lesson-section"> blocks with a     */
+/*  modifier class derived from the H2 slug. The styles below   */
+/*  give each variant a distinctive border / background tint    */
+/*  so readers can see the lesson's pedagogical structure       */
+/*  without reading the H2 text. Section-completion mechanics   */
+/*  (badge, mark-read footer, slug tracking) work uniformly     */
+/*  across all variants — these are still real H2-rooted        */
+/*  collapsible sections.                                       */
+/* ============================================================ */
+
+/* Common: lift the modifier sections out of the flat-strip look so
+   they read as boxed callouts rather than ordinary collapse blocks. */
+.lesson-content > details.lesson-section--tldr,
+.lesson-content > details.lesson-section--objectives,
+.lesson-content > details.lesson-section--prereq,
+.lesson-content > details.lesson-section--check,
+.lesson-content > details.lesson-section--glossary,
+.lesson-content > details.lesson-section--takeaways,
+.lesson-content > details.lesson-section--cross-refs {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.4rem 1rem 0.6rem;
+  background: var(--card);
+  margin-top: 1.25rem;
+}
+
+.lesson-section--tldr > .lesson-section-summary,
+.lesson-section--objectives > .lesson-section-summary,
+.lesson-section--prereq > .lesson-section-summary,
+.lesson-section--check > .lesson-section-summary,
+.lesson-section--glossary > .lesson-section-summary,
+.lesson-section--takeaways > .lesson-section-summary,
+.lesson-section--cross-refs > .lesson-section-summary {
+  background: transparent;
+}
+
+.lesson-section--tldr > .lesson-section-summary h2,
+.lesson-section--objectives > .lesson-section-summary h2,
+.lesson-section--prereq > .lesson-section-summary h2,
+.lesson-section--check > .lesson-section-summary h2,
+.lesson-section--glossary > .lesson-section-summary h2,
+.lesson-section--takeaways > .lesson-section-summary h2,
+.lesson-section--cross-refs > .lesson-section-summary h2 {
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+/* TL;DR — mint border, mint-tinted background. The advance organizer. */
+.lesson-content > details.lesson-section--tldr {
+  border-color: var(--accent-mint-border);
+  background: var(--accent-mint-soft);
+}
+.lesson-section--tldr > .lesson-section-summary h2 {
+  color: oklch(0.45 0.07 175);
+}
+
+/* Learning objectives — violet, distinctive from TL;DR. */
+.lesson-content > details.lesson-section--objectives {
+  border-color: var(--accent-violet-border);
+  background: var(--accent-violet-soft);
+}
+.lesson-section--objectives > .lesson-section-summary h2 {
+  color: oklch(0.45 0.07 290);
+}
+/* Numbered LOs read better than bulleted ones. */
+.lesson-section--objectives ol,
+.lesson-section--objectives ul {
+  margin: 0.5rem 0 0.25rem;
+}
+.lesson-section--objectives li {
+  margin-bottom: 0.35rem;
+}
+
+/* Prerequisites & callback — amber, "this is what you need first". */
+.lesson-content > details.lesson-section--prereq {
+  border-color: var(--accent-amber-border);
+  background: var(--accent-amber-soft);
+}
+.lesson-section--prereq > .lesson-section-summary h2 {
+  color: oklch(0.5 0.06 75);
+}
+
+/* ⏵ Check yourself — amber callout, mid-lesson retrieval prompt.
+   These also have the ⏵ glyph in the H2 itself; we lift it visually. */
+.lesson-content > details.lesson-section--check {
+  border-color: var(--accent-amber-border);
+  background: var(--accent-amber-soft);
+}
+.lesson-section--check > .lesson-section-summary h2 {
+  color: oklch(0.5 0.06 75);
+  font-size: 0.95rem;
+}
+/* The inline `<details>` answer block inside a check should look like an
+   answer-reveal, not a section-collapse. Slightly indented + dotted. */
+.lesson-section--check details {
+  border-left: 3px dotted var(--accent-amber-border);
+  padding: 0.4rem 0.85rem;
+  background: transparent;
+  margin: 0.6rem 0;
+}
+.lesson-section--check details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Glossary — neutral border, dl-style body. Terms are usually
+   `**term**: gloss [introduced D-N]` bullets in markdown; we render
+   the `**term**:` part as a definition-style strong. */
+.lesson-content > details.lesson-section--glossary {
+  border-color: var(--border);
+  background: var(--card);
+}
+.lesson-section--glossary > .lesson-section-summary h2 {
+  color: var(--muted-foreground);
+}
+.lesson-section--glossary ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5rem 0 0.25rem;
+}
+.lesson-section--glossary li {
+  margin-bottom: 0.4rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--border);
+}
+.lesson-section--glossary strong:first-child {
+  color: var(--accent-violet);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+/* Takeaways — mint border (matches TL;DR), reinforces the close-loop. */
+.lesson-content > details.lesson-section--takeaways {
+  border-color: var(--accent-mint-border);
+  background: var(--accent-mint-soft);
+}
+.lesson-section--takeaways > .lesson-section-summary h2 {
+  color: oklch(0.45 0.07 175);
+}
+/* The `(LO N)` tags at the end of each takeaway bullet — make them
+   visually quiet so they don't compete with the takeaway text. */
+.lesson-section--takeaways li em:last-child,
+.lesson-section--takeaways li code:last-child {
+  font-size: 0.8em;
+  color: var(--muted-foreground);
+  font-style: normal;
+  margin-left: 0.4rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Cross-references — neutral, lightweight. */
+.lesson-content > details.lesson-section--cross-refs {
+  border-color: var(--border);
+  background: transparent;
+}
+.lesson-section--cross-refs > .lesson-section-summary h2 {
+  color: var(--muted-foreground);
+}
+.lesson-section--cross-refs ul {
+  margin: 0.4rem 0;
+}
+
+/* Mobile: tighten the boxed callouts so they don't crowd. */
+@media (max-width: 640px) {
+  .lesson-content > details.lesson-section--tldr,
+  .lesson-content > details.lesson-section--objectives,
+  .lesson-content > details.lesson-section--prereq,
+  .lesson-content > details.lesson-section--check,
+  .lesson-content > details.lesson-section--glossary,
+  .lesson-content > details.lesson-section--takeaways,
+  .lesson-content > details.lesson-section--cross-refs {
+    padding: 0.3rem 0.7rem 0.45rem;
+  }
+  .lesson-section--tldr > .lesson-section-summary h2,
+  .lesson-section--objectives > .lesson-section-summary h2,
+  .lesson-section--prereq > .lesson-section-summary h2,
+  .lesson-section--check > .lesson-section-summary h2,
+  .lesson-section--glossary > .lesson-section-summary h2,
+  .lesson-section--takeaways > .lesson-section-summary h2,
+  .lesson-section--cross-refs > .lesson-section-summary h2 {
+    font-size: 0.95rem;
+  }
+}
+
+/* ============================================================ */
+/*  Stage 2.6 — prerequisites chip strip on lesson page header  */
+/* ============================================================ */
+
+.lesson-prereq-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+}
+.lesson-prereq-strip-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.lesson-prereq-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.55rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--foreground);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.lesson-prereq-chip:hover {
+  border-color: var(--accent-violet);
+  background: var(--accent-violet-soft);
+  color: var(--accent-violet);
+}
+
+/* ============================================================ */
+/*  Stage 2.6 — site-wide /glossary page                        */
+/* ============================================================ */
+
+.glossary-page {
+  max-width: var(--lesson-max-width, 70ch);
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+.glossary-page h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.4rem;
+}
+.glossary-page-lead {
+  color: var(--muted-foreground);
+  margin-bottom: 1.5rem;
+}
+.glossary-page dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1.2rem;
+  align-items: baseline;
+}
+.glossary-page dt {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-violet);
+  scroll-margin-top: 5rem;
+}
+.glossary-page dd {
+  margin: 0;
+  color: var(--foreground);
+}
+.glossary-page dd a {
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  margin-left: 0.4rem;
+  text-decoration: none;
+}
+.glossary-page dd a:hover {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+@media (max-width: 640px) {
+  .glossary-page dl {
+    grid-template-columns: 1fr;
+    gap: 0.15rem 0;
+  }
+  .glossary-page dd {
+    margin-bottom: 0.6rem;
+    padding-left: 0.4rem;
+    border-left: 2px solid var(--border);
+  }
+}
+
+/* ============================================================ */
 /*  Dashboard — week-review card after each 7-tile row          */
 /* ============================================================ */
 

@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "audit:quiz": "node scripts/audit-quiz-lengths.mjs",
+    "audit:schema": "node scripts/audit-lesson-schema.mjs",
+    "audit:bloom": "node scripts/audit-quiz-bloom.mjs",
+    "audit": "node scripts/audit-quiz-lengths.mjs && node scripts/audit-lesson-schema.mjs && node scripts/audit-quiz-bloom.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
