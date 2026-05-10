@@ -976,3 +976,280 @@
 .dashboard-tile--done .dashboard-tile-anchor {
   color: color-mix(in oklch, var(--accent-mint), var(--foreground) 30%);
 }
+
+/* ============================================================ */
+/*  Quiz variants — warm-up (top-of-lesson) + weekly (review)   */
+/* ============================================================ */
+
+.quiz-section--warmup {
+  margin-top: 0;
+  margin-bottom: 2rem;
+  border-color: var(--accent-amber-border);
+  background: var(--accent-amber-soft);
+}
+.quiz-section--warmup .quiz-heading {
+  color: var(--foreground);
+  font-size: 1.15rem;
+}
+.quiz-warmup-hint {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+}
+.quiz-source-day {
+  margin-left: auto;
+  padding-left: 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-amber);
+  white-space: nowrap;
+  align-self: center;
+}
+
+/* ----- weekly review (interactive) ----- */
+
+.quiz-section--weekly {
+  margin-top: 0;
+  border-color: var(--accent-violet-border);
+  background: var(--accent-violet-soft);
+}
+.quiz-weekly-header {
+  margin-bottom: 1rem;
+}
+.quiz-weekly-header .quiz-heading {
+  margin: 0;
+}
+.quiz-weekly-prior {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+}
+.quiz-weekly-locked {
+  margin: 0 0 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+}
+.quiz-weekly-locked-link {
+  color: var(--accent-mint);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.quiz-options--interactive {
+  gap: 0.4rem;
+}
+.quiz-option--clickable {
+  padding: 0;
+}
+.quiz-option-button {
+  width: 100%;
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.quiz-option-button:hover:not(:disabled) {
+  border-color: var(--accent-mint-border);
+  background: color-mix(in oklch, var(--card), var(--accent-mint-soft) 50%);
+}
+.quiz-option-button:disabled {
+  cursor: default;
+}
+.quiz-option--selected .quiz-option-button {
+  border-color: var(--accent-mint);
+  background: var(--accent-mint-soft);
+}
+.quiz-option--reveal-correct .quiz-option-button {
+  border-color: var(--accent-mint);
+  background: var(--accent-mint-soft);
+  color: oklch(0.16 0 0);
+}
+.quiz-option--reveal-correct .quiz-option-letter {
+  color: var(--accent-mint);
+  font-weight: 700;
+}
+.quiz-option--reveal-wrong .quiz-option-button {
+  border-color: var(--destructive);
+  background: color-mix(in oklch, var(--destructive), transparent 88%);
+}
+.quiz-option--reveal-wrong .quiz-option-letter {
+  color: var(--destructive);
+  font-weight: 700;
+}
+.quiz-option-button .quiz-option-text p {
+  margin: 0;
+  display: inline;
+}
+
+.quiz-question--correct {
+  border-color: var(--accent-mint-border);
+}
+.quiz-question--wrong {
+  border-color: color-mix(in oklch, var(--destructive), transparent 50%);
+}
+
+.quiz-answer--inline {
+  margin-top: 0.85rem;
+  display: flex;
+}
+
+.quiz-weekly-footer {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+.quiz-weekly-result {
+  font-size: 1.05rem;
+  color: var(--foreground);
+}
+.quiz-weekly-result strong {
+  color: var(--accent-mint);
+  font-weight: 700;
+}
+.quiz-weekly-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+.quiz-weekly-retry {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.quiz-weekly-retry:hover {
+  color: var(--foreground);
+  border-color: var(--foreground);
+}
+.quiz-weekly-back {
+  font-size: 0.85rem;
+  color: var(--accent-mint);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.quiz-weekly-back:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* ============================================================ */
+/*  Lesson page — week-review nudge card (D7/D14/D21/D28)       */
+/* ============================================================ */
+
+.lesson-week-review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-violet-border);
+  background: var(--accent-violet-soft);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.lesson-week-review-card:hover {
+  border-color: var(--accent-violet);
+  background: color-mix(in oklch, var(--accent-violet-soft), var(--card) 30%);
+}
+.lesson-week-review-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-violet);
+}
+.lesson-week-review-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.lesson-week-review-hint {
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+}
+
+/* ============================================================ */
+/*  Dashboard — week-review card after each 7-tile row          */
+/* ============================================================ */
+
+.dashboard-week-review {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--card);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  font-size: 0.85rem;
+}
+.dashboard-week-review-label {
+  font-weight: 600;
+  color: var(--foreground);
+  font-size: 0.85rem;
+}
+.dashboard-week-review-status {
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.dashboard-week-review-hint {
+  margin-left: auto;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.dashboard-week-review--locked {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.dashboard-week-review--unlocked {
+  border-color: var(--accent-violet-border);
+  background: var(--accent-violet-soft);
+}
+.dashboard-week-review--unlocked:hover {
+  border-color: var(--accent-violet);
+  background: color-mix(in oklch, var(--accent-violet-soft), var(--card) 30%);
+}
+.dashboard-week-review--unlocked .dashboard-week-review-hint {
+  color: var(--accent-violet);
+}
+.dashboard-week-review--done {
+  border-color: var(--accent-mint-border);
+  background: var(--accent-mint-soft);
+}
+.dashboard-week-review--done:hover {
+  border-color: var(--accent-mint);
+  background: color-mix(in oklch, var(--accent-mint-soft), var(--card) 20%);
+}
+.dashboard-week-review--done .dashboard-week-review-status {
+  color: var(--accent-mint);
+  font-weight: 500;
+}
+.dashboard-week-review--done .dashboard-week-review-hint {
+  color: var(--accent-mint);
+}

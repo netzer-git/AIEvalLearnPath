@@ -55,6 +55,8 @@ export default async function Home() {
           if (wk.length === 0) return null;
           const theme = wk[0].week_theme;
           const wkComplete = wk.filter((l) => completedDays.has(l.day)).length;
+          const reviewUnlocked = wkComplete === wk.length && wk.length > 0;
+          const reviewAttempt = progress.weekly[String(w)] ?? null;
           return (
             <section key={w} className="dashboard-week">
               <header className="dashboard-week-header">
@@ -109,10 +111,70 @@ export default async function Home() {
                   );
                 })}
               </div>
+              <WeekReviewCard
+                week={w}
+                unlocked={reviewUnlocked}
+                completedInWeek={wkComplete}
+                weekSize={wk.length}
+                attempt={reviewAttempt}
+              />
             </section>
           );
         })}
       </div>
     </div>
+  );
+}
+
+type WeekReviewCardProps = {
+  week: number;
+  unlocked: boolean;
+  completedInWeek: number;
+  weekSize: number;
+  attempt: { score: number; total: number; completed_at: string } | null;
+};
+
+function WeekReviewCard({
+  week,
+  unlocked,
+  completedInWeek,
+  weekSize,
+  attempt,
+}: WeekReviewCardProps) {
+  const baseClass = "dashboard-week-review";
+  const stateClass = attempt
+    ? "dashboard-week-review--done"
+    : unlocked
+      ? "dashboard-week-review--unlocked"
+      : "dashboard-week-review--locked";
+  const className = `${baseClass} ${stateClass}`;
+  const label = `Week ${week} review`;
+
+  if (!unlocked) {
+    return (
+      <div className={className} aria-disabled="true">
+        <span className="dashboard-week-review-label">{label}</span>
+        <span className="dashboard-week-review-status">
+          Locked · {completedInWeek} / {weekSize} complete
+        </span>
+        <span className="dashboard-week-review-hint">
+          Finish the week to unlock the cumulative review.
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <Link href={`/review/${week}`} className={className}>
+      <span className="dashboard-week-review-label">{label}</span>
+      <span className="dashboard-week-review-status">
+        {attempt
+          ? `Last score: ${attempt.score} / ${attempt.total}`
+          : "Unlocked — 8 questions across the week"}
+      </span>
+      <span className="dashboard-week-review-hint">
+        {attempt ? "Retake →" : "Start →"}
+      </span>
+    </Link>
   );
 }

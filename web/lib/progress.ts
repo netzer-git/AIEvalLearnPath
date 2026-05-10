@@ -17,12 +17,24 @@ export type LessonProgress = {
  */
 export type SectionsForDay = Record<string, string>;
 
+/**
+ * Weekly cumulative-review attempt. One per week (1..4); only the most
+ * recent submission is kept. Score is `correct / total` from the auto-graded
+ * end-of-week quiz.
+ */
+export type WeeklyReviewAttempt = {
+  completed_at: string;
+  score: number;
+  total: number;
+};
+
 export type ProgressData = {
   lessons: Record<string, LessonProgress>;
   sections: Record<string, SectionsForDay>;
+  weekly: Record<string, WeeklyReviewAttempt>;
 };
 
-const EMPTY: ProgressData = { lessons: {}, sections: {} };
+const EMPTY: ProgressData = { lessons: {}, sections: {}, weekly: {} };
 
 async function ensureFile(): Promise<void> {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -41,9 +53,10 @@ export async function loadProgress(): Promise<ProgressData> {
     return {
       lessons: parsed.lessons ?? {},
       sections: parsed.sections ?? {},
+      weekly: parsed.weekly ?? {},
     };
   } catch {
-    return { lessons: {}, sections: {} };
+    return { lessons: {}, sections: {}, weekly: {} };
   }
 }
 
@@ -95,4 +108,29 @@ export async function toggleSectionComplete(
 
   await fs.writeFile(PROGRESS_FILE, JSON.stringify(data, null, 2), "utf-8");
   return { completed, at };
+}
+
+/**
+ * Record a weekly cumulative-review attempt. Always overwrites the prior
+ * attempt for that week — the user can retake.
+ */
+export async function markWeeklyComplete(
+  week: number,
+  score: number,
+  total: number,
+): Promise<WeeklyReviewAttempt> {
+  const data = await loadProgress();
+  const entry: WeeklyReviewAttempt = {
+    completed_at: new Date().toISOString(),
+    score: Math.max(0, Math.round(score)),
+    total: Math.max(0, Math.round(total)),
+  };
+  data.weekly[String(week)] = entry;
+  await fs.writeFile(PROGRESS_FILE, JSON.stringify(data, null, 2), "utf-8");
+  return entry;
+}
+
+export async function getWeeklyAttempt(week: number): Promise<WeeklyReviewAttempt | null> {
+  const data = await loadProgress();
+  return data.weekly[String(week)] ?? null;
 }

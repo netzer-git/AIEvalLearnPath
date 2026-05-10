@@ -1,5 +1,7 @@
 import { markdownToHtml } from "@/lib/markdown";
 import type { Quiz, QuizQuestion } from "@/lib/quiz";
+import type { SampledQuestion } from "@/lib/quiz-pool";
+import WeeklyReviewClient from "./WeeklyReviewClient";
 
 /**
  * Strip a single wrapping <p>…</p> if it's the only top-level element.
@@ -25,13 +27,18 @@ async function renderBlock(md: string): Promise<string> {
   return await markdownToHtml(md);
 }
 
-async function renderQuestion(q: QuizQuestion): Promise<{
+export type RenderedQuestion = {
   number: number;
   stemHtml: string;
   options: { letter: string; html: string }[];
   answerLetter: string;
   explanationHtml: string;
-}> {
+  sourceDay?: number;
+};
+
+async function renderQuestion(
+  q: QuizQuestion | SampledQuestion,
+): Promise<RenderedQuestion> {
   const stemHtml = await renderInline(q.stem);
   const options = await Promise.all(
     q.options.map(async (opt) => ({
@@ -46,21 +53,86 @@ async function renderQuestion(q: QuizQuestion): Promise<{
     options,
     answerLetter: q.answerLetter,
     explanationHtml,
+    sourceDay: "sourceDay" in q ? (q as SampledQuestion).sourceDay : undefined,
   };
 }
 
-export default async function QuizSection({ quiz }: { quiz: Quiz }) {
-  const rendered = await Promise.all(quiz.questions.map(renderQuestion));
+export type QuizSectionVariant = "lesson" | "warmup" | "weekly";
+
+type QuizSectionProps =
+  | {
+      variant?: "lesson";
+      quiz: Quiz;
+      heading?: string;
+    }
+  | {
+      variant: "warmup";
+      questions: SampledQuestion[];
+      heading?: string;
+    }
+  | {
+      variant: "weekly";
+      week: 1 | 2 | 3 | 4;
+      questions: SampledQuestion[];
+      heading?: string;
+      locked?: boolean;
+      previousAttempt?: { score: number; total: number; completed_at: string } | null;
+    };
+
+export default async function QuizSection(props: QuizSectionProps) {
+  if (props.variant === "weekly") {
+    const heading = props.heading ?? `Week ${props.week} review`;
+    const rendered = await Promise.all(props.questions.map(renderQuestion));
+    if (rendered.length === 0) return null;
+    return (
+      <WeeklyReviewClient
+        week={props.week}
+        heading={heading}
+        questions={rendered}
+        locked={props.locked ?? false}
+        previousAttempt={props.previousAttempt ?? null}
+      />
+    );
+  }
+
+  const variant: "lesson" | "warmup" = props.variant ?? "lesson";
+  const inputQuestions: (QuizQuestion | SampledQuestion)[] =
+    variant === "lesson"
+      ? (props as { quiz: Quiz }).quiz.questions
+      : (props as { questions: SampledQuestion[] }).questions;
+  if (inputQuestions.length === 0) return null;
+
+  const rendered = await Promise.all(inputQuestions.map(renderQuestion));
+
+  const sectionClass =
+    variant === "warmup"
+      ? "quiz-section quiz-section--warmup"
+      : "quiz-section";
+  const heading =
+    props.heading ??
+    (variant === "warmup" ? "Warm-up — questions from prior days" : "Quiz");
+  const numLabel = variant === "warmup" ? "W" : "Q";
 
   return (
-    <section className="quiz-section">
-      <h2 className="quiz-heading">Quiz</h2>
+    <section className={sectionClass}>
+      <h2 className="quiz-heading">{heading}</h2>
+      {variant === "warmup" && (
+        <p className="quiz-warmup-hint">
+          A short retrieval-practice opener. Reveal answers when ready; this does not affect lesson completion.
+        </p>
+      )}
       <ol className="quiz-list">
-        {rendered.map((q) => (
-          <li key={q.number} className="quiz-question">
+        {rendered.map((q, i) => (
+          <li key={`${q.sourceDay ?? "L"}-${q.number}`} className="quiz-question">
             <div className="quiz-stem">
-              <span className="quiz-num">Q{q.number}.</span>
+              <span className="quiz-num">
+                {numLabel}
+                {variant === "warmup" ? i + 1 : q.number}.
+              </span>
               <span dangerouslySetInnerHTML={{ __html: q.stemHtml }} />
+              {variant === "warmup" && q.sourceDay != null && (
+                <span className="quiz-source-day">from Day {q.sourceDay}</span>
+              )}
             </div>
             <ul className="quiz-options">
               {q.options.map((opt) => (
