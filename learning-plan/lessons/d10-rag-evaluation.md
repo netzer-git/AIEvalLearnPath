@@ -25,7 +25,7 @@ calibration_role: absent
 
 ## TL;DR
 
-A retrieval-augmented generation (RAG) system has two moving parts — a retriever and a generator — and one accuracy number cannot tell you which one failed. **RGB** (Chen et al. 2023) provides four behavioral testbeds that perturb the retrieved passages (noise, missing evidence, multi-document, edited facts) and measure the generator's response; **RAGAS** (Es et al. 2024) provides reference-free metrics that score a fixed (question, context, answer) trace. The two are complements, not substitutes — and the seam between them, *counterfactual robustness*, is the controlled-lab on-ramp to D26's indirect prompt injection.
+A retrieval-augmented generation (RAG) system has two moving parts — a retriever and a generator — and one accuracy number cannot tell you which one failed. **RGB** (Chen et al. 2023) provides four behavioral testbeds that perturb the retrieved passages (noise, missing evidence, multi-document, edited facts) and measure the generator's response; **RAGAS** (Es et al. 2024) provides reference-free metrics that score a fixed (question, context, answer) trace. The two are complements, not substitutes — and the seam between them, *counterfactual robustness*, is the controlled-lab on-ramp to [D-26](/lesson/26)'s indirect prompt injection.
 
 ## Learning objectives
 
@@ -36,11 +36,11 @@ By the end of this lesson, you will be able to:
 3. **(L3)** *Apply* the RAGAS faithfulness definition to a concrete (question, context, answer) trace — including a counterfactual case where the answer is correct but contradicts the context — and predict whether the score is high or low.
 4. **(L4)** *Analyze* why RAGAS faithfulness gives the *wrong* sign on RGB-counterfactual traces by decomposing what construct each metric is actually measuring.
 5. **(L5)** *Evaluate* a production RAG-eval setup that reports only RAGAS metrics and surface which retrieval-failure mode it cannot catch without RGB-style perturbation.
-6. **(L4)** Contrast the controlled (RGB-counterfactual, warned, single-span edits) and adversarial (D26's AgentDojo, no warning, attacker-controlled tool outputs) variants of the *perturb-retrieved-passages-and-measure-behavior* primitive.
+6. **(L4)** Contrast the controlled (RGB-counterfactual, warned, single-span edits) and adversarial ([D-26](/lesson/26)'s AgentDojo, no warning, attacker-controlled tool outputs) variants of the *perturb-retrieved-passages-and-measure-behavior* primitive.
 
 ## Prerequisites & callback
 
-D10 is the first lesson on a *system* — retriever plus generator — rather than a single-input single-output task, and two earlier lessons are load-bearing for the framing. **D1's pipeline framing** ("an evaluation is a (dataset, scoring rule, reporting convention) triple plus a model run") expands on D10: the RAG "pipeline" now has retrieved passages as a deterministic-but-perturbable intermediate stage, and RGB's contribution is to *systematically vary* that stage to surface generator-side failure modes a single accuracy number hides. **D3's open-ended scoring primitives** (exact-match, abstention detection, free-form span comparison) are reused across all four RGB testbeds — RGB does not introduce new scoring rules, it stages four retrieval *conditions* under which D3's existing rules become diagnostically informative. If D3's distinction between "model abstained" and "model hallucinated a confident wrong answer" is unfamiliar, revisit it before proceeding; RGB's negative-rejection testbed is built on that distinction.
+[D-10](/lesson/10) is the first lesson on a *system* — retriever plus generator — rather than a single-input single-output task, and two earlier lessons are load-bearing for the framing. **[D-1](/lesson/1)'s pipeline framing** ("an evaluation is a (dataset, scoring rule, reporting convention) triple plus a model run") expands on [D-10](/lesson/10): the RAG "pipeline" now has retrieved passages as a deterministic-but-perturbable intermediate stage, and RGB's contribution is to *systematically vary* that stage to surface generator-side failure modes a single accuracy number hides. **[D-3](/lesson/3)'s open-ended scoring primitives** (exact-match, abstention detection, free-form span comparison) are reused across all four RGB testbeds — RGB does not introduce new scoring rules, it stages four retrieval *conditions* under which [D-3](/lesson/3)'s existing rules become diagnostically informative. If [D-3](/lesson/3)'s distinction between "model abstained" and "model hallucinated a confident wrong answer" is unfamiliar, revisit it before proceeding; RGB's negative-rejection testbed is built on that distinction.
 
 ## The opening hook
 
@@ -48,7 +48,7 @@ A retrieval-augmented generation (RAG) system has two moving parts that a single
 
 Two papers from late 2023 anchor the methodological response, and they answer different questions. **RGB** (Chen et al. 2023) asks: *under what retrieval conditions does the generator fail, and how?* It defines four behavioral testbeds — noise robustness, negative rejection, information integration, counterfactual robustness — that each isolate a different retrieval condition (irrelevant context, missing context, multi-document context, poisoned context) and measure the generator's response. **RAGAS** (Es et al. 2024) asks: *given a fixed input/output trace, how do we automatically score it without ground-truth references?* It defines a small set of LLM-judged metrics that decompose a RAG response into faithfulness (does the answer follow from the retrieved context?), answer relevance (does the answer address the question?), and context relevance (was the retrieved context focused?).
 
-Day 10's claim is that the two are complements. RGB tells you *what failure modes to provoke*; RAGAS tells you *how to score the trace once provoked*. Counterfactual robustness — the fourth RGB dimension — is also the on-ramp to D26's indirect prompt injection: the moment retrieved content stops being a passive evidence source and becomes attacker-controllable, the same evaluation primitive measures a different threat.
+[D-10](/lesson/10)'s claim is that the two are complements. RGB tells you *what failure modes to provoke*; RAGAS tells you *how to score the trace once provoked*. Counterfactual robustness — the fourth RGB dimension — is also the on-ramp to [D-26](/lesson/26)'s indirect prompt injection: the moment retrieved content stops being a passive evidence source and becomes attacker-controllable, the same evaluation primitive measures a different threat.
 
 ## The RAG pipeline and where each evaluation primitive applies
 
@@ -109,7 +109,7 @@ Passage 1 is the counterfactual — the date has been edited from 1969 to 1971. 
 
 A model that fails counterfactual robustness either (a) reports 1971 because it deferred to the (wrong) retrieved passage, or (b) reports 1969 *without flagging* the disagreement, which is correct on the surface but indicates the model isn't actually attending to the evidence. RGB scores both the answer accuracy and the explicit error-detection rate to distinguish these cases.
 
-The construction is the methodological point. Counterfactual passages aren't naturally occurring noise — Chen et al. produced them by taking model-known facts and surgically editing the answer-bearing span. That is a benign editor's analogue of what an attacker does in indirect prompt injection (D26): inject content into the retrieval corpus that flips the model's answer. RGB's 200 counterfactual items are the **upper bound on the easy case** — known, isolated, single-fact edits with explicit warning. D26's AgentDojo is the lower bound where edits are arbitrary, adversarial, and not pre-announced. The continuity between the two is the safety-relevant thread we will return to in the closing.
+The construction is the methodological point. Counterfactual passages aren't naturally occurring noise — Chen et al. produced them by taking model-known facts and surgically editing the answer-bearing span. That is a benign editor's analogue of what an attacker does in indirect prompt injection ([D-26](/lesson/26)): inject content into the retrieval corpus that flips the model's answer. RGB's 200 counterfactual items are the **upper bound on the easy case** — known, isolated, single-fact edits with explicit warning. [D-26](/lesson/26)'s AgentDojo is the lower bound where edits are arbitrary, adversarial, and not pre-announced. The continuity between the two is the safety-relevant thread we will return to in the closing.
 
 ## ⏵ Check yourself — distinguishing the four RGB testbeds
 
@@ -168,7 +168,7 @@ print(result)
 
 The trace above is a deliberately tricky case: the answer is *correct* (1969) but contradicts the retrieved context (1971). RAGAS faithfulness will score it *low* — the claim "Apollo 11 landed in 1969" is not entailed by a context that says 1971. That is the right behavior under RAGAS's definition (faithfulness = grounded-in-retrieved-context), but it is the *wrong* behavior for the counterfactual-robustness task, where overriding bad context is exactly what we want. **The lesson is methodological: faithfulness as defined by RAGAS rewards deference to context, including bad context.** You cannot use it as a one-number evaluator on RGB-counterfactual-style data without conflating two things.
 
-This is a worked example of the cross-thread sub-point: judge-based metrics inherit their judges' priors. RAGAS's faithfulness prior is "answer should be grounded in context" — fine for vanilla RAG, miscalibrated for adversarial-context RAG. D22 returns to LLM-as-judge biases in detail; D24 (RewardBench) examines reward-model-based scoring as an alternative. For now, the tactical move on D10 is: use RAGAS to score noise robustness and information integration; use *behavioral metrics* (RGB's exact-match + abstention + edit-detection rates) on negative rejection and counterfactual robustness.
+This is a worked example of the cross-thread sub-point: judge-based metrics inherit their judges' priors. RAGAS's faithfulness prior is "answer should be grounded in context" — fine for vanilla RAG, miscalibrated for adversarial-context RAG. [D-22](/lesson/22) returns to LLM-as-judge biases in detail; [D-24](/lesson/24) (RewardBench) examines reward-model-based scoring as an alternative. For now, the tactical move on [D-10](/lesson/10) is: use RAGAS to score noise robustness and information integration; use *behavioral metrics* (RGB's exact-match + abstention + edit-detection rates) on negative rejection and counterfactual robustness.
 
 ## ⏵ Check yourself — the faithfulness counterfactual paradox
 
@@ -205,25 +205,25 @@ Three other reference points are worth naming so you can place RGB correctly in 
 
 - **BEIR** (Thakur et al. 2021). A *retrieval-only* benchmark — 18 IR datasets with shared evaluation. Use BEIR if you want to evaluate the retriever in isolation; RGB and RAGAS evaluate the retriever-generator system.
 - **KILT** (Petroni et al. 2021). A knowledge-intensive language tasks benchmark — Wikipedia-grounded QA, slot filling, fact checking. Pre-dates the RAG framing but provides the canonical knowledge-intensive eval substrate. RGB's design is methodologically downstream of KILT.
-- **CRAG** (Yan et al. 2024, *Corrective Retrieval Augmented Generation*, arXiv:2401.15884). Despite the similar acronym to "Chen et al.'s RGB," CRAG is a *method* paper — it proposes a retrieval evaluator that triggers different actions (use, web-search-supplement, discard) based on retrieval confidence. It is not the anchor for D10. Worth knowing because in 2026 papers "RAG benchmark" sometimes means CRAG-the-method's evaluation suite rather than RGB; check the citation when reading.
+- **CRAG** (Yan et al. 2024, *Corrective Retrieval Augmented Generation*, arXiv:2401.15884). Despite the similar acronym to "Chen et al.'s RGB," CRAG is a *method* paper — it proposes a retrieval evaluator that triggers different actions (use, web-search-supplement, discard) based on retrieval confidence. It is not the anchor for [D-10](/lesson/10). Worth knowing because in 2026 papers "RAG benchmark" sometimes means CRAG-the-method's evaluation suite rather than RGB; check the citation when reading.
 
 A separate Meta benchmark also released in 2024 — *CRAG: Comprehensive RAG Benchmark* (Yang et al. 2024) — uses the same acronym for a different artifact. Disambiguate by author and arXiv ID when citing.
 
-> **Safety researcher's note.** Counterfactual robustness is the RAG dimension closest to a safety property in the sense Week 3 will use — adversarial robustness of the model's belief-update under attacker-controlled retrieval. A model that mechanically defers to retrieved context is a model an attacker can steer by writing into the corpus. The RGB construction (warning + edit + measure detection rate) is the *easy* case: the warning is in the system prompt, the edit is to a single span, and the model is asked explicitly to flag conflicts. D26's AgentDojo removes the warning, generalizes the edit to arbitrary attacker prose, and embeds it inside tool outputs the model has no a priori reason to distrust. The performance drop from RGB-counterfactual to AgentDojo is one of the cleanest "controlled-lab → real-threat" gradients in the curriculum, and it sits inside an evaluation pattern (perturb context, measure behavior) that the rest of agent-safety eval extends rather than replaces.
+> **Safety researcher's note.** Counterfactual robustness is the RAG dimension closest to a safety property in the sense Week 3 will use — adversarial robustness of the model's belief-update under attacker-controlled retrieval. A model that mechanically defers to retrieved context is a model an attacker can steer by writing into the corpus. The RGB construction (warning + edit + measure detection rate) is the *easy* case: the warning is in the system prompt, the edit is to a single span, and the model is asked explicitly to flag conflicts. [D-26](/lesson/26)'s AgentDojo removes the warning, generalizes the edit to arbitrary attacker prose, and embeds it inside tool outputs the model has no a priori reason to distrust. The performance drop from RGB-counterfactual to AgentDojo is one of the cleanest "controlled-lab → real-threat" gradients in the curriculum, and it sits inside an evaluation pattern (perturb context, measure behavior) that the rest of agent-safety eval extends rather than replaces.
 
 ## Cross-references
 
 **Backward.**
 
-- D-1 — RGB extends D1's *evaluation-as-pipeline* framing by treating the retrieved-passages stage as a deterministic-but-perturbable intermediate, then scheduling controlled perturbations of it.
-- D-3 — RGB's four testbeds reuse D3's open-ended scoring primitives (exact-match, abstention detection, span comparison) without inventing new scoring rules; RGB stages four retrieval *conditions* under which D3's scorers become diagnostic.
-- D-6 — RGB sources its base questions from recent news articles to limit pre-training overlap; the contamination concern from D6 is why this design choice matters more than it would on a synthetic corpus.
+- [D-1](/lesson/1) — RGB extends [D-1](/lesson/1)'s *evaluation-as-pipeline* framing by treating the retrieved-passages stage as a deterministic-but-perturbable intermediate, then scheduling controlled perturbations of it.
+- [D-3](/lesson/3) — RGB's four testbeds reuse [D-3](/lesson/3)'s open-ended scoring primitives (exact-match, abstention detection, span comparison) without inventing new scoring rules; RGB stages four retrieval *conditions* under which [D-3](/lesson/3)'s scorers become diagnostic.
+- [D-6](/lesson/6) — RGB sources its base questions from recent news articles to limit pre-training overlap; the contamination concern from [D-6](/lesson/6) is why this design choice matters more than it would on a synthetic corpus.
 
 **Forward.**
 
-- D-22 — RAGAS metrics are LLM-as-judge metrics; the systemic biases catalogued on D22 (self-preference, position, verbosity/length, bandwagon) all apply, and the faithfulness-on-counterfactual pathology above is a deference-bias variant.
-- D-24 — reward-model-based scoring is the alternative to LLM-as-judge for reference-free RAG metrics; D24 (RewardBench) examines the trade-off (faster + more reproducible, harder to inspect).
-- D-26 — counterfactual robustness with *benign* edits and explicit warnings is the controlled-lab version of attacker-controlled retrieved content with no warnings; the same evaluation primitive (perturb retrieved passages, measure model behavior) generalizes from RGB to AgentDojo.
+- [D-22](/lesson/22) — RAGAS metrics are LLM-as-judge metrics; the systemic biases catalogued on [D-22](/lesson/22) (self-preference, position, verbosity/length, bandwagon) all apply, and the faithfulness-on-counterfactual pathology above is a deference-bias variant.
+- [D-24](/lesson/24) — reward-model-based scoring is the alternative to LLM-as-judge for reference-free RAG metrics; [D-24](/lesson/24) (RewardBench) examines the trade-off (faster + more reproducible, harder to inspect).
+- [D-26](/lesson/26) — counterfactual robustness with *benign* edits and explicit warnings is the controlled-lab version of attacker-controlled retrieved content with no warnings; the same evaluation primitive (perturb retrieved passages, measure model behavior) generalizes from RGB to AgentDojo.
 
 ## Takeaways
 
@@ -231,18 +231,18 @@ A separate Meta benchmark also released in 2024 — *CRAG: Comprehensive RAG Ben
 2. RGB's four dimensions — noise robustness, negative rejection, information integration, counterfactual robustness — isolate four distinct retrieval conditions. Negative rejection is an abstention test; counterfactual robustness is a poisoned-context test. *(LO 1)*
 3. RAGAS originally defines three metrics (faithfulness, answer relevance, context relevance); the `ragas` library has since added context precision/recall and others. Cite the paper for the three; cite the library for the four-or-more. *(LO 2)*
 4. Faithfulness as defined rewards *deference* to retrieved context. On counterfactual-robust traces — where overriding bad context is correct — RAGAS faithfulness gives the wrong sign. Use behavioral metrics (EM, abstention rate, edit-detection rate) on adversarial-context dimensions. *(LO 3, LO 4)*
-5. RGB-counterfactual is the controlled precursor to indirect prompt injection (D26). The same evaluation primitive — perturb the retrieved passages, measure the model's behavior — generalizes from benign editorial edits to attacker-controlled content. *(LO 6)*
+5. RGB-counterfactual is the controlled precursor to indirect prompt injection ([D-26](/lesson/26)). The same evaluation primitive — perturb the retrieved passages, measure the model's behavior — generalizes from benign editorial edits to attacker-controlled content. *(LO 6)*
 
 ## Glossary
 
-- **RGB**: Retrieval-Augmented Generation Benchmark (Chen et al. 2023) — 1,000 instances across four behavioral testbeds that perturb retrieved passages and measure generator-side response [introduced D-10].
-- **RAGAS**: Retrieval-Augmented Generation ASsessment (Es et al. 2024) — a reference-free LLM-as-judge metric scaffold over `(question, context, answer)` triples [introduced D-10].
-- **noise robustness**: RGB testbed measuring whether a model can extract the gold answer when on-topic-but-not-answer-bearing passages are mixed with answer-bearing ones at varying ratios [introduced D-10].
-- **negative rejection**: RGB testbed measuring whether a model abstains when *every* retrieved passage is on-topic-but-noisy (no answer-bearing evidence). Failure mode is confident hallucination [introduced D-10].
-- **information integration**: RGB testbed measuring whether a model can combine facts from at least two retrieved passages to answer a multi-hop question [introduced D-10].
-- **counterfactual robustness**: RGB testbed measuring whether a model detects deliberately edited (incorrect) facts in retrieved passages, given a system-prompt warning, and overrides them using parametric memory [introduced D-10].
-- **faithfulness**: RAGAS metric defined as the fraction of atomic claims in an answer that are entailed by the retrieved context. Rewards deference to context — including bad context [introduced D-10].
-- **context precision/recall**: ground-truth-aware retrieval-quality metrics added by the `ragas` library after the original paper. Precision: of retrieved chunks, how many are relevant? Recall: of relevant chunks in the corpus, how many were retrieved? [introduced D-10].
+- **RGB**: Retrieval-Augmented Generation Benchmark (Chen et al. 2023) — 1,000 instances across four behavioral testbeds that perturb retrieved passages and measure generator-side response [introduced D-10](/lesson/10).
+- **RAGAS**: Retrieval-Augmented Generation ASsessment (Es et al. 2024) — a reference-free LLM-as-judge metric scaffold over `(question, context, answer)` triples [introduced D-10](/lesson/10).
+- **noise robustness**: RGB testbed measuring whether a model can extract the gold answer when on-topic-but-not-answer-bearing passages are mixed with answer-bearing ones at varying ratios [introduced D-10](/lesson/10).
+- **negative rejection**: RGB testbed measuring whether a model abstains when *every* retrieved passage is on-topic-but-noisy (no answer-bearing evidence). Failure mode is confident hallucination [introduced D-10](/lesson/10).
+- **information integration**: RGB testbed measuring whether a model can combine facts from at least two retrieved passages to answer a multi-hop question [introduced D-10](/lesson/10).
+- **counterfactual robustness**: RGB testbed measuring whether a model detects deliberately edited (incorrect) facts in retrieved passages, given a system-prompt warning, and overrides them using parametric memory [introduced D-10](/lesson/10).
+- **faithfulness**: RAGAS metric defined as the fraction of atomic claims in an answer that are entailed by the retrieved context. Rewards deference to context — including bad context [introduced D-10](/lesson/10).
+- **context precision/recall**: ground-truth-aware retrieval-quality metrics added by the `ragas` library after the original paper. Precision: of retrieved chunks, how many are relevant? Recall: of relevant chunks in the corpus, how many were retrieved? [introduced D-10](/lesson/10).
 
 ## References
 
@@ -251,7 +251,7 @@ A separate Meta benchmark also released in 2024 — *CRAG: Comprehensive RAG Ben
 - **Secondary.** Es, S., James, J., Espinosa Anke, L., & Schockaert, S. (2024). *RAGAS: Automated Evaluation of Retrieval Augmented Generation.* EACL 2024 (System Demonstrations). arXiv:2309.15217. https://arxiv.org/abs/2309.15217 (ACL Anthology: https://aclanthology.org/2024.eacl-demo.16/)
 - **Secondary.** Thakur, N., Reimers, N., Rücklé, A., Srivastava, A., & Gurevych, I. (2021). *BEIR: A Heterogeneous Benchmark for Zero-shot Evaluation of Information Retrieval Models.* NeurIPS Datasets & Benchmarks. arXiv:2104.08663. https://arxiv.org/abs/2104.08663
 - **Secondary.** Petroni, F., et al. (2021). *KILT: a Benchmark for Knowledge Intensive Language Tasks.* NAACL. arXiv:2009.02252. https://arxiv.org/abs/2009.02252
-- **Secondary.** Yan, S.-Q., Gu, J.-C., Zhu, Y., & Ling, Z.-H. (2024). *Corrective Retrieval Augmented Generation.* arXiv:2401.15884. https://arxiv.org/abs/2401.15884 (adjacent method paper, not the D10 anchor).
+- **Secondary.** Yan, S.-Q., Gu, J.-C., Zhu, Y., & Ling, Z.-H. (2024). *Corrective Retrieval Augmented Generation.* arXiv:2401.15884. https://arxiv.org/abs/2401.15884 (adjacent method paper, not the [D-10](/lesson/10) anchor).
 
 ## Quiz
 
@@ -285,10 +285,10 @@ A separate Meta benchmark also released in 2024 — *CRAG: Comprehensive RAG Ben
 
 **Q5.** Which is the **most defensible reading** of RGB-counterfactual robustness as a forward pointer to a later lesson in this curriculum?
 
-- A. D22 (LLM-as-judge), because the judge LLM is the source of counterfactual edits in the RGB construction pipeline.
-- B. D26 (AgentDojo / indirect prompt injection): the perturb-context primitive extends from warned edits to unannounced attacker-controlled retrieval.
-- C. D14 (RULER), because counterfactual passages are a long-context phenomenon that require 100k-token windows to reproduce.
-- D. D11 (HumanEval), because counterfactual code patches are the direct analogue of counterfactual passages in the RGB design.
+- A. [D-22](/lesson/22) (LLM-as-judge), because the judge LLM is the source of counterfactual edits in the RGB construction pipeline.
+- B. [D-26](/lesson/26) (AgentDojo / indirect prompt injection): the perturb-context primitive extends from warned edits to unannounced attacker-controlled retrieval.
+- C. [D-14](/lesson/14) (RULER), because counterfactual passages are a long-context phenomenon that require 100k-token windows to reproduce.
+- D. [D-11](/lesson/11) (HumanEval), because counterfactual code patches are the direct analogue of counterfactual passages in the RGB design.
 
 **Q6.** The original RAGAS paper (Es et al. 2024) defines exactly which metrics?
 
@@ -304,7 +304,7 @@ A separate Meta benchmark also released in 2024 — *CRAG: Comprehensive RAG Ben
 2. **C** — RAGAS faithfulness asks whether each atomic claim in the answer is entailed by the retrieved context. A claim that contradicts the context is not entailed by it, so faithfulness is low — *even though the answer is factually correct*. This is the methodological mismatch between RAGAS faithfulness (which rewards deference to context) and RGB counterfactual robustness (which rewards overriding bad context). The answer would correctly score high on RGB-counterfactual and low on RAGAS-faithfulness; the disagreement is informative, not a bug.
 3. **B** — Chen et al. take model-known questions, generate the model's correct answer, then manually edit the corresponding span in the retrieved passage to be incorrect. The model is given an instruction warning that retrieved content may contain errors, and is scored on detection + corrected-answer accuracy.
 4. **B** — RGB is a behavioral benchmark over four dimensions; RAGAS is a trace-level scoring framework. They measure orthogonal things and are typically used together (RGB-style perturbations driving the inputs, RAGAS-style metrics scoring the outputs), modulo the counterfactual-robustness caveat in Q2.
-5. **B** — counterfactual robustness with benign edits and explicit warnings is the controlled lab version of D26's adversarial threat: attacker-controlled retrieved content embedded in tool outputs without warnings. The evaluation primitive — perturb retrieved passages, measure model behavior — generalizes directly.
+5. **B** — counterfactual robustness with benign edits and explicit warnings is the controlled lab version of [D-26](/lesson/26)'s adversarial threat: attacker-controlled retrieved content embedded in tool outputs without warnings. The evaluation primitive — perturb retrieved passages, measure model behavior — generalizes directly.
 6. **A** — the original paper defines three metrics: faithfulness, answer relevance, context relevance. The four-metric framing in modern blog posts — adding context precision and recall — comes from the `ragas` library, not the paper. Cite the paper for the three and the library for additions.
 
 </details>

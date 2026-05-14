@@ -25,26 +25,26 @@ calibration_role: absent
 
 ## TL;DR
 
-SWE-Bench evaluates whether an agent can fix a real GitHub issue: given a problem statement and a repo at `base_commit`, the agent must produce a unified diff that, when applied, makes a held-out test patch's `FAIL_TO_PASS` items pass without breaking `PASS_TO_PASS` items. The substantive jump from D11's HumanEval is the *unit of work* — function body to multi-file repo patch with localization required and tests hidden until evaluation time. **SWE-Bench Verified** (500 human-curated instances) is the canonical anchor; **SWE-agent** (Yang et al. 2024) is the canonical scaffold and the Agent-Computer Interface idea — that small interface choices move the score as much as model gains — is the methodological lesson that recurs on D26.
+SWE-Bench evaluates whether an agent can fix a real GitHub issue: given a problem statement and a repo at `base_commit`, the agent must produce a unified diff that, when applied, makes a held-out test patch's `FAIL_TO_PASS` items pass without breaking `PASS_TO_PASS` items. The substantive jump from [D-11](/lesson/11)'s HumanEval is the *unit of work* — function body to multi-file repo patch with localization required and tests hidden until evaluation time. **SWE-Bench Verified** (500 human-curated instances) is the canonical anchor; **SWE-agent** (Yang et al. 2024) is the canonical scaffold and the Agent-Computer Interface idea — that small interface choices move the score as much as model gains — is the methodological lesson that recurs on [D-26](/lesson/26).
 
 ## Learning objectives
 
 By the end of this lesson, you will be able to:
 
-1. **(L2)** State SWE-Bench's resolution rule — `FAIL_TO_PASS` $\wedge$ `PASS_TO_PASS` under a Docker-isolated, judge-free harness — and identify why this is methodologically cleaner than D11's pass@k for shipped-code questions.
+1. **(L2)** State SWE-Bench's resolution rule — `FAIL_TO_PASS` $\wedge$ `PASS_TO_PASS` under a Docker-isolated, judge-free harness — and identify why this is methodologically cleaner than [D-11](/lesson/11)'s pass@k for shipped-code questions.
 2. **(L3)** *Compute* the curation retention rate from the SWE-Bench Verified pipeline (500 retained from a 1,699-instance sample) and use it to explain the empirical effect of curation (the GPT-4 Resolved-rate roughly tripling from the original benchmark to Verified).
 3. **(L4)** *Decompose* a single SWE-Bench instance into its load-bearing fields (`problem_statement`, `base_commit`, `patch`, `test_patch`, `FAIL_TO_PASS`, `PASS_TO_PASS`) and identify which the model sees, which the harness applies, and which is the scoring oracle.
 4. **(L4)** *Contrast* SWE-Bench (repo-scale, hidden tests) with HumanEval (function-scale, visible tests) along unit-of-work, localization, test-visibility, and scoring axes.
 5. **(L5)** *Evaluate* a 2026 system-card SWE-Bench Verified score (e.g. 82%) with respect to scaffold-dependence, contamination posture, and the binomial CI on a 500-item benchmark.
-6. **(L4)** Articulate the Agent-Computer Interface (ACI) framing — that scaffolding is part of the system under test — and link it forward to the same pattern in D-26 (web agents).
+6. **(L4)** Articulate the Agent-Computer Interface (ACI) framing — that scaffolding is part of the system under test — and link it forward to the same pattern in [D-26](/lesson/26) (web agents).
 
 ## Prerequisites & callback
 
-This lesson presupposes **D11's HumanEval / pass@k machinery** as the load-bearing prior. D-11 introduced *execution-based scoring* — the model's output is fed to an interpreter and run against unit tests, no judge in the loop — and pass@k as the unbiased estimator that summarizes "does the model produce correct code?" across multiple samples. SWE-Bench keeps the execution-based-scoring move and abandons everything else: the unit of work shifts from *function body* to *multi-file repository patch*; the test suite shifts from *visible at training time* to *hidden until the harness applies it*; and the per-item score shifts from a sample-budget pass@k to a binary `% Resolved`. The contamination thread D-11 names (HumanEval public since 2021, ~95% saturated, post-cutoff successor LiveCodeBench) recurs here in a structurally similar way: SWE-Bench's instances are public GitHub PRs from before October 2023, and post-cutoff successors (SWE-Bench Live, SWE-rebench, SWE-Bench Pro) exist for the same reason. What changes most is the *realism axis* — SWE-Bench is closer to the loop a working software engineer is actually in than HumanEval has ever been.
+This lesson presupposes **[D-11](/lesson/11)'s HumanEval / pass@k machinery** as the load-bearing prior. [D-11](/lesson/11) introduced *execution-based scoring* — the model's output is fed to an interpreter and run against unit tests, no judge in the loop — and pass@k as the unbiased estimator that summarizes "does the model produce correct code?" across multiple samples. SWE-Bench keeps the execution-based-scoring move and abandons everything else: the unit of work shifts from *function body* to *multi-file repository patch*; the test suite shifts from *visible at training time* to *hidden until the harness applies it*; and the per-item score shifts from a sample-budget pass@k to a binary `% Resolved`. The contamination thread [D-11](/lesson/11) names (HumanEval public since 2021, ~95% saturated, post-cutoff successor LiveCodeBench) recurs here in a structurally similar way: SWE-Bench's instances are public GitHub PRs from before October 2023, and post-cutoff successors (SWE-Bench Live, SWE-rebench, SWE-Bench Pro) exist for the same reason. What changes most is the *realism axis* — SWE-Bench is closer to the loop a working software engineer is actually in than HumanEval has ever been.
 
 ## The opening hook
 
-Yesterday (D-11) the model was given a function signature and a docstring and asked to fill in a body. The unit tests were small, the file was one screen long, and the only state the model had to track was the local namespace. HumanEval works because the *unit of evaluation* is the function.
+Yesterday ([D-11](/lesson/11)) the model was given a function signature and a docstring and asked to fill in a body. The unit tests were small, the file was one screen long, and the only state the model had to track was the local namespace. HumanEval works because the *unit of evaluation* is the function.
 
 Today the unit changes. The model is given:
 
@@ -55,13 +55,13 @@ Today the unit changes. The model is given:
 
 The model has to localize the bug, edit one or more files, and produce a unified diff. That diff is then applied to the repo, and a held-out test suite — the patch the human maintainer wrote when they actually fixed the issue — runs in a Docker container. The model "resolves" the issue iff every previously-failing test now passes and every previously-passing test still passes.
 
-This is **SWE-Bench**. The substantive shift from D-11 isn't difficulty. It's that the eval target moved from *synthesis of an isolated function* to *grounded edits to existing code under hidden tests*. That shift — from function-shaped to repository-shaped problems — is what made SWE-Bench the canonical anchor for "agentic" code evaluation.
+This is **SWE-Bench**. The substantive shift from [D-11](/lesson/11) isn't difficulty. It's that the eval target moved from *synthesis of an isolated function* to *grounded edits to existing code under hidden tests*. That shift — from function-shaped to repository-shaped problems — is what made SWE-Bench the canonical anchor for "agentic" code evaluation.
 
 ## Why HumanEval doesn't measure this
 
 SWE-Bench and HumanEval are both code-generation benchmarks scored by execution. They are different evals.
 
-| Axis | HumanEval (D-11) | SWE-Bench |
+| Axis | HumanEval ([D-11](/lesson/11)) | SWE-Bench |
 | --- | --- | --- |
 | **Unit of work** | Function body | Multi-file patch |
 | **Context** | Function signature + docstring (~30 lines) | Whole repo (~$10^4$–$10^6$ LOC) |
@@ -98,7 +98,7 @@ The original benchmark contains **2,294** instances across the 12 repositories. 
 
 ### Scoring rule
 
-The metric is **`% Resolved`** — the fraction of instances on which both `FAIL_TO_PASS` and `PASS_TO_PASS` test sets pass. There is no partial credit. Either the patch ships or it doesn't. Three things deserve emphasis here, because they distinguish SWE-Bench from D-11:
+The metric is **`% Resolved`** — the fraction of instances on which both `FAIL_TO_PASS` and `PASS_TO_PASS` test sets pass. There is no partial credit. Either the patch ships or it doesn't. Three things deserve emphasis here, because they distinguish SWE-Bench from [D-11](/lesson/11):
 
 1. **The `test_patch` is hidden from the model and applied at evaluation time, not at submission time.** The model never sees the tests. It also doesn't know which files in the repo will end up being tested. This is the part that makes the eval *grounded*: the model can't game the test suite because it can't see it.
 2. **Both `FAIL_TO_PASS` and `PASS_TO_PASS` must succeed.** `FAIL_TO_PASS` is the regression-style "the bug is fixed" check (these tests were failing on `base_commit`; they must pass now). `PASS_TO_PASS` is the side-effects check (these tests were passing on `base_commit`; they must *still* pass). A patch that fixes the issue but breaks an unrelated test fails the instance. This is closer to what shipping the patch through code review would feel like.
@@ -135,12 +135,12 @@ The model sees only `problem_statement` and the repo at `base_commit`. The harne
 
 ## ⏵ Check yourself — resolution mechanics
 
-A candidate patch makes all 4 `FAIL_TO_PASS` tests pass but causes 1 of 217 previously-passing `PASS_TO_PASS` tests to fail. Is the SWE-Bench instance resolved? Why does this differ from a partial-credit metric like pass@k from D-11?
+A candidate patch makes all 4 `FAIL_TO_PASS` tests pass but causes 1 of 217 previously-passing `PASS_TO_PASS` tests to fail. Is the SWE-Bench instance resolved? Why does this differ from a partial-credit metric like pass@k from [D-11](/lesson/11)?
 
 <details>
 <summary>Show answer</summary>
 
-**Not resolved.** SWE-Bench's resolution rule is "all `FAIL_TO_PASS` pass *and* all `PASS_TO_PASS` pass." A single regression on previously-passing functionality flips the boolean — there is no fractional credit. The patch demonstrably fixes the bug, but it ships a regression, and shipping a regression is exactly the property `PASS_TO_PASS` is designed to catch (the bug-fix-vs-merge gap from a real code-review loop). Pass@k from D-11 has no analogue of `PASS_TO_PASS`: every HumanEval problem is its own self-contained function with no "rest of the codebase" to regress, so pass@k can be a per-sample boolean averaged over a sample budget. SWE-Bench's resolution rule is intentionally stricter because the realism axis it targets — patch-as-shipped-PR — has no use for partial credit.
+**Not resolved.** SWE-Bench's resolution rule is "all `FAIL_TO_PASS` pass *and* all `PASS_TO_PASS` pass." A single regression on previously-passing functionality flips the boolean — there is no fractional credit. The patch demonstrably fixes the bug, but it ships a regression, and shipping a regression is exactly the property `PASS_TO_PASS` is designed to catch (the bug-fix-vs-merge gap from a real code-review loop). Pass@k from [D-11](/lesson/11) has no analogue of `PASS_TO_PASS`: every HumanEval problem is its own self-contained function with no "rest of the codebase" to regress, so pass@k can be a per-sample boolean averaged over a sample budget. SWE-Bench's resolution rule is intentionally stricter because the realism axis it targets — patch-as-shipped-PR — has no use for partial credit.
 
 </details>
 
@@ -158,7 +158,7 @@ The fix was a human-annotation pass. **93 experienced Python developers** screen
 
 The empirical effect of the curation was substantial. On the original SWE-Bench, GPT-4 (with a strong scaffold) was reported in the **1.7–4% Resolved** range; the same scaffold on Verified roughly *tripled* — not because the model got better but because the benchmark stopped penalizing models for instances no model could resolve. The headline reframe: **a chunk of "the model failed" turned out to be "the eval was wrong."**
 
-This curation also doubles as a contamination-response mechanism, even though it wasn't framed that way in the announcement. Both the original SWE-Bench instances and the canonical agent harnesses have been on the public web for over a year — they are plausibly in modern pretraining and post-training corpora. SWE-Bench Verified narrows the surface (500 instances vs. 2,294) and lets follow-up audits target a smaller, cleaner set when contamination concerns surface (and they have; see the forward pointer to D-25 below).
+This curation also doubles as a contamination-response mechanism, even though it wasn't framed that way in the announcement. Both the original SWE-Bench instances and the canonical agent harnesses have been on the public web for over a year — they are plausibly in modern pretraining and post-training corpora. SWE-Bench Verified narrows the surface (500 instances vs. 2,294) and lets follow-up audits target a smaller, cleaner set when contamination concerns surface (and they have; see the forward pointer to [D-25](/lesson/25) below).
 
 ## ⏵ Check yourself — curation arithmetic
 
@@ -179,7 +179,7 @@ A model that just sees `problem_statement` and the repo file tree can't do much.
 
 The paper's contribution is the **Agent-Computer Interface (ACI)**: a small, deliberately-designed set of commands the agent uses to interact with the repo (read file, search by string or regex, scroll, edit by line range, run tests, submit). The ACI's design is the surprising part of the paper — the authors found that *small interface choices* (line-numbered file viewer, structured edit command that diffs against the visible window, an explicit "submit" action) move the eval-quality needle as much as model-side improvements. SWE-agent's reported number on the original SWE-Bench was **12.5% Resolved with GPT-4** at release, which was state-of-the-art for an agent at the time and demonstrated that agent-style scaffolding closes most of the gap to the maintainers' own patches on resolvable instances.
 
-The methodological lesson runs through Week 4: when an eval is agentic, *the harness scaffolding is part of the system under test*. Two papers reporting different SWE-Bench numbers for the same base model usually disagree on the agent loop, not on the model. We return to this in D-26 (web agents — WebArena) where the same scaffolding-determines-score pattern repeats with a different action surface.
+The methodological lesson runs through Week 4: when an eval is agentic, *the harness scaffolding is part of the system under test*. Two papers reporting different SWE-Bench numbers for the same base model usually disagree on the agent loop, not on the model. We return to this in [D-26](/lesson/26) (web agents — WebArena) where the same scaffolding-determines-score pattern repeats with a different action surface.
 
 ## ⏵ Check yourself — scaffolding is part of the system
 
@@ -188,7 +188,7 @@ Two papers report SWE-Bench Verified `% Resolved` on the *same* base model — p
 <details>
 <summary>Show answer</summary>
 
-The dominant source is the **agent scaffold**, not the model: ACI design (file viewer, search granularity, edit primitives, submit affordance), prompt orchestration, retry policy, context-window management for large repos, and the per-instance compute budget. Secondary sources are the harness version (image registry tag, pytest version) and per-instance budgets (max steps, max tokens, allowed tool calls). The methodological rule from Yang et al. 2024 is that *the scaffold is part of the system under test*; two SWE-Bench numbers for the same base model are almost always disagreements about the agent loop. This anticipates **D-26 (WebArena)**, where the same pattern repeats with a different action surface — webpage actions instead of repo edits — and headline scores are again dominated by scaffold choices.
+The dominant source is the **agent scaffold**, not the model: ACI design (file viewer, search granularity, edit primitives, submit affordance), prompt orchestration, retry policy, context-window management for large repos, and the per-instance compute budget. Secondary sources are the harness version (image registry tag, pytest version) and per-instance budgets (max steps, max tokens, allowed tool calls). The methodological rule from Yang et al. 2024 is that *the scaffold is part of the system under test*; two SWE-Bench numbers for the same base model are almost always disagreements about the agent loop. This anticipates **[D-26](/lesson/26) (WebArena)**, where the same pattern repeats with a different action surface — webpage actions instead of repo edits — and headline scores are again dominated by scaffold choices.
 
 </details>
 
@@ -199,12 +199,12 @@ The trajectory on SWE-Bench Verified has been steeper than almost any other anch
 - **Aug 2024 (Verified release).** GPT-4o with the Agentless scaffold: ~33%.
 - **Late 2024.** OpenAI o1 with agent scaffolds: ~48%.
 - **Mid-2025.** Top reasoning models (Claude Sonnet/Opus 4.x family, GPT-5 family, Gemini 2.5 Pro family) crossed 60% and pushed toward 70%.
-- **Early 2026.** Frontier reasoning models with strong scaffolds report SWE-Bench Verified Resolved rates in the **70–90%+** range; the leaderboards are crowded enough that month-to-month rank changes are usually noise. (D-7's saturation framing applies directly: at 90%+ Resolved on a 500-item benchmark, per-model 95% CIs are ~$\pm 2.5$ points and most reported gaps between top-tier systems are statistically inconclusive.)
+- **Early 2026.** Frontier reasoning models with strong scaffolds report SWE-Bench Verified Resolved rates in the **70–90%+** range; the leaderboards are crowded enough that month-to-month rank changes are usually noise. ([D-7](/lesson/7)'s saturation framing applies directly: at 90%+ Resolved on a 500-item benchmark, per-model 95% CIs are ~$\pm 2.5$ points and most reported gaps between top-tier systems are statistically inconclusive.)
 
 Two contamination-flavored caveats worth carrying forward:
 
 - The 500 Verified instances are public GitHub PRs from before October 2023. They almost certainly appear, in some form, in the pretraining corpora of every 2025–2026 frontier model. The original gold patches are recoverable from the upstream repos by anyone who knows the `base_commit`.
-- The agent harness is itself a target of post-training — labs RL-tune on SWE-Bench-shaped trajectories. This is not contamination of the *test data* in the strict D-6 sense, but it does mean SWE-Bench Verified increasingly measures "how well has this model been trained against this specific harness shape" rather than "how well can this model do software engineering in the wild." Successor benchmarks that sample post-cutoff (SWE-Bench Live, SWE-rebench) and ones that sample from non-public industrial codebases (SWE-Bench Pro) exist precisely for this reason. Treat any 2026+ SWE-Bench Verified score as a measure-with-known-drift, not a clean capability number.
+- The agent harness is itself a target of post-training — labs RL-tune on SWE-Bench-shaped trajectories. This is not contamination of the *test data* in the strict [D-6](/lesson/6) sense, but it does mean SWE-Bench Verified increasingly measures "how well has this model been trained against this specific harness shape" rather than "how well can this model do software engineering in the wild." Successor benchmarks that sample post-cutoff (SWE-Bench Live, SWE-rebench) and ones that sample from non-public industrial codebases (SWE-Bench Pro) exist precisely for this reason. Treat any 2026+ SWE-Bench Verified score as a measure-with-known-drift, not a clean capability number.
 
 ## The ecosystem around the anchor
 
@@ -213,7 +213,7 @@ A short pointer-only roundup of the variants you'll encounter — none of these 
 - **SWE-Bench Lite** — 300-instance subset of the original, biased toward simpler-to-set-up instances. Commonly used when full Verified is too expensive to run.
 - **SWE-Bench Multimodal** (Yang et al., ICLR 2025) — 517 instances drawn from front-end / visual repos where the issue includes screenshots or diagrams. Tests whether agents that can *see* the bug do better than agents that only read text.
 - **SWE-Gym** (Pan et al., ICML 2025; arXiv:2412.21139) — 2,438 *training* instances, executable runtimes included. SWE-Gym is for fine-tuning agents and verifiers; not an evaluation set. The naming convention matters: "Gym" = training environment, "Bench" = evaluation set.
-- **SWE-Bench Live** and **SWE-rebench** — continuously refreshed leaderboards that sample post-cutoff issues. The contamination-resistant successor pattern from D-11 (HumanEval $\to$ LiveCodeBench) repeats here.
+- **SWE-Bench Live** and **SWE-rebench** — continuously refreshed leaderboards that sample post-cutoff issues. The contamination-resistant successor pattern from [D-11](/lesson/11) (HumanEval $\to$ LiveCodeBench) repeats here.
 
 You don't need to memorize these. The point is that "SWE-Bench" in 2026 names a *family* of benchmarks built around the original task structure; the anchor is Verified.
 
@@ -240,44 +240,44 @@ python -m swebench.harness.run_evaluation \
 
 The harness emits a per-instance `resolved` boolean and a leaderboard-ready aggregate. There is no LLM-judge anywhere in the loop; the entire scoring rule is "did the test runner exit zero on both test sets?" That property — *fully executable, no judge, no human in the loop* — is what makes SWE-Bench the cleanest agentic eval methodologically. Most of Week 4's evals are not this clean.
 
-> **Safety researcher's note.** SWE-Bench's resolution check is "the test suite exits zero." That is a strictly weaker guarantee than "the patch is correct." A model can produce a patch that passes `FAIL_TO_PASS` and `PASS_TO_PASS` *and also* introduces a subtle vulnerability the existing tests don't catch — a regex that's now exploitable, an authentication check that returns the right exception but in a guard-bypassable order, a sanitizer that's been narrowed to a specific input class. The benchmark's tests are written by maintainers fixing a bug, not by adversaries auditing the patch; nothing in the SWE-Bench harness checks for new attack surface introduced *by* the fix. This is the supply-chain edge case for code agents: as automated patches start landing in real repositories (and they are — Dependabot-style PR-bot agents are doing this in 2026), the eval signal "SWE-Bench Resolved %" doesn't directly measure the property that matters for shipping code, which is "does this patch pass the test suite *and* not introduce a security regression." Capability evals like SWE-Bench tell you the agent can write a patch that compiles and passes tests; they do not tell you the patch is safe to merge. Week 3 and the policy-relevant closer on D-28 are where this gap gets named — the relevant phrase is *capability outpacing audit*. We'll return to it on D-26 (indirect prompt injection on web agents) and D-27 (OS-level agents) where the action surface is wider and the audit asymmetry sharper.
+> **Safety researcher's note.** SWE-Bench's resolution check is "the test suite exits zero." That is a strictly weaker guarantee than "the patch is correct." A model can produce a patch that passes `FAIL_TO_PASS` and `PASS_TO_PASS` *and also* introduces a subtle vulnerability the existing tests don't catch — a regex that's now exploitable, an authentication check that returns the right exception but in a guard-bypassable order, a sanitizer that's been narrowed to a specific input class. The benchmark's tests are written by maintainers fixing a bug, not by adversaries auditing the patch; nothing in the SWE-Bench harness checks for new attack surface introduced *by* the fix. This is the supply-chain edge case for code agents: as automated patches start landing in real repositories (and they are — Dependabot-style PR-bot agents are doing this in 2026), the eval signal "SWE-Bench Resolved %" doesn't directly measure the property that matters for shipping code, which is "does this patch pass the test suite *and* not introduce a security regression." Capability evals like SWE-Bench tell you the agent can write a patch that compiles and passes tests; they do not tell you the patch is safe to merge. Week 3 and the policy-relevant closer on [D-28](/lesson/28) are where this gap gets named — the relevant phrase is *capability outpacing audit*. We'll return to it on [D-26](/lesson/26) (indirect prompt injection on web agents) and [D-27](/lesson/27) (OS-level agents) where the action surface is wider and the audit asymmetry sharper.
 
 ## Cross-references
 
 **Backward.**
 
-- D-1 — pipeline framing (dataset, scoring rule, reporting convention) instantiated for repo-scale code: dataset is `(problem_statement, base_commit, test_patch, FAIL_TO_PASS, PASS_TO_PASS)`, scoring rule is the boolean conjunction, reporting convention is mean `% Resolved` over instances.
-- D-5 — binomial CI on a 500-item benchmark used in the system-card critique below; near 80–90% Resolved, the per-model 95% half-width is ~$\pm 2.5$–$3.4$ points.
-- D-6 — public-since-2023 GitHub PRs as the contamination surface; the gold patch is recoverable upstream by anyone who knows the `base_commit`.
-- D-7 — saturation framing applied to top-end SWE-Bench Verified scores; once the ceiling is in sight, model-vs-model differences collapse into the noise floor.
-- D-11 — execution-based scoring carries forward from HumanEval; the unit of work shifts from function body to repo patch and the test suite shifts from visible to hidden.
+- [D-1](/lesson/1) — pipeline framing (dataset, scoring rule, reporting convention) instantiated for repo-scale code: dataset is `(problem_statement, base_commit, test_patch, FAIL_TO_PASS, PASS_TO_PASS)`, scoring rule is the boolean conjunction, reporting convention is mean `% Resolved` over instances.
+- [D-5](/lesson/5) — binomial CI on a 500-item benchmark used in the system-card critique below; near 80–90% Resolved, the per-model 95% half-width is ~$\pm 2.5$–$3.4$ points.
+- [D-6](/lesson/6) — public-since-2023 GitHub PRs as the contamination surface; the gold patch is recoverable upstream by anyone who knows the `base_commit`.
+- [D-7](/lesson/7) — saturation framing applied to top-end SWE-Bench Verified scores; once the ceiling is in sight, model-vs-model differences collapse into the noise floor.
+- [D-11](/lesson/11) — execution-based scoring carries forward from HumanEval; the unit of work shifts from function body to repo patch and the test suite shifts from visible to hidden.
 
 **Forward.**
 
-- D-25 — SWE-Bench Verified is one of the two or three benchmarks the 2024–2025 reasoning-model launches led with; expect it paired with AIME and GPQA Diamond on every system card. The cost-axis Pareto framing D-25 introduces — accuracy reported with tokens/$\$$ on the x-axis — applies directly: an agent that wins SWE-Bench Verified by 3 points but uses 10× the tokens isn't obviously better.
-- D-26 — web agents (WebArena): the action surface widens (webpage actions instead of repo edits) but the scaffold-determines-score lesson recurs.
-- D-27 — OS-level agents widen the surface again; the audit asymmetry the safety note flags here is sharper there.
-- D-28 — *capability outpacing audit*: SWE-Bench's "tests pass" being weaker than "patch is correct" is exactly the operational handle D-28 uses for the autonomy frontier.
+- [D-25](/lesson/25) — SWE-Bench Verified is one of the two or three benchmarks the 2024–2025 reasoning-model launches led with; expect it paired with AIME and GPQA Diamond on every system card. The cost-axis Pareto framing [D-25](/lesson/25) introduces — accuracy reported with tokens/$\$$ on the x-axis — applies directly: an agent that wins SWE-Bench Verified by 3 points but uses 10× the tokens isn't obviously better.
+- [D-26](/lesson/26) — web agents (WebArena): the action surface widens (webpage actions instead of repo edits) but the scaffold-determines-score lesson recurs.
+- [D-27](/lesson/27) — OS-level agents widen the surface again; the audit asymmetry the safety note flags here is sharper there.
+- [D-28](/lesson/28) — *capability outpacing audit*: SWE-Bench's "tests pass" being weaker than "patch is correct" is exactly the operational handle [D-28](/lesson/28) uses for the autonomy frontier.
 
 ## Takeaways
 
 1. SWE-Bench evaluates *repository-grounded patches*: model sees an issue and a repo at `base_commit`, must produce a unified diff that, when applied, makes a hidden test patch's `FAIL_TO_PASS` tests pass without breaking `PASS_TO_PASS` tests. Scoring is binary `% Resolved`, executed per-instance in Docker, no judge in the loop. *(LO 1, LO 3)*
 2. The substantive jump from HumanEval is *unit of work*: function body to multi-file patch with localization required and tests hidden until evaluation time — closer to the realistic SWE loop than HumanEval is. *(LO 4)*
 3. Original SWE-Bench (Jimenez et al. 2023, ICLR 2024) has 2,294 instances across 12 Python repos; SWE-Bench Verified (OpenAI, Aug 2024) is a 500-instance subset filtered by 93 human annotators from a 1,699-instance random sample against issue-clarity, test-clarity, and environment-reproducibility criteria. The retention rate ($500/1{,}699 \approx 29\%$) and the GPT-4 Resolved-rate roughly tripling on the same scaffold together demonstrate that a chunk of "the model failed" was "the eval was wrong." *(LO 2)*
-4. SWE-agent (Yang et al. 2024, NeurIPS 2024) is the canonical scaffold; the Agent-Computer Interface idea — that scaffolding is part of the system under test — recurs on D-26 (web agents). *(LO 6)*
+4. SWE-agent (Yang et al. 2024, NeurIPS 2024) is the canonical scaffold; the Agent-Computer Interface idea — that scaffolding is part of the system under test — recurs on [D-26](/lesson/26) (web agents). *(LO 6)*
 5. As of mid-2026, top reasoning models on SWE-Bench Verified are in the 70–90%+ range; per-model 95% CIs at $p \approx 0.85$ on $n = 500$ are $\sqrt{0.85 \cdot 0.15 / 500} \cdot 1.96 \approx \pm 3.1$ points, so most leaderboard gaps between top-tier systems are statistically inconclusive. Post-cutoff successors (SWE-Bench Live, SWE-rebench, SWE-Bench Pro) exist for the contamination-and-saturation reason. *(LO 5)*
-6. Resolution is a *weaker* guarantee than correctness: a patch that passes `FAIL_TO_PASS` + `PASS_TO_PASS` can still introduce vulnerabilities or behavioral regressions the maintainer-authored tests don't catch — capability outpacing audit, the D-28 throughline. *(LO 1, LO 5)*
+6. Resolution is a *weaker* guarantee than correctness: a patch that passes `FAIL_TO_PASS` + `PASS_TO_PASS` can still introduce vulnerabilities or behavioral regressions the maintainer-authored tests don't catch — capability outpacing audit, the [D-28](/lesson/28) throughline. *(LO 1, LO 5)*
 
 ## Glossary
 
-- **`% Resolved`**: SWE-Bench's headline metric — fraction of instances on which both `FAIL_TO_PASS` and `PASS_TO_PASS` test sets pass inside the Docker harness. Binary per instance, no partial credit [introduced D-12].
-- **`FAIL_TO_PASS`**: per-instance list of test IDs that fail at `base_commit` and must pass after the model's patch. The "bug is fixed" check [introduced D-12].
-- **`PASS_TO_PASS`**: per-instance list of test IDs that pass at `base_commit` and must still pass after the model's patch. The "no unrelated regression" check that has no analogue in HumanEval [introduced D-12].
-- **gold patch**: the maintainer-authored diff that actually closed the GitHub issue. Held out from the model; recoverable from upstream repos by anyone who knows the `base_commit`, which is part of the contamination surface [introduced D-12].
-- **Agent-Computer Interface (ACI)**: the small set of commands an agent uses to interact with a repo (read, search, scroll, edit, run, submit). Yang et al. 2024 show ACI design moves the eval needle as much as model gains [introduced D-12 · forward to D-26].
-- **SWE-Bench Verified**: 500-instance subset of the original SWE-Bench, human-annotated by 93 Python developers from a 1,699-instance random sample against issue-clarity, test-clarity, and environment-reproducibility criteria. The canonical anchor since August 2024 [introduced D-12].
-- **scaffold-dependence**: the property that an agentic eval's headline number depends on the harness scaffold (ACI, retry policy, compute budget) as much as on the base model. Two SWE-Bench numbers for the same base model usually disagree on the scaffold, not the model [introduced D-12 · forward to D-26].
-- **execution-based scoring**: scoring rule where the model's output is fed to an interpreter / test runner and graded by the runner's exit code, with no judge in the loop [introduced D-11 · reused].
+- **`% Resolved`**: SWE-Bench's headline metric — fraction of instances on which both `FAIL_TO_PASS` and `PASS_TO_PASS` test sets pass inside the Docker harness. Binary per instance, no partial credit [introduced D-12](/lesson/12).
+- **`FAIL_TO_PASS`**: per-instance list of test IDs that fail at `base_commit` and must pass after the model's patch. The "bug is fixed" check [introduced D-12](/lesson/12).
+- **`PASS_TO_PASS`**: per-instance list of test IDs that pass at `base_commit` and must still pass after the model's patch. The "no unrelated regression" check that has no analogue in HumanEval [introduced D-12](/lesson/12).
+- **gold patch**: the maintainer-authored diff that actually closed the GitHub issue. Held out from the model; recoverable from upstream repos by anyone who knows the `base_commit`, which is part of the contamination surface [introduced D-12](/lesson/12).
+- **Agent-Computer Interface (ACI)**: the small set of commands an agent uses to interact with a repo (read, search, scroll, edit, run, submit). Yang et al. 2024 show ACI design moves the eval needle as much as model gains [introduced D-12 · forward to D-26](/lesson/12).
+- **SWE-Bench Verified**: 500-instance subset of the original SWE-Bench, human-annotated by 93 Python developers from a 1,699-instance random sample against issue-clarity, test-clarity, and environment-reproducibility criteria. The canonical anchor since August 2024 [introduced D-12](/lesson/12).
+- **scaffold-dependence**: the property that an agentic eval's headline number depends on the harness scaffold (ACI, retry policy, compute budget) as much as on the base model. Two SWE-Bench numbers for the same base model usually disagree on the scaffold, not the model [introduced D-12 · forward to D-26](/lesson/12).
+- **execution-based scoring**: scoring rule where the model's output is fed to an interpreter / test runner and graded by the runner's exit code, with no judge in the loop [introduced D-11 · reused](/lesson/11).
 
 ## References
 
@@ -340,7 +340,7 @@ The harness emits a per-instance `resolved` boolean and a leaderboard-ready aggr
 2. **B** — the function-vs-patch and visible-vs-hidden-tests jump is the core contrast; A misstates language coverage, C misstates the scoring backend, D misstates the output format.
 3. **B** — retention rate is $500/1{,}699 \approx 29.4\%$. Verified is the 500-instance human-curated subset that 93 annotators retained from the 1,699-instance sample after filtering against issue-clarity, test-specification clarity, and environment-reproducibility criteria; the original 2,294-instance set was unfiltered. (A is wrong: there is no LLM judge in the SWE-Bench loop, before or after curation. C is wrong: both versions run in Docker. D is wrong: both use pytest under the hood.)
 4. **A** — `PASS_TO_PASS` is the no-regressions check; the patch must fix the bug (`FAIL_TO_PASS`) without breaking unrelated functionality.
-5. **C** — the ACI framing is the paper's contribution and the methodological lesson that recurs on D-26 (web agents).
-6. **C** — D-5's CI math gives $\sqrt{0.82 \cdot 0.18 / 500} \approx 0.017$, so the per-model 95% half-width is roughly $\pm 3.4$ points. Combined with the scaffold-dependence of agent scores (D-12) and the public-since-2023 contamination surface (D-6), a bare 82% number is under-specified in three distinct ways. (A would *lose* signal — Verified is the cleaner anchor. B is wrong: SWE-Bench is not MC and `acc_norm` is an MC scoring fix. D is wrong: SWE-Bench is not multiple choice.)
+5. **C** — the ACI framing is the paper's contribution and the methodological lesson that recurs on [D-26](/lesson/26) (web agents).
+6. **C** — [D-5](/lesson/5)'s CI math gives $\sqrt{0.82 \cdot 0.18 / 500} \approx 0.017$, so the per-model 95% half-width is roughly $\pm 3.4$ points. Combined with the scaffold-dependence of agent scores ([D-12](/lesson/12)) and the public-since-2023 contamination surface ([D-6](/lesson/6)), a bare 82% number is under-specified in three distinct ways. (A would *lose* signal — Verified is the cleaner anchor. B is wrong: SWE-Bench is not MC and `acc_norm` is an MC scoring fix. D is wrong: SWE-Bench is not multiple choice.)
 
 </details>

@@ -40,7 +40,7 @@ By the end of this lesson, you will be able to:
 
 ## Prerequisites & callback
 
-This lesson is load-bearing on two prior days. **D1** framed an evaluation as a (dataset, scoring rule, reporting convention) pipeline and parked Goodhart's Law as a recurring overlay; today is the first day where Goodhart is *foregrounded* as the lesson's central mechanism, and the answer to "what hides behind the headline 89.5?" we left open in D1's *What the headline number doesn't tell you* is "some non-trivial fraction of the test items leaked." **D5** framed the statistical-hygiene question — sampling noise, confidence intervals, cross-lab comparability — and contamination is the systematic-bias counterpart to that random-error story: a 1-point CI on a contaminated benchmark just gives you a precise estimate of a biased quantity. If you have not internalized the *evaluation-as-pipeline* framing (D1) and the *systematic vs. random error* distinction (D5), today will read as forensics; with them, today reads as the diagnosis.
+This lesson is load-bearing on two prior days. **[D-1](/lesson/1)** framed an evaluation as a (dataset, scoring rule, reporting convention) pipeline and parked Goodhart's Law as a recurring overlay; today is the first day where Goodhart is *foregrounded* as the lesson's central mechanism, and the answer to "what hides behind the headline 89.5?" we left open in [D-1](/lesson/1)'s *What the headline number doesn't tell you* is "some non-trivial fraction of the test items leaked." **[D-5](/lesson/5)** framed the statistical-hygiene question — sampling noise, confidence intervals, cross-lab comparability — and contamination is the systematic-bias counterpart to that random-error story: a 1-point CI on a contaminated benchmark just gives you a precise estimate of a biased quantity. If you have not internalized the *evaluation-as-pipeline* framing ([D-1](/lesson/1)) and the *systematic vs. random error* distinction ([D-5](/lesson/5)), today will read as forensics; with them, today reads as the diagnosis.
 
 ## The opening hook
 
@@ -90,7 +90,7 @@ MMLU-Pro is the canonical "hardened MMLU" — a re-curated successor designed to
 
 **Why 4 → 10 choices is the headline change.** A 4-choice MC item has a random-guess baseline of 25%. A 10-choice item has a random-guess baseline of 10%. The difference matters in two ways:
 
-1. **Headroom.** Top frontier models scored ~86–90% on MMLU but only ~60–75% on MMLU-Pro at release, restoring the dynamic range that saturation had collapsed (more on this Day 7).
+1. **Headroom.** Top frontier models scored ~86–90% on MMLU but only ~60–75% on MMLU-Pro at release, restoring the dynamic range that saturation had collapsed (more on this [D-7](/lesson/7)).
 2. **Cue exploitation is harder.** With 4 options a model can rule out two and coin-flip; with 10 options it has to actually localize the answer. This is also why the paper reports MMLU-Pro is *less prompt-sensitive* than MMLU: with more distractors, surface-feature heuristics carry less of the score, so the score depends more on the underlying knowledge and less on the prompt template (sensitivity drops from ~4–5% on MMLU to ~2% on MMLU-Pro across 24 prompt styles).
 
 **Where contamination resistance specifically comes in.** MMLU-Pro's contamination defenses are *partial and indirect*, and the paper is honest about this. The four mechanisms:
@@ -100,7 +100,7 @@ MMLU-Pro is the canonical "hardened MMLU" — a re-curated successor designed to
 - **More distractors** make memorization a harder signal to exploit — a model that vaguely remembers "the answer was the option mentioning 'momentum'" has worse odds with 9 distractors than with 3.
 - **Reasoning-heavy authoring** shifts items toward problems where the path-to-answer matters, not just the surface form.
 
-What MMLU-Pro does **not** do: it does not use a private held-out set, does not procedurally generate items, and does not refresh over time. It is a static public benchmark, which means the same Goodhart loop will eventually catch up to it. The paper's own framing is essentially "buy us a few years of headroom while the field figures out structurally contamination-resistant designs" — see ARC-AGI's private split (Chollet 2019; ARC-AGI-2 in Chollet et al. 2025) or LiveCodeBench's post-cutoff sampling (Jain et al. 2024, Day 11) for those structurally-resistant designs.
+What MMLU-Pro does **not** do: it does not use a private held-out set, does not procedurally generate items, and does not refresh over time. It is a static public benchmark, which means the same Goodhart loop will eventually catch up to it. The paper's own framing is essentially "buy us a few years of headroom while the field figures out structurally contamination-resistant designs" — see ARC-AGI's private split (Chollet 2019; ARC-AGI-2 in Chollet et al. 2025) or LiveCodeBench's post-cutoff sampling (Jain et al. 2024, [D-11](/lesson/11)) for those structurally-resistant designs.
 
 ## ⏵ Check yourself — 4-vs-10 mechanics
 
@@ -253,7 +253,7 @@ Memorization is necessary but not sufficient for contamination-driven score infl
 
 ## Goodhart foregrounded
 
-We have been circling Goodhart's Law all week, but Day 6 is where it becomes mechanical rather than philosophical. Restate it:
+We have been circling Goodhart's Law all week, but [D-6](/lesson/6) is where it becomes mechanical rather than philosophical. Restate it:
 
 > When a measure becomes a target, it ceases to be a good measure.
 
@@ -261,39 +261,39 @@ For a static public benchmark, the *causal mechanism* by which Goodhart bites is
 
 Three things follow:
 
-- **Contamination compounds with leaderboard popularity.** The more attention a benchmark gets, the faster it leaks. MMLU was the most-cited LLM benchmark of 2021–2024 (Day 1) and consequently among the most-contaminated.
-- **Contamination is asymmetric across labs.** Labs that aggressively decontaminate report lower numbers than labs that don't, all else equal. This is one reason cross-lab leaderboard comparisons should be read with caution (Day 5).
-- **The Goodhart "fix" is not a better metric — it is a benchmark redesign.** MMLU-Pro, GPQA (Day 7), LiveCodeBench (Day 11), ARC-AGI's private split, and FrontierMath (Day 25) are all responses to the same diagnosis: the answer to a contaminated benchmark is not "compute it more carefully" but "build a benchmark that is structurally harder to contaminate."
+- **Contamination compounds with leaderboard popularity.** The more attention a benchmark gets, the faster it leaks. MMLU was the most-cited LLM benchmark of 2021–2024 ([D-1](/lesson/1)) and consequently among the most-contaminated.
+- **Contamination is asymmetric across labs.** Labs that aggressively decontaminate report lower numbers than labs that don't, all else equal. This is one reason cross-lab leaderboard comparisons should be read with caution ([D-5](/lesson/5)).
+- **The Goodhart "fix" is not a better metric — it is a benchmark redesign.** MMLU-Pro, GPQA ([D-7](/lesson/7)), LiveCodeBench ([D-11](/lesson/11)), ARC-AGI's private split, and FrontierMath ([D-25](/lesson/25)) are all responses to the same diagnosis: the answer to a contaminated benchmark is not "compute it more carefully" but "build a benchmark that is structurally harder to contaminate."
 
-This is the throughline for the rest of the curriculum, and D6 is the day where the pattern is named. The other foregrounded Goodhart days each instantiate a *different* mechanism by which a measure decouples from the construct it was supposed to track:
+This is the throughline for the rest of the curriculum, and [D-6](/lesson/6) is the day where the pattern is named. The other foregrounded Goodhart days each instantiate a *different* mechanism by which a measure decouples from the construct it was supposed to track:
 
-- **D6 (today) — leakage.** The test set ends up in the training set. The mechanism is byte-level overlap.
-- **D15 (TruthfulQA) — incentive shape.** The benchmark's reward structure rewards refusals over truth on contested items, so optimizing the score teaches the model to refuse rather than to be truthful.
-- **D17 (SAD) — situational conditioning.** The model learns what evaluation contexts look like and conditions on the fact that it is being evaluated, behaving differently than it would in deployment.
-- **D22 (LLM-as-judge) — measurement-instrument-as-target.** When the judge model is itself a frontier LLM, optimizing the judged score teaches the model to produce text that the judge prefers, not text that humans would prefer.
-- **D28 (METR autonomy) — selection pressure.** Frontier-capability benchmarks measure the *envelope* of what current models can do; once we are training to push that envelope, the envelope itself is the optimization target and the measurement-versus-target gap is the entire field's terminal Goodhart problem.
+- **[D-6](/lesson/6) (today) — leakage.** The test set ends up in the training set. The mechanism is byte-level overlap.
+- **[D-15](/lesson/15) (TruthfulQA) — incentive shape.** The benchmark's reward structure rewards refusals over truth on contested items, so optimizing the score teaches the model to refuse rather than to be truthful.
+- **[D-17](/lesson/17) (SAD) — situational conditioning.** The model learns what evaluation contexts look like and conditions on the fact that it is being evaluated, behaving differently than it would in deployment.
+- **[D-22](/lesson/22) (LLM-as-judge) — measurement-instrument-as-target.** When the judge model is itself a frontier LLM, optimizing the judged score teaches the model to produce text that the judge prefers, not text that humans would prefer.
+- **[D-28](/lesson/28) (METR autonomy) — selection pressure.** Frontier-capability benchmarks measure the *envelope* of what current models can do; once we are training to push that envelope, the envelope itself is the optimization target and the measurement-versus-target gap is the entire field's terminal Goodhart problem.
 
-Wherever you see a "v2" benchmark replacing a "v1" — Open LLM Leaderboard v1→v2 (Day 1), MMLU→MMLU-Pro (today), HumanEval→LiveCodeBench (Day 11), ARC-AGI-1→ARC-AGI-2 (Day 7) — the upgrade is, at its core, a Goodhart-collapse response of the D6 leakage variety, retrofitted with one or more of the structural defenses we listed: private splits, post-cutoff sampling, procedural generation, refresh-over-time. The D6 lesson is that *no metric-level fix* is sufficient; the architectural move has to be at the dataset-and-release level.
+Wherever you see a "v2" benchmark replacing a "v1" — Open LLM Leaderboard v1→v2 ([D-1](/lesson/1)), MMLU→MMLU-Pro (today), HumanEval→LiveCodeBench ([D-11](/lesson/11)), ARC-AGI-1→ARC-AGI-2 ([D-7](/lesson/7)) — the upgrade is, at its core, a Goodhart-collapse response of the [D-6](/lesson/6) leakage variety, retrofitted with one or more of the structural defenses we listed: private splits, post-cutoff sampling, procedural generation, refresh-over-time. The [D-6](/lesson/6) lesson is that *no metric-level fix* is sufficient; the architectural move has to be at the dataset-and-release level.
 
-> **Safety researcher's note.** Contamination matters for safety evals more than for capability evals, and in the opposite direction. On capabilities, contamination *inflates* scores — bad, but the mistake is "this model is more capable than reality." On safety, contamination of red-team prompts and jailbreaks (Day 19, HarmBench) into post-training data means the model has seen the attack format and learned to refuse it — *deflating* measured attack success rates without genuine robustness gains. A model that refuses every attack pattern in your held-out set might be safer; or it might just have memorized the patterns, with no transfer to novel attacks. The asymmetry: an inflated capability score is embarrassing; a deflated unsafe-response rate is dangerous. Worth carrying into Week 3.
+> **Safety researcher's note.** Contamination matters for safety evals more than for capability evals, and in the opposite direction. On capabilities, contamination *inflates* scores — bad, but the mistake is "this model is more capable than reality." On safety, contamination of red-team prompts and jailbreaks ([D-19](/lesson/19), HarmBench) into post-training data means the model has seen the attack format and learned to refuse it — *deflating* measured attack success rates without genuine robustness gains. A model that refuses every attack pattern in your held-out set might be safer; or it might just have memorized the patterns, with no transfer to novel attacks. The asymmetry: an inflated capability score is embarrassing; a deflated unsafe-response rate is dangerous. Worth carrying into Week 3.
 
 ## Cross-references
 
 **Backward.**
 
-- D-1 — picks up the "what hides behind the headline number?" thread parked under *What the headline number doesn't tell you*; today instantiates the *contamination* item on that list with mechanism + forensics + benchmark redesign.
-- D-1 — picks up the *Goodhart's Law* curriculum-wide overlay introduced as a callback there; today is the first **foregrounded** Goodhart lesson and sets the pattern for D-15, D-17, D-22, and D-28.
-- D-5 — picks up the systematic-bias counterpart to D-5's random-error story: a tight CI on a contaminated benchmark is a precise estimate of a biased quantity, which is not what the CI's framing implied.
+- [D-1](/lesson/1) — picks up the "what hides behind the headline number?" thread parked under *What the headline number doesn't tell you*; today instantiates the *contamination* item on that list with mechanism + forensics + benchmark redesign.
+- [D-1](/lesson/1) — picks up the *Goodhart's Law* curriculum-wide overlay introduced as a callback there; today is the first **foregrounded** Goodhart lesson and sets the pattern for [D-15](/lesson/15), [D-17](/lesson/17), [D-22](/lesson/22), and [D-28](/lesson/28).
+- [D-5](/lesson/5) — picks up the systematic-bias counterpart to [D-5](/lesson/5)'s random-error story: a tight CI on a contaminated benchmark is a precise estimate of a biased quantity, which is not what the CI's framing implied.
 
 **Forward.**
 
-- D-7 — picks up *saturation* as the visible leaderboard consequence of the contamination loop; GPQA is the saturation-resistant successor and shares MMLU-Pro's "harder by construction" diagnosis.
-- D-11 — picks up *contamination on a code benchmark*, where leak rates are even higher because GitHub is in pretraining wholesale; LiveCodeBench's post-cutoff problem sampling is the structurally-resistant design alternative.
-- D-15 — picks up the *incentive-shape* form of Goodhart on TruthfulQA, where the benchmark's reward structure (refusal beats truth on contested items) is the decoupling mechanism rather than data leakage.
-- D-17 — picks up the *situational-conditioning* form of Goodhart with SAD: models that recognize evaluation contexts and behave differently when they detect them.
-- D-22 — picks up the *measurement-instrument-as-target* form of Goodhart with LLM-as-judge, where optimizing for a judge model's preferences decouples from human preference.
-- D-25 — picks up FrontierMath as a structural-defense exemplar: a private-split benchmark whose canonical items never appear in public data at all.
-- D-28 — picks up the *selection-pressure* form of Goodhart on METR's autonomy suite, the curriculum-closing instance of the same mechanism.
+- [D-7](/lesson/7) — picks up *saturation* as the visible leaderboard consequence of the contamination loop; GPQA is the saturation-resistant successor and shares MMLU-Pro's "harder by construction" diagnosis.
+- [D-11](/lesson/11) — picks up *contamination on a code benchmark*, where leak rates are even higher because GitHub is in pretraining wholesale; LiveCodeBench's post-cutoff problem sampling is the structurally-resistant design alternative.
+- [D-15](/lesson/15) — picks up the *incentive-shape* form of Goodhart on TruthfulQA, where the benchmark's reward structure (refusal beats truth on contested items) is the decoupling mechanism rather than data leakage.
+- [D-17](/lesson/17) — picks up the *situational-conditioning* form of Goodhart with SAD: models that recognize evaluation contexts and behave differently when they detect them.
+- [D-22](/lesson/22) — picks up the *measurement-instrument-as-target* form of Goodhart with LLM-as-judge, where optimizing for a judge model's preferences decouples from human preference.
+- [D-25](/lesson/25) — picks up FrontierMath as a structural-defense exemplar: a private-split benchmark whose canonical items never appear in public data at all.
+- [D-28](/lesson/28) — picks up the *selection-pressure* form of Goodhart on METR's autonomy suite, the curriculum-closing instance of the same mechanism.
 
 ## Takeaways
 
@@ -306,14 +306,14 @@ Wherever you see a "v2" benchmark replacing a "v1" — Open LLM Leaderboard v1�
 
 ## Glossary
 
-- **test-set contamination**: the test set (or a paraphrase of it) appears in the model's training data, so scores reflect memorization rather than generalization [introduced D-6].
-- **decontamination**: pre-training pipeline step that filters known benchmark items out of the training corpus, typically via 13-gram overlap; "partial decontamination" is the honest framing because paraphrase and indirect contamination survive [introduced D-6].
-- **paraphrase contamination**: a reworded version of a test item appears in training; defeats n-gram overlap detection and motivates membership-inference and exchangeability tests [introduced D-6].
-- **n-gram overlap**: contamination detection via shared 13-grams between test items and training documents (Brown et al. 2020); the workhorse method when corpus access is available [introduced D-6].
-- **Min-K% Prob**: black-box contamination detector (Shi et al. 2023) that averages the bottom-K% of token log-probabilities under the target model; higher (less negative) values suggest training-set membership [introduced D-6].
-- **canary string**: a uniquely-formatted, low-perplexity-impossible string deliberately inserted into training data to test for memorization after training (Carlini et al. 2019, *The Secret Sharer*) [introduced D-6].
-- **membership inference**: the broader family of techniques (LiRA, Min-K%, exchangeability) that try to decide, for an input, whether it was in the training set; near-chance at frontier-LLM scale per Duan et al. (2024) [introduced D-6].
-- **exchangeability test**: black-box contamination detector (Oren et al. 2023) that compares the model's likelihood of a benchmark in canonical order vs. shuffled orderings; offers an exact finite-sample false-positive-rate guarantee [introduced D-6].
+- **test-set contamination**: the test set (or a paraphrase of it) appears in the model's training data, so scores reflect memorization rather than generalization [introduced D-6](/lesson/6).
+- **decontamination**: pre-training pipeline step that filters known benchmark items out of the training corpus, typically via 13-gram overlap; "partial decontamination" is the honest framing because paraphrase and indirect contamination survive [introduced D-6](/lesson/6).
+- **paraphrase contamination**: a reworded version of a test item appears in training; defeats n-gram overlap detection and motivates membership-inference and exchangeability tests [introduced D-6](/lesson/6).
+- **n-gram overlap**: contamination detection via shared 13-grams between test items and training documents (Brown et al. 2020); the workhorse method when corpus access is available [introduced D-6](/lesson/6).
+- **Min-K% Prob**: black-box contamination detector (Shi et al. 2023) that averages the bottom-K% of token log-probabilities under the target model; higher (less negative) values suggest training-set membership [introduced D-6](/lesson/6).
+- **canary string**: a uniquely-formatted, low-perplexity-impossible string deliberately inserted into training data to test for memorization after training (Carlini et al. 2019, *The Secret Sharer*) [introduced D-6](/lesson/6).
+- **membership inference**: the broader family of techniques (LiRA, Min-K%, exchangeability) that try to decide, for an input, whether it was in the training set; near-chance at frontier-LLM scale per Duan et al. (2024) [introduced D-6](/lesson/6).
+- **exchangeability test**: black-box contamination detector (Oren et al. 2023) that compares the model's likelihood of a benchmark in canonical order vs. shuffled orderings; offers an exact finite-sample false-positive-rate guarantee [introduced D-6](/lesson/6).
 
 ## References
 
@@ -379,7 +379,7 @@ Wherever you see a "v2" benchmark replacing a "v1" — Open LLM Leaderboard v1�
 <details>
 <summary>Answers</summary>
 
-1. **B** — the contamination loop (benchmark → leaderboard target → web indexing → pretraining → inflated score) is the mechanism. See "Goodhart foregrounded." The other options describe real but distinct phenomena: A is saturation (Day 7), C is grader variance (Day 3 / Day 22), D is the prompt-template multiple-comparisons artifact (Day 1 / Day 4) — none is the *Goodhart* mechanism on a static public benchmark.
+1. **B** — the contamination loop (benchmark → leaderboard target → web indexing → pretraining → inflated score) is the mechanism. See "Goodhart foregrounded." The other options describe real but distinct phenomena: A is saturation ([D-7](/lesson/7)), C is grader variance ([D-3](/lesson/3) / [D-22](/lesson/22)), D is the prompt-template multiple-comparisons artifact ([D-1](/lesson/1) / [D-4](/lesson/4)) — none is the *Goodhart* mechanism on a static public benchmark.
 2. **B** — 4 → 10 answer choices is the headline mechanical change; it raises the random baseline from 25% to 10% and reduces cue-exploitation room. The other changes (reasoning-heavy items, 14-discipline grouping) are downstream of the questions and the curation, not of the format change.
 3. **A** — Min-K% averages the *bottom* K% of token log-probs. Memorized text lacks the genuinely-low-probability tokens that unseen text has. (B describes a fully Bayesian approach that's intractable; C is the canary exposure metric; D is n-gram overlap.)
 4. **C** — paraphrase contamination is the failure mode of n-gram overlap detection. A reworded textbook PDF would not share a 13-gram with the original test item but is still contamination. Min-K% Prob and exchangeability tests are the partial counters; that paraphrase contamination is the *load-bearing* failure of the n-gram method is exactly why the field developed those black-box alternatives.

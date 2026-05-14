@@ -36,15 +36,15 @@ By the end of this lesson, you will be able to:
 3. **(L4)** *Analyze* a few-shot exemplar block by decomposing its contribution into the three independent mechanisms — format induction, task identification, reasoning elicitation — and identify which mechanism is load-bearing for a given task.
 4. **(L4)** *Analyze* the BBH per-task pattern (CoT-helps / CoT-neutral / CoT-hurts buckets) to predict, for a new BIG-Bench task, which bucket its CoT-vs-direct gap is most likely to land in.
 5. **(L5)** *Evaluate* a model card's BBH score for unstated prompting-pipeline assumptions (variant, exemplar source, aggregate vs. per-task) and surface the methodological question the headline leaves unfalsifiable.
-6. **(L4)** Read CoT as a compute-budget knob — moving compute from inside the model to outside via decoded tokens — and connect that framing forward to the inference-time-scaling story (D-25).
+6. **(L4)** Read CoT as a compute-budget knob — moving compute from inside the model to outside via decoded tokens — and connect that framing forward to the inference-time-scaling story ([D-25](/lesson/25)).
 
 ## Prerequisites & callback
 
-Today's lesson assumes two pieces of prior machinery. From **D-1**, the framing that an evaluation is a *(dataset, scoring rule, reporting convention) pipeline* — the prompting strategy is the input-side stage of that pipeline, the part D-1 grouped under "prompt template" and largely deferred to today. From **D-2**, the mechanics of log-likelihood scoring on multiple-choice items — the option-by-option `acc` / `acc_norm` machinery that lets you score zero-shot MC at all on a base model. The Day-4 move is to admit a fourth degree of freedom — *what the prompt to the model actually looks like* — alongside the three D-1 introduced, and show that this fourth axis can swing scores by 10–30 points on the same model and dataset.
+Today's lesson assumes two pieces of prior machinery. From **[D-1](/lesson/1)**, the framing that an evaluation is a *(dataset, scoring rule, reporting convention) pipeline* — the prompting strategy is the input-side stage of that pipeline, the part [D-1](/lesson/1) grouped under "prompt template" and largely deferred to today. From **[D-2](/lesson/2)**, the mechanics of log-likelihood scoring on multiple-choice items — the option-by-option `acc` / `acc_norm` machinery that lets you score zero-shot MC at all on a base model. The Day-4 move is to admit a fourth degree of freedom — *what the prompt to the model actually looks like* — alongside the three [D-1](/lesson/1) introduced, and show that this fourth axis can swing scores by 10–30 points on the same model and dataset.
 
 ## The opening hook
 
-Day 1 ended on a quiet observation: two papers can report different MMLU numbers for the same model checkpoint and both be "correct." Day 2 traced one source of that drift to the scoring rule (`acc` vs. `acc_norm`). Day 3 traced another to the metric on free-form output. Today's source is the one most likely to swing a headline number by ten points or more, and it lives entirely on the input side.
+[D-1](/lesson/1) ended on a quiet observation: two papers can report different MMLU numbers for the same model checkpoint and both be "correct." [D-2](/lesson/2) traced one source of that drift to the scoring rule (`acc` vs. `acc_norm`). [D-3](/lesson/3) traced another to the metric on free-form output. Today's source is the one most likely to swing a headline number by ten points or more, and it lives entirely on the input side.
 
 If you take the same model, the same dataset, and the same scoring rule, and change only **how the prompt is constructed** — zero-shot vs. five-shot, with reasoning steps vs. answer-only — you can move the score from below random to above the average human. On BIG-Bench Hard, switching Codex (`code-davinci-002`) from answer-only few-shot to chain-of-thought few-shot moves it from **56.6%** to **73.9%** averaged across 23 tasks (Suzgun et al. 2022). Same model, same data, same scoring; the prompt is the experiment.
 
@@ -166,7 +166,7 @@ If you average over BBH, CoT helps. If you read it task by task, the picture is 
 
 1. **CoT unlocks the task.** Multi-step reasoning where the answer requires holding intermediate state: `tracking_shuffled_objects_*`, `multistep_arithmetic`, `dyck_languages`, `web_of_lies`, `logical_deduction_*`. Gaps of +20 to +60 points are common. These tasks have *flat scaling curves* under answer-only prompting (more parameters don't help) and *steep* scaling curves under CoT.
 2. **CoT is roughly neutral.** Single-step recognition tasks where the answer is essentially a lookup or a one-step inference: parts of `sports_understanding`, `causal_judgement`. CoT neither helps nor much hurts.
-3. **CoT can hurt.** A small number of tasks where reasoning out loud lets the model talk itself into a wrong answer, or where the format of "reasoning then answer" disrupts a strong direct-recognition signal. The paper notes this is rare on BBH but real, and it is the seed of a much larger story about CoT failure modes (faithfulness — does the verbalized reasoning actually drive the answer? — gets a full treatment on D-9 with GSM8K and process supervision).
+3. **CoT can hurt.** A small number of tasks where reasoning out loud lets the model talk itself into a wrong answer, or where the format of "reasoning then answer" disrupts a strong direct-recognition signal. The paper notes this is rare on BBH but real, and it is the seed of a much larger story about CoT failure modes (faithfulness — does the verbalized reasoning actually drive the answer? — gets a full treatment on [D-9](/lesson/9) with GSM8K and process supervision).
 
 The takeaway: *whether to use CoT in your evaluation pipeline is a per-task design decision, not a global default.* Picking one strategy for the whole benchmark and reporting a single aggregate number throws away the information BBH was designed to surface.
 
@@ -220,9 +220,9 @@ $$
 \text{compute per item} \;\propto\; T \cdot N_\text{params}.
 $$
 
-Doubling $T$ doubles the compute. *Where CoT helps, it does so partly by buying more sequential compute per item.* This is the seed of the entire **inference-time-scaling** thread: if more decoded tokens means more compute means more correct answers on reasoning-heavy tasks, then a model's accuracy is no longer a single number — it is a curve over decoding budget. We pick this back up on D-25 (AIME, FrontierMath, the o1 system card) where the budget axis becomes a first-class reporting axis.
+Doubling $T$ doubles the compute. *Where CoT helps, it does so partly by buying more sequential compute per item.* This is the seed of the entire **inference-time-scaling** thread: if more decoded tokens means more compute means more correct answers on reasoning-heavy tasks, then a model's accuracy is no longer a single number — it is a curve over decoding budget. We pick this back up on [D-25](/lesson/25) (AIME, FrontierMath, the o1 system card) where the budget axis becomes a first-class reporting axis.
 
-> **Safety researcher's note.** CoT is a double-edged tool for a safety practitioner. On one side, the verbalized reasoning trace is a *transparency surface*: you can read it, grep it for refusals, train a process-supervision reward model on it (Lightman et al. 2023, previewed on D-9). On the other side, **CoT faithfulness is not guaranteed** — recent work (Turpin et al. 2023; Anthropic 2025 "Reasoning models don't always say what they think") shows that models routinely produce reasoning that does not in fact drive the final answer. Optimizing for legible CoT can produce models whose visible reasoning looks aligned while their actual decision is something else. Today's BBH-flavored takeaway is narrower: CoT changes scores. The deeper question of whether the reasoning trace is a real window into the model is an open problem we'll pick up on D-9 (process supervision) and again on D-25 (reasoning models).
+> **Safety researcher's note.** CoT is a double-edged tool for a safety practitioner. On one side, the verbalized reasoning trace is a *transparency surface*: you can read it, grep it for refusals, train a process-supervision reward model on it (Lightman et al. 2023, previewed on [D-9](/lesson/9)). On the other side, **CoT faithfulness is not guaranteed** — recent work (Turpin et al. 2023; Anthropic 2025 "Reasoning models don't always say what they think") shows that models routinely produce reasoning that does not in fact drive the final answer. Optimizing for legible CoT can produce models whose visible reasoning looks aligned while their actual decision is something else. Today's BBH-flavored takeaway is narrower: CoT changes scores. The deeper question of whether the reasoning trace is a real window into the model is an open problem we'll pick up on [D-9](/lesson/9) (process supervision) and again on [D-25](/lesson/25) (reasoning models).
 
 ## What the headline number doesn't tell you
 
@@ -239,7 +239,7 @@ Suzgun et al. (2022) report that on BBH-aggregate Codex moves from 56.6% to 73.9
 <details>
 <summary>Show answer</summary>
 
-The aggregate compresses a non-uniform per-task pattern into a single number. On BBH the +17.3-point average is the mean of (a) tasks where CoT unlocks +20 to +60 points (multi-step object tracking, multistep arithmetic, dyck languages, logical deduction), (b) tasks where CoT is roughly neutral (single-step recognition like sports understanding or causal judgement), and (c) a small set where CoT can hurt. Reporting only the aggregate hides which of those three regimes a *new* task or model lands in — and the methodological question the BBH paper exists to answer is exactly *which regime*, not "what is the average lift." A model card that headlines the aggregate without showing a per-task breakdown is doing the same thing MMLU did with subject-aggregate (D-1's macro-vs-micro point): surfacing one number where a 23-row table is the actual evidence.
+The aggregate compresses a non-uniform per-task pattern into a single number. On BBH the +17.3-point average is the mean of (a) tasks where CoT unlocks +20 to +60 points (multi-step object tracking, multistep arithmetic, dyck languages, logical deduction), (b) tasks where CoT is roughly neutral (single-step recognition like sports understanding or causal judgement), and (c) a small set where CoT can hurt. Reporting only the aggregate hides which of those three regimes a *new* task or model lands in — and the methodological question the BBH paper exists to answer is exactly *which regime*, not "what is the average lift." A model card that headlines the aggregate without showing a per-task breakdown is doing the same thing MMLU did with subject-aggregate ([D-1](/lesson/1)'s macro-vs-micro point): surfacing one number where a 23-row table is the actual evidence.
 
 </details>
 
@@ -247,15 +247,15 @@ The aggregate compresses a non-uniform per-task pattern into a single number. On
 
 **Backward.**
 
-- D-1 — picks up the *(dataset, scoring rule, reporting convention) pipeline* framing and adds the prompting strategy as a fourth axis on the input side.
-- D-2 — picks up *log-likelihood scoring* and the `acc` / `acc_norm` mechanics, which are the per-option scoring substrate that lets zero-shot MC be scored on a base model in the first place.
-- D-3 — picks up *free-form scoring* — relevant because CoT outputs are free-form prose terminating in an extracted answer, so generative-output extraction (regex on `So the answer is …`) becomes part of the pipeline.
+- [D-1](/lesson/1) — picks up the *(dataset, scoring rule, reporting convention) pipeline* framing and adds the prompting strategy as a fourth axis on the input side.
+- [D-2](/lesson/2) — picks up *log-likelihood scoring* and the `acc` / `acc_norm` mechanics, which are the per-option scoring substrate that lets zero-shot MC be scored on a base model in the first place.
+- [D-3](/lesson/3) — picks up *free-form scoring* — relevant because CoT outputs are free-form prose terminating in an extracted answer, so generative-output extraction (regex on `So the answer is …`) becomes part of the pipeline.
 
 **Forward.**
 
-- D-9 — picks up the *CoT faithfulness* failure mode on math reasoning, where the gap is even larger and process-supervision (Lightman et al. 2023) becomes the central instrument.
-- D-22 — picks up the methodology question of whether CoT-as-rationale should be *judged* by an LLM (and the Goodhart hazards of doing so).
-- D-25 — picks up *inference-time scaling*: when "produce more reasoning tokens" stops being a prompting trick and becomes a model property (o1, o3, R1), the entire evaluation contract has to change to put compute-per-item on the x-axis.
+- [D-9](/lesson/9) — picks up the *CoT faithfulness* failure mode on math reasoning, where the gap is even larger and process-supervision (Lightman et al. 2023) becomes the central instrument.
+- [D-22](/lesson/22) — picks up the methodology question of whether CoT-as-rationale should be *judged* by an LLM (and the Goodhart hazards of doing so).
+- [D-25](/lesson/25) — picks up *inference-time scaling*: when "produce more reasoning tokens" stops being a prompting trick and becomes a model property (o1, o3, R1), the entire evaluation contract has to change to put compute-per-item on the x-axis.
 
 ## Takeaways
 
@@ -265,18 +265,18 @@ The aggregate compresses a non-uniform per-task pattern into a single number. On
 4. On BBH, Codex moves from 56.6% (answer-only) to 73.9% (CoT) averaged across 23 tasks — the +17.3 point gap is the canonical magnitude of "prompting strategy is part of the eval," and `lm-evaluation-harness` exposes the four variants as `bbh_zeroshot` / `bbh_fewshot` / `bbh_cot_zeroshot` / `bbh_cot_fewshot`. *(LO 2)*
 5. The aggregate hides the per-task pattern: CoT unlocks some tasks, is neutral on others, and can hurt on a few. Choosing one strategy globally throws away that information. *(LO 4)*
 6. Before treating a BBH headline as a measurement, ask **"which variant, whose exemplars, aggregate or per-task?"** — without those three, the number is unfalsifiable. *(LO 5)*
-7. Reading CoT as a compute-budget knob (more decoded tokens = more sequential compute per item) prepares the reader for the inference-time-scaling story (D-25). *(LO 6)*
+7. Reading CoT as a compute-budget knob (more decoded tokens = more sequential compute per item) prepares the reader for the inference-time-scaling story ([D-25](/lesson/25)). *(LO 6)*
 
 ## Glossary
 
-- **few-shot ($k$-shot) prompting**: prepending $k$ worked `(question, answer)` exemplars to the test item before the model reads it [introduced D-4].
-- **chain-of-thought (CoT) prompting**: a few-shot variant whose exemplar answers are *reasoning steps then final answer*, so the model imitates the format and produces its own trace before committing to an answer [introduced D-4].
-- **zero-shot CoT**: the trigger-phrase variant ("Let's think step by step.") that elicits reasoning without exemplars; cheaper than few-shot CoT, generally weaker [introduced D-4].
-- **format induction**: the role of exemplars in *demonstrating the answer format* so harness regex extraction succeeds — distinct from teaching the task [introduced D-4].
-- **exemplar**: a `(question, answer)` pair (or `(question, reasoning, answer)` triple in CoT) prepended to the test item; typically held-out and fixed across the test set in canonical evals [introduced D-4].
-- **BIG-Bench Hard (BBH)**: the 23-task BIG-Bench subset where prior LMs under answer-only few-shot underperformed the average human-rater baseline — curated to surface the CoT-vs-direct gap [introduced D-4].
-- **CoT faithfulness**: whether the verbalized reasoning trace actually drives the model's final answer; not guaranteed (Turpin et al. 2023) [introduced D-4 · forward pointer to D-9].
-- **inference-time scaling**: the framing in which a model's accuracy is a curve over decoded-tokens-per-item rather than a single number; CoT is the seed of this thread [introduced D-4 · forward pointer to D-25].
+- **few-shot ($k$-shot) prompting**: prepending $k$ worked `(question, answer)` exemplars to the test item before the model reads it [introduced D-4](/lesson/4).
+- **chain-of-thought (CoT) prompting**: a few-shot variant whose exemplar answers are *reasoning steps then final answer*, so the model imitates the format and produces its own trace before committing to an answer [introduced D-4](/lesson/4).
+- **zero-shot CoT**: the trigger-phrase variant ("Let's think step by step.") that elicits reasoning without exemplars; cheaper than few-shot CoT, generally weaker [introduced D-4](/lesson/4).
+- **format induction**: the role of exemplars in *demonstrating the answer format* so harness regex extraction succeeds — distinct from teaching the task [introduced D-4](/lesson/4).
+- **exemplar**: a `(question, answer)` pair (or `(question, reasoning, answer)` triple in CoT) prepended to the test item; typically held-out and fixed across the test set in canonical evals [introduced D-4](/lesson/4).
+- **BIG-Bench Hard (BBH)**: the 23-task BIG-Bench subset where prior LMs under answer-only few-shot underperformed the average human-rater baseline — curated to surface the CoT-vs-direct gap [introduced D-4](/lesson/4).
+- **CoT faithfulness**: whether the verbalized reasoning trace actually drives the model's final answer; not guaranteed (Turpin et al. 2023) [introduced D-4 · forward pointer to D-9](/lesson/4).
+- **inference-time scaling**: the framing in which a model's accuracy is a curve over decoded-tokens-per-item rather than a single number; CoT is the seed of this thread [introduced D-4 · forward pointer to D-25](/lesson/4).
 
 ## References
 
@@ -311,7 +311,7 @@ The aggregate compresses a non-uniform per-task pattern into a single number. On
 - C. The CoT condition uses a different test set than the answer-only condition.
 - D. The benchmark was specifically curated to surface tasks where CoT helps.
 
-**Q4.** A safety practitioner reads a model's chain-of-thought and concludes the trace is reasoning honestly to a refusal. Which assumption is the **load-bearing** one in that conclusion, and which Day 4 reference flags it as not always justified?
+**Q4.** A safety practitioner reads a model's chain-of-thought and concludes the trace is reasoning honestly to a refusal. Which assumption is the **load-bearing** one in that conclusion, and which [D-4](/lesson/4) reference flags it as not always justified?
 
 - A. They are assuming CoT is faithful to the model's actual decision; Turpin et al. 2023 shows this is often false.
 - B. They are assuming CoT reduces decoding latency, which Wei et al. 2022 report is offset by the longer reasoning trace.
@@ -338,7 +338,7 @@ The aggregate compresses a non-uniform per-task pattern into a single number. On
 1. **B** — the four BBH variants in `lm-evaluation-harness` can produce scores that span 30+ points on the same model. A reader who doesn't know which variant was used cannot interpret the headline number; the other three options are either irrelevant to BBH score (A, C) or second-order to variant choice (D).
 2. **B** — see "Anchor: BIG-Bench Hard." The selection criterion is exactly the slice of BIG-Bench where answer-only few-shot underestimated frontier model capability against the human-rater baseline.
 3. **C** — the test set is identical across conditions; that's the whole point of the comparison. A and B are the format-induction and reasoning-elicitation mechanisms; D is the curation criterion. Computing the gap (73.9 − 56.6 = +17.3) is the headline magnitude the lesson tracks.
-4. **A** — CoT is a transparency *surface*, not a guaranteed *window*. Turpin et al. 2023 demonstrate models producing rationalizations that do not drive their final answer (the "unfaithful CoT" failure mode). D-9 returns to this with process supervision.
+4. **A** — CoT is a transparency *surface*, not a guaranteed *window*. Turpin et al. 2023 demonstrate models producing rationalizations that do not drive their final answer (the "unfaithful CoT" failure mode). [D-9](/lesson/9) returns to this with process supervision.
 5. **B** — Kojima et al. 2022 introduced zero-shot CoT as the trigger-phrase variant; Wei et al. 2022 introduced few-shot CoT with hand-written exemplars. Both work; the few-shot variant is generally stronger when the exemplars are good. C overstates zero-shot CoT; D is empirically false (few-shot CoT was originally demonstrated on base PaLM and Codex).
 6. **B** — BBH's per-task table tells a finer story than its aggregate. CoT unlocks multi-step-reasoning tasks (large gaps), is neutral on recognition tasks, and occasionally hurts. Reporting only the aggregate is what makes "BBH = 73.9" a less informative number than the underlying 23 numbers.
 

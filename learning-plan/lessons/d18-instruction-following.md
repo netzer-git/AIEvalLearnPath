@@ -25,7 +25,7 @@ calibration_role: absent
 
 ## TL;DR
 
-IFEval (Zhou et al. 2023) sidesteps Day 3's open-ended-scoring problem by restricting itself to instructions a 20-line Python function can check — "answer in exactly three bullet points," "include the keyword 'cardinal' twice," "respond in valid JSON" — across 25 instruction types in 9 categories on ~500 prompts. Scores break out four ways (instruction-level vs. prompt-level, strict vs. loose), and the gaps between them are the most informative axis. The scoring rule is the deterministic-harness pattern from D1 reapplied to a different cut of behaviour: when you can write the check, write the check; reach for an LLM judge only when you can't.
+IFEval (Zhou et al. 2023) sidesteps [D-3](/lesson/3)'s open-ended-scoring problem by restricting itself to instructions a 20-line Python function can check — "answer in exactly three bullet points," "include the keyword 'cardinal' twice," "respond in valid JSON" — across 25 instruction types in 9 categories on ~500 prompts. Scores break out four ways (instruction-level vs. prompt-level, strict vs. loose), and the gaps between them are the most informative axis. The scoring rule is the deterministic-harness pattern from [D-1](/lesson/1) reapplied to a different cut of behaviour: when you can write the check, write the check; reach for an LLM judge only when you can't.
 
 ## Learning objectives
 
@@ -34,21 +34,21 @@ By the end of this lesson, you will be able to:
 1. **(L2)** Distinguish *verifiable* from *unverifiable* instructions and explain why IFEval's deterministic Python checks dodge the judge biases (position, verbosity, self-preference) that plague AlpacaEval, Arena-Hard-Auto, and MT-Bench.
 2. **(L2)** State IFEval's construction (~500 prompts, 25 instruction types across 9 categories) and the four headline metrics — instruction-level strict, instruction-level loose, prompt-level strict, prompt-level loose.
 3. **(L3)** *Compute* the gap between instruction-level and prompt-level accuracy under independence (multiplicative compounding), and the gap between strict and loose under the three response transformations.
-4. **(L4)** *Analyze* a vendor's IFEval gain after rule-based-reward post-training and decompose it into capability gain vs. optimization-against-the-checker — the contamination-resistant-successor reflex from D6/D7/D11 reapplied here.
+4. **(L4)** *Analyze* a vendor's IFEval gain after rule-based-reward post-training and decompose it into capability gain vs. optimization-against-the-checker — the contamination-resistant-successor reflex from [D-6](/lesson/6)/[D-7](/lesson/7)/[D-11](/lesson/11) reapplied here.
 5. **(L5)** *Evaluate* an IFEval drop reported alongside a reasoning-capability gain (e.g., +AIME, −IFEval) and judge its safety implications, given that refusal is itself an instruction.
 6. **(L4)** Identify which slice of instruction-following IFEval *cannot* reach — helpfulness, faithfulness, coherence — and pair it with the correct judge-based foil for a complete report card.
 
 ## Prerequisites & callback
 
-D1 set up an evaluation as a (dataset, scoring rule, reporting convention) pipeline in which everything outside the model is deterministic code. IFEval is that framing taken to its logical extreme: the scoring rule is *literally* deterministic Python, executed on the model's raw response. Today's pipeline is `prompt → model → response → check_fn(response, kwargs) → boolean → aggregate`, with no judge model, embedding model, or human rater anywhere in the loop. The contrast with D3 (free-form scoring, where judges and embedding metrics are unavoidable) and the foreshadowing of D22 (LLM-as-judge, where the judge biases IFEval avoids are catalogued) frame why this single design move — restrict to the verifiable slice — is worth a whole lesson.
+[D-1](/lesson/1) set up an evaluation as a (dataset, scoring rule, reporting convention) pipeline in which everything outside the model is deterministic code. IFEval is that framing taken to its logical extreme: the scoring rule is *literally* deterministic Python, executed on the model's raw response. Today's pipeline is `prompt → model → response → check_fn(response, kwargs) → boolean → aggregate`, with no judge model, embedding model, or human rater anywhere in the loop. The contrast with [D-3](/lesson/3) (free-form scoring, where judges and embedding metrics are unavoidable) and the foreshadowing of [D-22](/lesson/22) (LLM-as-judge, where the judge biases IFEval avoids are catalogued) frame why this single design move — restrict to the verifiable slice — is worth a whole lesson.
 
 ## The opening hook
 
-Most "instruction-following" benchmarks score the *content* of a response — was the answer good, was the summary faithful, did the model do what the user asked? Content is a judge problem. As Day 3 established, when the answer is free-form there is no clean automatic metric: $n$-gram overlap is paraphrase-blind, embedding metrics miss negation, and the modern default — LLM-as-judge — drags in self-preference, position bias, verbosity bias, and the cost of a frontier model in the loop (Day 22).
+Most "instruction-following" benchmarks score the *content* of a response — was the answer good, was the summary faithful, did the model do what the user asked? Content is a judge problem. As [D-3](/lesson/3) established, when the answer is free-form there is no clean automatic metric: $n$-gram overlap is paraphrase-blind, embedding metrics miss negation, and the modern default — LLM-as-judge — drags in self-preference, position bias, verbosity bias, and the cost of a frontier model in the loop ([D-22](/lesson/22)).
 
 IFEval (Zhou et al. 2023) makes a different design move. Instead of scoring whether the response is *good*, it scores whether the response *satisfies a constraint that can be checked by a 20-line Python function*. "Answer in exactly three bullet points." "Include the keyword 'cardinal' at least twice." "End your response with the postscript 'P.S.'." "Respond in valid JSON." A regex, a `len()` call, or a `json.loads()` settles it. No judge, no embedding model, no human rater — just a deterministic check.
 
-This is the cleanest available answer to the Day 3 free-form-scoring problem on the slice of behaviour where it works: when you can write the check, *write the check*. Reach for a judge only when you can't.
+This is the cleanest available answer to the [D-3](/lesson/3) free-form-scoring problem on the slice of behaviour where it works: when you can write the check, *write the check*. Reach for a judge only when you can't.
 
 ## Verifiable vs. unverifiable instructions
 
@@ -76,7 +76,7 @@ flowchart TB
 
 IFEval lives entirely in the green box. That is its scope, and it is also its honest limitation: most instructions a real user gives a model are in the red box. IFEval is not a complete instruction-following eval. It is the *automatic* slice — the one a CI pipeline can run on every commit without paying for a judge model.
 
-The contrast benchmarks land in the red box and pay the judge cost: **AlpacaEval 2.0** uses GPT-4 to compare candidate vs. reference completions on Vicuna/self-instruct-style prompts; **Arena-Hard-Auto** (covered on D22) uses an auto-judge against a reference model on 500 hard Arena-derived prompts; **MT-Bench** uses GPT-4 to score on a 1–10 scale across 80 multi-turn prompts. All three are good benchmarks. None of them avoids the judge biases. IFEval avoids them by construction — at the cost of testing only the constraints a regex can check.
+The contrast benchmarks land in the red box and pay the judge cost: **AlpacaEval 2.0** uses GPT-4 to compare candidate vs. reference completions on Vicuna/self-instruct-style prompts; **Arena-Hard-Auto** (covered on [D-22](/lesson/22)) uses an auto-judge against a reference model on 500 hard Arena-derived prompts; **MT-Bench** uses GPT-4 to score on a 1–10 scale across 80 multi-turn prompts. All three are good benchmarks. None of them avoids the judge biases. IFEval avoids them by construction — at the cost of testing only the constraints a regex can check.
 
 ## Anchor: IFEval (Zhou et al. 2023)
 
@@ -182,7 +182,7 @@ In `lm-evaluation-harness`:
 lm_eval   --model hf   --model_args pretrained=meta-llama/Llama-3.1-8B-Instruct   --tasks ifeval   --batch_size 8
 ```
 
-The `ifeval` task is **0-shot generative** by default — the prompts are themselves the instructions, so few-shot exemplars would distort the test. The harness reports the four metrics above. The same dataset is in Inspect (`inspect_evals/ifeval`) and is one of the six benchmarks on Hugging Face's **Open LLM Leaderboard v2** (launched June 2024, retired March 2025; D1 covered the v2 transition), alongside MMLU-Pro, GPQA, MUSR, MATH-Hard, and BBH.
+The `ifeval` task is **0-shot generative** by default — the prompts are themselves the instructions, so few-shot exemplars would distort the test. The harness reports the four metrics above. The same dataset is in Inspect (`inspect_evals/ifeval`) and is one of the six benchmarks on Hugging Face's **Open LLM Leaderboard v2** (launched June 2024, retired March 2025; [D-1](/lesson/1) covered the v2 transition), alongside MMLU-Pro, GPQA, MUSR, MATH-Hard, and BBH.
 
 ## ⏵ Check yourself — instruction-level vs. prompt-level
 
@@ -199,7 +199,7 @@ Under independence at $p = 0.85$, a 2.5-instruction-on-average prompt has expect
 
 IFEval and the judge-based foils are not substitutes. They measure different cuts.
 
-| Property | IFEval (this lesson) | AlpacaEval 2.0 | Arena-Hard-Auto (D22) | MT-Bench (D22) |
+| Property | IFEval (this lesson) | AlpacaEval 2.0 | Arena-Hard-Auto ([D-22](/lesson/22)) | MT-Bench ([D-22](/lesson/22)) |
 | --- | --- | --- | --- | --- |
 | Scope | Programmatically verifiable constraints | Free-form helpfulness vs. reference | Free-form helpfulness vs. reference, hard prompts | Free-form quality, multi-turn |
 | Scorer | Python check function | GPT-4-class judge | GPT-4-class judge | GPT-4-class judge |
@@ -226,21 +226,21 @@ A vendor reports IFEval **prompt-strict 0.62** and **prompt-loose 0.78** on the 
 
 The same property that makes IFEval clean to score makes it cheap to optimize. A check function is a reward signal. Post-training pipelines starting around 2024 explicitly target IFEval-style constraints with **rule-based rewards**: the model is RL'd to satisfy "exactly 3 bullets," "no commas," "valid JSON" against the IFEval check functions or close paraphrases.
 
-This produces models that pattern-match the *form* of an IFEval instruction reliably while their behaviour on out-of-distribution constraints (a constraint phrased differently, a constraint composed with another, a constraint embedded in a longer task) drifts. The follow-up literature has documented this drift directly — IFEval scores climbed faster than instruction-following capability on held-out constraint sets (Pyatkin et al. 2025, *Generalizing Verifiable Instruction Following*, introduces IFBench partly as a contamination-and-overfitting-resistant successor; the contamination-resistant-successor pattern from D6/D7/D11 applies again).
+This produces models that pattern-match the *form* of an IFEval instruction reliably while their behaviour on out-of-distribution constraints (a constraint phrased differently, a constraint composed with another, a constraint embedded in a longer task) drifts. The follow-up literature has documented this drift directly — IFEval scores climbed faster than instruction-following capability on held-out constraint sets (Pyatkin et al. 2025, *Generalizing Verifiable Instruction Following*, introduces IFBench partly as a contamination-and-overfitting-resistant successor; the contamination-resistant-successor pattern from [D-6](/lesson/6)/[D-7](/lesson/7)/[D-11](/lesson/11) applies again).
 
 The lesson is *not* that IFEval is broken — its construction is sound and the headline numbers remain useful. It's that a benchmark whose checks are public and cheap to differentiate against is structurally susceptible to direct optimization, and the gap between IFEval-strict on the public set and a held-out instruction-following probe is the relevant safety/capability signal once a model is plausibly being trained against the benchmark. The reflex transfers: ask whether the model could have seen this benchmark's checks during post-training, and read the headline number with that in mind.
 
 ## Reasoning-model regression on IFEval
 
-A 2025 finding worth flagging here and unpacking on D25: **reasoning models trained with extended chain-of-thought regress on IFEval relative to their non-reasoning siblings.** The intuition is that long-CoT training optimizes the model to prioritize the trajectory of an internal reasoning chain — get the math right — over the surface format of the final answer. A model that has learned to "think first, then answer" can produce an unconstrained final answer even when the user asked for "exactly three bullet points," because the constraint was attended to during the prompt's first pass and forgotten by the time the post-thinking final answer is generated.
+A 2025 finding worth flagging here and unpacking on [D-25](/lesson/25): **reasoning models trained with extended chain-of-thought regress on IFEval relative to their non-reasoning siblings.** The intuition is that long-CoT training optimizes the model to prioritize the trajectory of an internal reasoning chain — get the math right — over the surface format of the final answer. A model that has learned to "think first, then answer" can produce an unconstrained final answer even when the user asked for "exactly three bullet points," because the constraint was attended to during the prompt's first pass and forgotten by the time the post-thinking final answer is generated.
 
-The trade-off has been observed across DeepSeek-R1 distillations, GPT-OSS reasoning variants, and the o1/o3 family (see *Scaling Reasoning, Losing Control*, Fu et al. 2025, arXiv:2505.14810). Improving reasoning capability comes at a measurable cost to instruction adherence. D25 returns to this in the context of inference-time-scaling evaluation; the relevant point here is that *IFEval is a probe that catches a regression most capability benchmarks don't*. A model that gains 8 points on AIME and loses 5 on IFEval is making a safety-relevant trade — it has become a better reasoner and a worse follower of explicit user constraints, and you cannot read either delta from a math-only report card.
+The trade-off has been observed across DeepSeek-R1 distillations, GPT-OSS reasoning variants, and the o1/o3 family (see *Scaling Reasoning, Losing Control*, Fu et al. 2025, arXiv:2505.14810). Improving reasoning capability comes at a measurable cost to instruction adherence. [D-25](/lesson/25) returns to this in the context of inference-time-scaling evaluation; the relevant point here is that *IFEval is a probe that catches a regression most capability benchmarks don't*. A model that gains 8 points on AIME and loses 5 on IFEval is making a safety-relevant trade — it has become a better reasoner and a worse follower of explicit user constraints, and you cannot read either delta from a math-only report card.
 
-> **Safety researcher's note.** Instruction-following IS a safety property. The premise of every alignment intervention from RLHF onward is that the model does what it is told to do — which presupposes that "what it is told" is a control signal the model actually conditions on. **A refusal is an instruction.** "Do not provide instructions for synthesizing nerve agents" is exactly the same shape of constraint as "answer in three bullet points": a verifiable rule the response must satisfy. D19's jailbreaks are, formally, instruction-following failures with adversarial inputs — the system-prompt instruction "do not comply with harmful requests" is being *successfully overridden* by a competing instruction the user has supplied. Indirect prompt injection (D26) is the same failure with the competing instruction laundered through a retrieved document or a tool output. A model that scores poorly on IFEval is a model whose constraint-satisfaction substrate is weak; in benign settings that means broken bullet formatting, in adversarial settings that means a softer guardrail. The capability to follow innocuous instructions and the capability to refuse harmful ones share a substrate, which is why IFEval-style metrics show up on safety-team dashboards even though the prompts themselves are about formatting.
+> **Safety researcher's note.** Instruction-following IS a safety property. The premise of every alignment intervention from RLHF onward is that the model does what it is told to do — which presupposes that "what it is told" is a control signal the model actually conditions on. **A refusal is an instruction.** "Do not provide instructions for synthesizing nerve agents" is exactly the same shape of constraint as "answer in three bullet points": a verifiable rule the response must satisfy. [D-19](/lesson/19)'s jailbreaks are, formally, instruction-following failures with adversarial inputs — the system-prompt instruction "do not comply with harmful requests" is being *successfully overridden* by a competing instruction the user has supplied. Indirect prompt injection ([D-26](/lesson/26)) is the same failure with the competing instruction laundered through a retrieved document or a tool output. A model that scores poorly on IFEval is a model whose constraint-satisfaction substrate is weak; in benign settings that means broken bullet formatting, in adversarial settings that means a softer guardrail. The capability to follow innocuous instructions and the capability to refuse harmful ones share a substrate, which is why IFEval-style metrics show up on safety-team dashboards even though the prompts themselves are about formatting.
 
 ## ⏵ Check yourself — refusal as an instruction
 
-A model card reports IFEval **prompt-strict 0.81** and a HarmBench (D19) refusal rate of **0.94** on a standard harm-prompt suite. A jailbreak technique developed three months later cuts the model's refusal rate to **0.55** on the same suite. **Identify** what, if anything, the IFEval baseline can tell a safety researcher about the magnitude or shape of the refusal regression — and what it cannot.
+A model card reports IFEval **prompt-strict 0.81** and a HarmBench ([D-19](/lesson/19)) refusal rate of **0.94** on a standard harm-prompt suite. A jailbreak technique developed three months later cuts the model's refusal rate to **0.55** on the same suite. **Identify** what, if anything, the IFEval baseline can tell a safety researcher about the magnitude or shape of the refusal regression — and what it cannot.
 
 <details>
 <summary>Show answer</summary>
@@ -253,39 +253,39 @@ IFEval cannot diagnose the post-jailbreak drop directly — its prompts are abou
 
 **Backward.**
 
-- D-1 — IFEval is the deterministic-harness pattern from D1 — `prompt → model → response → check_fn → score` — applied to a different scoring rule (Python predicate over the response, not log-likelihood argmax over options).
-- D-3 — IFEval is the answer to D3's open-ended-scoring impasse on the slice of behaviour where the answer can be written as a checkable predicate. Where it can't, you fall back to D3's judge-based metrics.
-- D-6 — the contamination-resistant-successor pattern (MMLU-Pro on D6) reappears here as IFBench (Pyatkin et al. 2025) for held-out instruction following.
-- D-7 — saturation pressure on a public, easily-RL'd benchmark; IFBench is the saturation-and-overfitting-resistant sibling.
-- D-11 — public, cheap-to-differentiate check functions are direct RL targets, the same pattern as HumanEval contamination on D11.
+- [D-1](/lesson/1) — IFEval is the deterministic-harness pattern from [D-1](/lesson/1) — `prompt → model → response → check_fn → score` — applied to a different scoring rule (Python predicate over the response, not log-likelihood argmax over options).
+- [D-3](/lesson/3) — IFEval is the answer to [D-3](/lesson/3)'s open-ended-scoring impasse on the slice of behaviour where the answer can be written as a checkable predicate. Where it can't, you fall back to [D-3](/lesson/3)'s judge-based metrics.
+- [D-6](/lesson/6) — the contamination-resistant-successor pattern (MMLU-Pro on [D-6](/lesson/6)) reappears here as IFBench (Pyatkin et al. 2025) for held-out instruction following.
+- [D-7](/lesson/7) — saturation pressure on a public, easily-RL'd benchmark; IFBench is the saturation-and-overfitting-resistant sibling.
+- [D-11](/lesson/11) — public, cheap-to-differentiate check functions are direct RL targets, the same pattern as HumanEval contamination on [D-11](/lesson/11).
 
 **Forward.**
 
-- D-19 — refusal as an instruction; jailbreaks are instruction-following failures with adversarial inputs. The IFEval substrate is the constraint-satisfaction capacity a refusal depends on.
-- D-22 — the LLM-as-judge biases IFEval avoids by construction (position, verbosity, self-preference) get their full treatment. AlpacaEval, Arena-Hard-Auto, and MT-Bench cover the unverifiable slice; IFEval is the cheap-and-clean foil.
-- D-25 — reasoning-model training (long CoT, RL on math) regresses IFEval scores relative to non-reasoning siblings — *Scaling Reasoning, Losing Control* (Fu et al. 2025). The cost-axis Pareto framing on D25 returns to this trade.
-- D-26 — indirect prompt injection is instruction-following failure with the competing instruction laundered through retrieved content; IFEval is the benign-setting probe of the same substrate.
+- [D-19](/lesson/19) — refusal as an instruction; jailbreaks are instruction-following failures with adversarial inputs. The IFEval substrate is the constraint-satisfaction capacity a refusal depends on.
+- [D-22](/lesson/22) — the LLM-as-judge biases IFEval avoids by construction (position, verbosity, self-preference) get their full treatment. AlpacaEval, Arena-Hard-Auto, and MT-Bench cover the unverifiable slice; IFEval is the cheap-and-clean foil.
+- [D-25](/lesson/25) — reasoning-model training (long CoT, RL on math) regresses IFEval scores relative to non-reasoning siblings — *Scaling Reasoning, Losing Control* (Fu et al. 2025). The cost-axis Pareto framing on [D-25](/lesson/25) returns to this trade.
+- [D-26](/lesson/26) — indirect prompt injection is instruction-following failure with the competing instruction laundered through retrieved content; IFEval is the benign-setting probe of the same substrate.
 
 ## Takeaways
 
 1. IFEval (Zhou et al. 2023) anchors the **verifiable-instruction** axis: ~500 prompts, **25 instruction types across 9 categories** (Keywords, Length, Detectable Format, Detectable Content, Punctuation, Change Cases, Startend, Combination, Language), each scored by a Python check function — no judge required. *(LO 1, LO 2)*
 2. Four headline metrics — **prompt-level strict, prompt-level loose, instruction-level strict, instruction-level loose**. Prompt-level conjoins all instructions in a prompt (multiplicatively compounded under independence); loose adds three response-level transformations (strip markdown emphasis, drop first line, drop last line) to forgive cosmetic preambles. *(LO 2, LO 3)*
 3. Instruction-level/prompt-level gap is the multiplicative-compounding lesson: 4 instructions at $p = 0.8$ each give $0.8$ instruction-level vs. $0.8^{4} approx 0.41$ prompt-level. The realised gap on a real test set is wider than independence predicts because within-prompt failures are positively correlated. *(LO 3)*
-4. IFEval is the cleanest answer to D3's open-ended-scoring problem on the slice it covers: when you can write the check, write the check. Reach for an LLM judge (D22) only when no verifiable formulation exists. *(LO 1, LO 6)*
+4. IFEval is the cleanest answer to [D-3](/lesson/3)'s open-ended-scoring problem on the slice it covers: when you can write the check, write the check. Reach for an LLM judge ([D-22](/lesson/22)) only when no verifiable formulation exists. *(LO 1, LO 6)*
 5. AlpacaEval, Arena-Hard-Auto, and MT-Bench cover the *unverifiable* slice with judge-based scoring. Report both; the gap is informative. *(LO 6)*
 6. Public, cheap check functions are easy RL targets. IFEval-strict on the public set can rise without underlying instruction-following capability rising; **IFBench** (Pyatkin et al. 2025) is the contamination-resistant-successor pattern applied to this benchmark. *(LO 4)*
-7. Reasoning-model training (long CoT, RL on math) regresses IFEval scores relative to non-reasoning siblings — a measurable trade between reasoning ability and constraint adherence, and a safety-relevant signal because **refusal is an instruction**. Jailbreaks (D19) and indirect PI (D26) are instruction-following failures under adversarial pressure. *(LO 5)*
+7. Reasoning-model training (long CoT, RL on math) regresses IFEval scores relative to non-reasoning siblings — a measurable trade between reasoning ability and constraint adherence, and a safety-relevant signal because **refusal is an instruction**. Jailbreaks ([D-19](/lesson/19)) and indirect PI ([D-26](/lesson/26)) are instruction-following failures under adversarial pressure. *(LO 5)*
 
 ## Glossary
 
-- **verifiable instruction**: an instruction whose satisfaction by a model response can be decided by a deterministic Python predicate (regex, length count, JSON parse, etc.), without recourse to a judge model or human rater [introduced D-18].
-- **instruction-level accuracy**: fraction of *individual instructions* across the dataset that the model satisfies, averaging over instructions and ignoring how they group into prompts [introduced D-18].
-- **prompt-level accuracy**: fraction of *prompts* on which the model satisfies *every* instruction in that prompt — the conjunction over a prompt's instructions [introduced D-18].
-- **strict accuracy**: instruction- or prompt-level accuracy with the check run on the raw model response [introduced D-18].
-- **loose accuracy**: instruction- or prompt-level accuracy with the check run on the powerset of three response-level transformations (strip markdown emphasis, drop first line, drop last line); the instruction passes if any transformed response satisfies the check [introduced D-18].
-- **rule-based reward**: an RL reward computed from a deterministic predicate on the model's response (e.g., "valid JSON", "exactly 3 bullets") — cheap, reproducible, and structurally susceptible to direct optimization against the predicate [introduced D-18 · forward to D-24].
-- **LLM-as-judge**: scoring a free-form response with a frontier model in the loop; the foil to verifiable-instruction scoring, carrying position, verbosity, and self-preference biases [introduced D-3 · reused].
-- **instruction-following regression**: a measurable drop in IFEval scores after a training intervention (e.g., long-CoT post-training) that improved a different capability — the cost-axis trade documented by *Scaling Reasoning, Losing Control* (Fu et al. 2025) [introduced D-18 · forward to D-25].
+- **verifiable instruction**: an instruction whose satisfaction by a model response can be decided by a deterministic Python predicate (regex, length count, JSON parse, etc.), without recourse to a judge model or human rater [introduced D-18](/lesson/18).
+- **instruction-level accuracy**: fraction of *individual instructions* across the dataset that the model satisfies, averaging over instructions and ignoring how they group into prompts [introduced D-18](/lesson/18).
+- **prompt-level accuracy**: fraction of *prompts* on which the model satisfies *every* instruction in that prompt — the conjunction over a prompt's instructions [introduced D-18](/lesson/18).
+- **strict accuracy**: instruction- or prompt-level accuracy with the check run on the raw model response [introduced D-18](/lesson/18).
+- **loose accuracy**: instruction- or prompt-level accuracy with the check run on the powerset of three response-level transformations (strip markdown emphasis, drop first line, drop last line); the instruction passes if any transformed response satisfies the check [introduced D-18](/lesson/18).
+- **rule-based reward**: an RL reward computed from a deterministic predicate on the model's response (e.g., "valid JSON", "exactly 3 bullets") — cheap, reproducible, and structurally susceptible to direct optimization against the predicate [introduced D-18 · forward to D-24](/lesson/18).
+- **LLM-as-judge**: scoring a free-form response with a frontier model in the loop; the foil to verifiable-instruction scoring, carrying position, verbosity, and self-preference biases [introduced D-3 · reused](/lesson/3).
+- **instruction-following regression**: a measurable drop in IFEval scores after a training intervention (e.g., long-CoT post-training) that improved a different capability — the cost-axis trade documented by *Scaling Reasoning, Losing Control* (Fu et al. 2025) [introduced D-18 · forward to D-25](/lesson/18).
 
 ## References
 
@@ -294,9 +294,9 @@ IFEval cannot diagnose the post-jailbreak drop directly — its prompts are abou
 - **Harness.** EleutherAI. *lm-evaluation-harness, ifeval task.* https://github.com/EleutherAI/lm-evaluation-harness/tree/main/lm_eval/tasks/ifeval
 - **Secondary.** UK AISI. *inspect_evals/ifeval — Inspect implementation.* https://ukgovernmentbeis.github.io/inspect_evals/evals/reasoning/ifeval/
 - **Secondary.** Hugging Face. *Open LLM Leaderboard v2 (archived) — IFEval, BBH, MATH-Hard, GPQA, MUSR, MMLU-Pro.* https://huggingface.co/docs/leaderboards/en/open_llm_leaderboard/archive
-- **Secondary.** Li, X., et al. (2023). *AlpacaEval: An Automatic Evaluator of Instruction-following Models.* https://github.com/tatsu-lab/alpaca_eval — and Zheng, L., et al. (2023). *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena.* arXiv:2306.05685. https://arxiv.org/abs/2306.05685 — judge-based foils, full treatment on D22.
+- **Secondary.** Li, X., et al. (2023). *AlpacaEval: An Automatic Evaluator of Instruction-following Models.* https://github.com/tatsu-lab/alpaca_eval — and Zheng, L., et al. (2023). *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena.* arXiv:2306.05685. https://arxiv.org/abs/2306.05685 — judge-based foils, full treatment on [D-22](/lesson/22).
 - **Secondary.** Pyatkin, V., et al. (2025). *Generalizing Verifiable Instruction Following* (IFBench). arXiv:2507.02833. https://arxiv.org/abs/2507.02833 — contamination-resistant-successor probe.
-- **Secondary.** Fu, T., et al. (2025). *Scaling Reasoning, Losing Control: Evaluating Instruction Following in Large Reasoning Models.* arXiv:2505.14810. https://arxiv.org/abs/2505.14810 — reasoning-model trade-off (forward-pointer to D25).
+- **Secondary.** Fu, T., et al. (2025). *Scaling Reasoning, Losing Control: Evaluating Instruction Following in Large Reasoning Models.* arXiv:2505.14810. https://arxiv.org/abs/2505.14810 — reasoning-model trade-off (forward-pointer to [D-25](/lesson/25)).
 
 ## Quiz
 
@@ -349,7 +349,7 @@ IFEval cannot diagnose the post-jailbreak drop directly — its prompts are abou
 2. **B** — loose applies the powerset of three response-level transformations (markdown emphasis stripping, first-line drop, last-line drop) and passes if any combination satisfies the check. Strict checks the raw response. The intent is to forgive cosmetic preambles like "Sure, here it is:" without forgiving genuine constraint violations.
 3. **B** — the entire design move is replacing a judge with a deterministic check, which eliminates the judge biases by construction. (A is wrong on the facts — IFEval has ~500 prompts, fewer than MT-Bench-paired Arena tracks. C and D are factually wrong.)
 4. **C** — Factual Accuracy is not in the taxonomy and could not be (it's not programmatically verifiable from the response alone — it would require a judge or a fact-checker). The other three are real categories.
-5. **B** — public check functions are direct RL targets, so a large IFEval gain in a vendor that explicitly used rule-based rewards needs cross-checking on a held-out constraint set. IFBench (Pyatkin et al. 2025) is the canonical such cross-check; the contamination-resistant-successor pattern from D6/D7/D11 applies. A overclaims; C is false (IFEval is on the retired Open LLM Leaderboard v2 but the benchmark itself is still in active use); D is unsupported by the data given.
-6. **B** — the reasoning-vs-instruction-following trade-off documented in *Scaling Reasoning, Losing Control* (Fu et al. 2025) and the broader 2025 literature. Instruction-following is a safety property because refusal is an instruction (the lesson's safety note), so a measurable regression on IFEval after reasoning training is a signal worth surfacing. D25 returns to this with the cost-axis Pareto framing.
+5. **B** — public check functions are direct RL targets, so a large IFEval gain in a vendor that explicitly used rule-based rewards needs cross-checking on a held-out constraint set. IFBench (Pyatkin et al. 2025) is the canonical such cross-check; the contamination-resistant-successor pattern from [D-6](/lesson/6)/[D-7](/lesson/7)/[D-11](/lesson/11) applies. A overclaims; C is false (IFEval is on the retired Open LLM Leaderboard v2 but the benchmark itself is still in active use); D is unsupported by the data given.
+6. **B** — the reasoning-vs-instruction-following trade-off documented in *Scaling Reasoning, Losing Control* (Fu et al. 2025) and the broader 2025 literature. Instruction-following is a safety property because refusal is an instruction (the lesson's safety note), so a measurable regression on IFEval after reasoning training is a signal worth surfacing. [D-25](/lesson/25) returns to this with the cost-axis Pareto framing.
 
 </details>

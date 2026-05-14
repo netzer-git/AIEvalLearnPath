@@ -36,21 +36,21 @@ By the end of this lesson, you will be able to:
 3. **(L4)** *Analyze* a 19-point `acc_norm − acc` gap on HellaSwag and identify the load-bearing mechanism (option-length variance combined with length-biased summed log-likelihoods).
 4. **(L4)** Decompose accuracy and calibration into orthogonal evaluation axes and explain why a single forward pass yields *two* eval targets, not one.
 5. **(L5)** *Evaluate* a deployment choice between two equally-accurate models with different ECE in an abstention pipeline, and defend the calibration-aware pick.
-6. **(L4)** Frame calibration as a recurring curriculum thread (introduced D2, reprised D15, callback D20, closed D24) and explain why fine-tuning is its standard failure mode.
+6. **(L4)** Frame calibration as a recurring curriculum thread (introduced [D-2](/lesson/2), reprised [D-15](/lesson/15), callback [D-20](/lesson/20), closed [D-24](/lesson/24)) and explain why fine-tuning is its standard failure mode.
 
 ## Prerequisites & callback
 
-Day 1 introduced the four-step evaluation pipeline (dataset → prompt → model → scoring rule → aggregation), the distinction between **letter-only** and **log-likelihood** scoring, and a brief preview of `acc` vs. `acc_norm` and **length bias** as a mechanical artifact of unnormalized log-likelihood scoring. Today picks up exactly where D1 ended: we open the "scoring rule" box, derive both metrics from a single forward pass, and reframe everything around a third quantity D1 only hinted at — the model's confidence — which becomes this curriculum's recurring **calibration** thread.
+[D-1](/lesson/1) introduced the four-step evaluation pipeline (dataset → prompt → model → scoring rule → aggregation), the distinction between **letter-only** and **log-likelihood** scoring, and a brief preview of `acc` vs. `acc_norm` and **length bias** as a mechanical artifact of unnormalized log-likelihood scoring. Today picks up exactly where [D-1](/lesson/1) ended: we open the "scoring rule" box, derive both metrics from a single forward pass, and reframe everything around a third quantity [D-1](/lesson/1) only hinted at — the model's confidence — which becomes this curriculum's recurring **calibration** thread.
 
 ## The opening hook
 
-Day 1 ended with a small puzzle: `lm-evaluation-harness` reports two numbers for every multiple-choice task, `acc` and `acc_norm`, and they can disagree. On MMLU the gap is usually a point or two — annoying, mostly ignorable. On HellaSwag the gap is routinely **15–20 points** for the same model on the same data: Llama-2 7B, for instance, scores roughly 57 on `acc` and 76 on `acc_norm` (lm-eval-harness reports). One model, one dataset, two numbers, both produced by the same harness — and a 19-point delta you can't reason about until you understand what the two metrics actually compute.
+[D-1](/lesson/1) ended with a small puzzle: `lm-evaluation-harness` reports two numbers for every multiple-choice task, `acc` and `acc_norm`, and they can disagree. On MMLU the gap is usually a point or two — annoying, mostly ignorable. On HellaSwag the gap is routinely **15–20 points** for the same model on the same data: Llama-2 7B, for instance, scores roughly 57 on `acc` and 76 on `acc_norm` (lm-eval-harness reports). One model, one dataset, two numbers, both produced by the same harness — and a 19-point delta you can't reason about until you understand what the two metrics actually compute.
 
-That delta is today's pedagogical engine. Unpacking it forces three things into the open: how log-likelihood scoring works mechanically on options of unequal length, why HellaSwag's adversarially-generated continuations are an unusually pathological case, and — the bigger move — that **a model's confidence is itself an evaluable quantity, distinct from its accuracy**. That second move opens the **calibration thread** the curriculum will return to on D15, D20, and D24.
+That delta is today's pedagogical engine. Unpacking it forces three things into the open: how log-likelihood scoring works mechanically on options of unequal length, why HellaSwag's adversarially-generated continuations are an unusually pathological case, and — the bigger move — that **a model's confidence is itself an evaluable quantity, distinct from its accuracy**. That second move opens the **calibration thread** the curriculum will return to on [D-15](/lesson/15), [D-20](/lesson/20), and [D-24](/lesson/24).
 
 ## The pipeline, with scoring zoomed in
 
-Day 1's pipeline diagram had a single "Scoring rule" box. Today we open it up:
+[D-1](/lesson/1)'s pipeline diagram had a single "Scoring rule" box. Today we open it up:
 
 ```mermaid
 flowchart LR
@@ -128,7 +128,7 @@ Now option **A** wins (least negative per byte). The two metrics disagree on thi
 
 ## `acc` vs. `acc_norm`, mechanically
 
-Day 1 introduced these in passing. Today, the math.
+[D-1](/lesson/1) introduced these in passing. Today, the math.
 
 Given a context $c$ and four candidate endings $o_1,\ldots,o_4$ (gold = $o_{y}$), tokenize each $o_i$ as $t_{i,1},\ldots,t_{i,n_i}$. The model gives us per-token log-probabilities conditional on $c$ and the preceding tokens of the option. The **summed log-likelihood** of option $i$ is:
 
@@ -175,7 +175,7 @@ Three caveats worth internalizing now, because the calibration-skeptical literat
 
 1. **ECE is bin-sensitive.** With 10 vs. 15 vs. 30 bins you get different numbers on the same predictions. Reporting bin count alongside ECE is mandatory.
 2. **ECE does not distinguish over- from under-confidence.** It's an absolute value. Two models with the same ECE can be miscalibrated in opposite directions; the reliability diagram tells you which.
-3. **ECE on a 4-way MC is not the same scale as ECE on free-form generation.** Confidence on MC is a softmax over 4 logits, with floor $0.25$. ECE numbers in the calibration literature are not directly comparable across these regimes — Day 15 and Day 24 will hit this when calibration shows up on TruthfulQA and RewardBench respectively.
+3. **ECE on a 4-way MC is not the same scale as ECE on free-form generation.** Confidence on MC is a softmax over 4 logits, with floor $0.25$. ECE numbers in the calibration literature are not directly comparable across these regimes — [D-15](/lesson/15) and [D-24](/lesson/24) will hit this when calibration shows up on TruthfulQA and RewardBench respectively.
 
 ### A worked, schematic ECE on HellaSwag
 
@@ -218,12 +218,12 @@ Up to this point calibration looks like a statistical hygiene topic — and Guo 
 Kadavath et al. 2022 (*Language Models (Mostly) Know What They Know*, Anthropic) is the canonical move. Their finding, in one sentence: **larger language models are well-calibrated on multiple-choice and true/false questions when probed properly**, and they can be trained to produce a self-rated $P(\text{True})$ that tracks ground truth — but calibration of $P(\text{IK})$ ("I know") on novel tasks is harder. The framing this opens up:
 
 - **Confidence is communicable.** A well-calibrated model that says "I'm 30% sure" lets a downstream system route the question to a human, retrieve more context, or refuse. A miscalibrated overconfident model robs the downstream system of that signal.
-- **Abstention is a function of calibration.** A model that abstains (refuses to answer) on its low-confidence items improves selective accuracy *only if* its confidence is informative about correctness. Without calibration, abstention is just mood. (Day 15 returns to this on TruthfulQA, where the benchmark's incentive structure rewards refusal — and a well-calibrated abstention is mechanically very different from a refuse-everything policy that happens to match the rubric.)
-- **Calibration is brittle under fine-tuning.** RLHF and instruction-tuning routinely degrade calibration, because the optimization target is human-preferred phrasing rather than truth-tracking probabilities. (Day 24 returns to this on RewardBench: reward-model confidence and how it composes with downstream sampling.)
+- **Abstention is a function of calibration.** A model that abstains (refuses to answer) on its low-confidence items improves selective accuracy *only if* its confidence is informative about correctness. Without calibration, abstention is just mood. ([D-15](/lesson/15) returns to this on TruthfulQA, where the benchmark's incentive structure rewards refusal — and a well-calibrated abstention is mechanically very different from a refuse-everything policy that happens to match the rubric.)
+- **Calibration is brittle under fine-tuning.** RLHF and instruction-tuning routinely degrade calibration, because the optimization target is human-preferred phrasing rather than truth-tracking probabilities. ([D-24](/lesson/24) returns to this on RewardBench: reward-model confidence and how it composes with downstream sampling.)
 
-This is the framing Day 2 plants and the curriculum picks up later. The shorthand: **accuracy tells you whether the model gets it right; calibration tells you whether the model knows when it doesn't.**
+This is the framing [D-2](/lesson/2) plants and the curriculum picks up later. The shorthand: **accuracy tells you whether the model gets it right; calibration tells you whether the model knows when it doesn't.**
 
-> **Safety researcher's note.** Calibration matters more for safety-relevant evaluations than for capability ones, and the asymmetry is sharp. On MMLU, an overconfident wrong answer costs you a point. On a dangerous-capability eval (D21, WMDP) or a refusal eval (D18, IFEval; D19, HarmBench), an overconfident wrong answer means the model produced harmful content with conviction. A well-calibrated model that says "I'm not sure how to synthesize this" is safer than a confidently-wrong one even if their top-1 accuracies are identical — because the calibrated one is *legible* to a downstream filter or human reviewer.
+> **Safety researcher's note.** Calibration matters more for safety-relevant evaluations than for capability ones, and the asymmetry is sharp. On MMLU, an overconfident wrong answer costs you a point. On a dangerous-capability eval ([D-21](/lesson/21), WMDP) or a refusal eval ([D-18](/lesson/18), IFEval; [D-19](/lesson/19), HarmBench), an overconfident wrong answer means the model produced harmful content with conviction. A well-calibrated model that says "I'm not sure how to synthesize this" is safer than a confidently-wrong one even if their top-1 accuracies are identical — because the calibrated one is *legible* to a downstream filter or human reviewer.
 
 ## ⏵ Check yourself — calibration ≠ accuracy
 
@@ -232,7 +232,7 @@ A model card claims "Model X scores 0.78 on HellaSwag (`acc_norm`) and is well-c
 <details>
 <summary>Show answer</summary>
 
-Model X's claim is the defensible one. The two claims look superficially similar — both report 0.78 accuracy — but only Model X has reported the *additional* eval target (calibration) that is load-bearing for the auto-execute use case. "High-confidence outputs" without an ECE number is ambiguous: it could mean *well-calibrated and confident on items the model knows*, or it could mean *uniformly overconfident regardless of correctness*. The latter is the dominant failure mode for modern neural networks (Guo et al. 2017) and is exactly what makes a confidence-thresholded auto-execute pipeline unsafe. The general lesson: when a model card foregrounds confidence without calibration data, treat the confidence numbers as untrustworthy by default. This is the framing D15 (selective prediction) and D24 (RewardBench) build on.
+Model X's claim is the defensible one. The two claims look superficially similar — both report 0.78 accuracy — but only Model X has reported the *additional* eval target (calibration) that is load-bearing for the auto-execute use case. "High-confidence outputs" without an ECE number is ambiguous: it could mean *well-calibrated and confident on items the model knows*, or it could mean *uniformly overconfident regardless of correctness*. The latter is the dominant failure mode for modern neural networks (Guo et al. 2017) and is exactly what makes a confidence-thresholded auto-execute pipeline unsafe. The general lesson: when a model card foregrounds confidence without calibration data, treat the confidence numbers as untrustworthy by default. This is the framing [D-15](/lesson/15) (selective prediction) and [D-24](/lesson/24) (RewardBench) build on.
 
 </details>
 
@@ -246,28 +246,28 @@ Three immediate consequences:
 
 ## Goodhart sub-thread
 
-Calibration is Goodhart-relevant in a meta sense: confidence is one of the few model outputs downstream pipelines treat as load-bearing without re-evaluating it. If labs start optimizing models *to look calibrated* on a fixed eval set — minimizing ECE on a held-out HellaSwag slice, say — the same Goodhart pathology that D6 will foreground for contamination and D22 for judge bias appears one level up: the calibration *measure* (ECE on a fixed slice) decouples from the calibration *property* (the model's confidence tracking its actual correctness rate in deployment). The defensive move is the one D1 named — keep measure and property distinct, watch for cases where improving the former no longer implies improving the latter, and prefer reliability-diagram inspection over a single ECE number when the stakes are non-trivial. We park this here as a sub-thread; D6, D22, and D24 each foreground a different version of the same shape.
+Calibration is Goodhart-relevant in a meta sense: confidence is one of the few model outputs downstream pipelines treat as load-bearing without re-evaluating it. If labs start optimizing models *to look calibrated* on a fixed eval set — minimizing ECE on a held-out HellaSwag slice, say — the same Goodhart pathology that [D-6](/lesson/6) will foreground for contamination and [D-22](/lesson/22) for judge bias appears one level up: the calibration *measure* (ECE on a fixed slice) decouples from the calibration *property* (the model's confidence tracking its actual correctness rate in deployment). The defensive move is the one [D-1](/lesson/1) named — keep measure and property distinct, watch for cases where improving the former no longer implies improving the latter, and prefer reliability-diagram inspection over a single ECE number when the stakes are non-trivial. We park this here as a sub-thread; [D-6](/lesson/6), [D-22](/lesson/22), and [D-24](/lesson/24) each foreground a different version of the same shape.
 
 ## Calibration introduces
 
 Today is the first lesson where **calibration** enters the curriculum as a named recurring thread. The frame: calibration is orthogonal to accuracy, measurable via reliability diagrams and ECE, and disproportionately important for safety because downstream pipelines rely on confidence as a routing / abstention / refusal signal. The thread reappears at three more places, each picking up today's framing rather than re-deriving it:
 
-- **D15** (*reprises*) — TruthfulQA and selective prediction. Calibration shifts from "softmax over 4 options" to "should the model refuse to answer at all?", and abstention-as-calibrated-action becomes the operational measure.
-- **D20** (*callback*) — sycophancy. Position-holding under user challenge is a calibration question: a confidently-correct model that flips to confidently-wrong under pushback was never calibrated about its confidence, only about its first-pass output.
-- **D24** (*closes*) — RewardBench. Reward-model calibration and how it composes with downstream sampling is the curriculum's last calibration topic; that's where the thread terminates.
+- **[D-15](/lesson/15)** (*reprises*) — TruthfulQA and selective prediction. Calibration shifts from "softmax over 4 options" to "should the model refuse to answer at all?", and abstention-as-calibrated-action becomes the operational measure.
+- **[D-20](/lesson/20)** (*callback*) — sycophancy. Position-holding under user challenge is a calibration question: a confidently-correct model that flips to confidently-wrong under pushback was never calibrated about its confidence, only about its first-pass output.
+- **[D-24](/lesson/24)** (*closes*) — RewardBench. Reward-model calibration and how it composes with downstream sampling is the curriculum's last calibration topic; that's where the thread terminates.
 
 When those lessons say "calibration", they refer back to today's reliability-diagram-and-ECE framing.
 
 ## Cross-references
 
 **Backward.**
-- D-1 — picks up `acc` vs. `acc_norm`, log-likelihood scoring, and length bias as the mechanical artifact this lesson opens up; reframes them as the entry point for the calibration thread.
+- [D-1](/lesson/1) — picks up `acc` vs. `acc_norm`, log-likelihood scoring, and length bias as the mechanical artifact this lesson opens up; reframes them as the entry point for the calibration thread.
 
 **Forward.**
-- D-3 — picks up free-form scoring (EM, F1, BLEU/ROUGE) where MC drops out; the length-bias defense moves from "byte-normalize" to "structured matching".
-- D-15 — reprises calibration as selective prediction / abstention on TruthfulQA, where refusal becomes the operational measure of "the model knows when it doesn't know".
-- D-20 — calibration callback under sycophantic challenge; position-holding is reframed as a confidence-calibration question.
-- D-24 — closes the calibration thread on RewardBench: reward-model confidence and downstream sampling composition.
+- [D-3](/lesson/3) — picks up free-form scoring (EM, F1, BLEU/ROUGE) where MC drops out; the length-bias defense moves from "byte-normalize" to "structured matching".
+- [D-15](/lesson/15) — reprises calibration as selective prediction / abstention on TruthfulQA, where refusal becomes the operational measure of "the model knows when it doesn't know".
+- [D-20](/lesson/20) — calibration callback under sycophantic challenge; position-holding is reframed as a confidence-calibration question.
+- [D-24](/lesson/24) — closes the calibration thread on RewardBench: reward-model confidence and downstream sampling composition.
 
 ## Takeaways
 
@@ -276,18 +276,18 @@ When those lessons say "calibration", they refer back to today's reliability-dia
 3. **Reliability diagrams** plot binned accuracy vs. binned confidence; the diagonal is perfect calibration. **ECE** is the items-weighted average gap between bars and diagonal — bin-sensitive and direction-blind. *(LO 2)*
 4. Modern neural networks are typically **overconfident** (Guo et al. 2017); large language models are **mostly well-calibrated** on MC and T/F formats, with caveats around novel tasks and fine-tuning (Kadavath et al. 2022). *(LO 6)*
 5. For abstention pipelines, equal accuracy plus lower ECE is the calibration-aware pick — confidence has to be informative about correctness or the abstention rule is mood, not policy. *(LO 5)*
-6. Calibration is a recurring thread in this curriculum, not a one-shot topic. **D15** reprises it on TruthfulQA, **D20** is a callback under sycophancy, **D24** closes it on RewardBench. *(LO 6)*
+6. Calibration is a recurring thread in this curriculum, not a one-shot topic. **[D-15](/lesson/15)** reprises it on TruthfulQA, **[D-20](/lesson/20)** is a callback under sycophancy, **[D-24](/lesson/24)** closes it on RewardBench. *(LO 6)*
 
 ## Glossary
 
-- **log-likelihood scoring**: scoring an MC item by the model's $\log P(\text{option} \mid \text{prompt})$ summed over the option's tokens, rather than by sampling a letter [introduced D-1 · reused].
-- **byte-length normalization**: dividing summed log-likelihood by the option's UTF-8 byte length before argmax; the basis of `acc_norm` and tokenizer-agnostic by construction [introduced D-2].
-- **softmax confidence**: $p_i = \exp(\ell_i) / \sum_k \exp(\ell_k)$ over option log-likelihoods; the model's $\max_i p_i$ is its confidence in the predicted option [introduced D-2].
-- **reliability diagram**: a plot of binned empirical accuracy vs. binned average confidence; the $y = x$ diagonal is perfect calibration; bars below ⇒ overconfidence, above ⇒ underconfidence (Guo et al. 2017) [introduced D-2].
-- **Expected Calibration Error (ECE)**: items-weighted average of $|\text{acc}(B_m) - \text{conf}(B_m)|$ over confidence bins; scalar summary of a reliability diagram. Bin-sensitive and direction-blind [introduced D-2].
-- **adversarial filtering**: dataset construction pattern where a discriminator (BERT-Large for HellaSwag) is used to retain only those generated wrong answers that are plausible to a strong model but obviously wrong to humans (Zellers et al. 2019) [introduced D-2].
-- **abstention**: refusing to answer on low-confidence items; only improves selective accuracy when confidence is informative about correctness — i.e., when the model is calibrated [introduced D-2].
-- **calibration**: the property that a model's stated confidence matches its empirical accuracy; orthogonal to top-1 accuracy and the curriculum's recurring thread D2 → D15 → D20 → D24 [introduced D-2].
+- **log-likelihood scoring**: scoring an MC item by the model's $\log P(\text{option} \mid \text{prompt})$ summed over the option's tokens, rather than by sampling a letter [introduced D-1 · reused](/lesson/1).
+- **byte-length normalization**: dividing summed log-likelihood by the option's UTF-8 byte length before argmax; the basis of `acc_norm` and tokenizer-agnostic by construction [introduced D-2](/lesson/2).
+- **softmax confidence**: $p_i = \exp(\ell_i) / \sum_k \exp(\ell_k)$ over option log-likelihoods; the model's $\max_i p_i$ is its confidence in the predicted option [introduced D-2](/lesson/2).
+- **reliability diagram**: a plot of binned empirical accuracy vs. binned average confidence; the $y = x$ diagonal is perfect calibration; bars below ⇒ overconfidence, above ⇒ underconfidence (Guo et al. 2017) [introduced D-2](/lesson/2).
+- **Expected Calibration Error (ECE)**: items-weighted average of $|\text{acc}(B_m) - \text{conf}(B_m)|$ over confidence bins; scalar summary of a reliability diagram. Bin-sensitive and direction-blind [introduced D-2](/lesson/2).
+- **adversarial filtering**: dataset construction pattern where a discriminator (BERT-Large for HellaSwag) is used to retain only those generated wrong answers that are plausible to a strong model but obviously wrong to humans (Zellers et al. 2019) [introduced D-2](/lesson/2).
+- **abstention**: refusing to answer on low-confidence items; only improves selective accuracy when confidence is informative about correctness — i.e., when the model is calibrated [introduced D-2](/lesson/2).
+- **calibration**: the property that a model's stated confidence matches its empirical accuracy; orthogonal to top-1 accuracy and the curriculum's recurring thread [D-2](/lesson/2) → [D-15](/lesson/15) → [D-20](/lesson/20) → [D-24](/lesson/24) [introduced D-2](/lesson/2).
 
 ## References
 
@@ -352,6 +352,6 @@ When those lessons say "calibration", they refer back to today's reliability-dia
 3. **B** — confidence (0.95) exceeds accuracy (0.80) and the bar is below the diagonal: the model is overconfident, the dominant failure mode in Guo et al. 2017.
 4. **C** — ECE numbers are *not* directly comparable across regimes with different confidence floors (4-way MC has floor 0.25; free-form generation has none). A, B, D are all standard, established caveats / definitions.
 5. **C** — the paper's core finding for MC and T/F regimes; the harder case is $P(\text{IK})$ on novel tasks.
-6. **B** — abstention is only meaningful when confidence is informative about correctness, and ECE measures exactly that. Equal accuracy + lower ECE = the right choice for any pipeline that uses confidence as a routing or refusal signal. This is the framing D15, D20, and D24 will build on.
+6. **B** — abstention is only meaningful when confidence is informative about correctness, and ECE measures exactly that. Equal accuracy + lower ECE = the right choice for any pipeline that uses confidence as a routing or refusal signal. This is the framing [D-15](/lesson/15), [D-20](/lesson/20), and [D-24](/lesson/24) will build on.
 
 </details>

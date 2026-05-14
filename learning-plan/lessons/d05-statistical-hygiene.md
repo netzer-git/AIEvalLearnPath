@@ -38,11 +38,11 @@ By the end of this lesson, you will be able to:
 
 ## Prerequisites & callback
 
-Two prior lessons are load-bearing today. **D1** framed an evaluation as a (dataset, scoring rule, reporting convention) **pipeline** and noted in passing that "with ~14k MMLU items, sampling noise alone is around ±0.4 points" — today does that math and asks what to assume when a 0.6-point delta is reported with no interval. **D2** introduced **calibration** as a property of the scoring rule (`acc` vs. `acc_norm`, the reliability-diagram framing); HELM lifts calibration into a *scenario-level metric* reported alongside accuracy, so D2's mechanic and today's structural argument meet inside the same scoring matrix.
+Two prior lessons are load-bearing today. **[D-1](/lesson/1)** framed an evaluation as a (dataset, scoring rule, reporting convention) **pipeline** and noted in passing that "with ~14k MMLU items, sampling noise alone is around ±0.4 points" — today does that math and asks what to assume when a 0.6-point delta is reported with no interval. **[D-2](/lesson/2)** introduced **calibration** as a property of the scoring rule (`acc` vs. `acc_norm`, the reliability-diagram framing); HELM lifts calibration into a *scenario-level metric* reported alongside accuracy, so [D-2](/lesson/2)'s mechanic and today's structural argument meet inside the same scoring matrix.
 
 ## The opening hook
 
-On Day 1 we noted, almost in passing, that "with ~14k test items, sampling noise alone is around ±0.4 points." Today we do the math, then ask the harder question: if a benchmark is reported with no confidence interval at all, what should you assume about a 0.6-point gap between two models?
+On [D-1](/lesson/1) we noted, almost in passing, that "with ~14k test items, sampling noise alone is around ±0.4 points." Today we do the math, then ask the harder question: if a benchmark is reported with no confidence interval at all, what should you assume about a 0.6-point gap between two models?
 
 In most other empirical sciences the answer is "assume nothing — the report is incomplete." LLM evaluation has spent five years cheerfully ignoring this norm. Leaderboards rank models on point estimates; papers headline a one-decimal-place delta and call it state-of-the-art; press releases cite "+1.2 on MMLU" as if it were a meaningful effect size. **A score without an uncertainty interval is not a measurement; it is a guess with extra digits.**
 
@@ -58,7 +58,7 @@ which is maximized when $p = 0.5$ (the most uncertain coin). For the full 14,042
 
 $$\mathrm{SE}(\hat{p}) = \sqrt{\frac{0.85 \cdot 0.15}{14042}} \approx 0.0030$$
 
-A 95% normal-approximation interval is roughly $\hat{p} \pm 1.96 \cdot \mathrm{SE} \approx \hat{p} \pm 0.0059$ — the **±0.4 to ±0.6 percentage points** sampling-noise envelope we waved at on Day 1. Two models reporting MMLU scores of 85.1 and 85.4 are *statistically indistinguishable* under this model. Three out of four "improvements" of <1 point on MMLU are noise.
+A 95% normal-approximation interval is roughly $\hat{p} \pm 1.96 \cdot \mathrm{SE} \approx \hat{p} \pm 0.0059$ — the **±0.4 to ±0.6 percentage points** sampling-noise envelope we waved at on [D-1](/lesson/1). Two models reporting MMLU scores of 85.1 and 85.4 are *statistically indistinguishable* under this model. Three out of four "improvements" of <1 point on MMLU are noise.
 
 Three corrections to that simple picture matter:
 
@@ -134,9 +134,9 @@ The original 2022 release defined:
 
 The headline empirical claim of the paper is that HELM improved benchmark coverage of the 30 surveyed models from an average of ~17.9% of the core scenarios pre-HELM to 96.0% under the HELM evaluation. *Coverage* — not headline accuracy — is the deliverable.
 
-The shift from "benchmark × accuracy" to "scenario × metric" is the structural argument. A model that scores 85 on MMLU has revealed *one number*. A model that has been run through HELM has revealed accuracy, calibration, robustness to typos, demographic-fairness gaps, social-bias scores, toxicity rate, and tokens-per-second on the same scenarios. The reader gets a vector of comparable measurements rather than a single comparable scalar. That is the same philosophy you will see again on D22 (judge biases) and D24 (RewardBench): the "headline number" is a compression that throws away signal.
+The shift from "benchmark × accuracy" to "scenario × metric" is the structural argument. A model that scores 85 on MMLU has revealed *one number*. A model that has been run through HELM has revealed accuracy, calibration, robustness to typos, demographic-fairness gaps, social-bias scores, toxicity rate, and tokens-per-second on the same scenarios. The reader gets a vector of comparable measurements rather than a single comparable scalar. That is the same philosophy you will see again on [D-22](/lesson/22) (judge biases) and [D-24](/lesson/24) (RewardBench): the "headline number" is a compression that throws away signal.
 
-> **Calibration in HELM.** Day 2 introduced calibration as a property of the *scoring rule* (acc vs. acc_norm and the reliability-diagram framing). HELM treats it as a first-class scenario-level *metric* — Expected Calibration Error reported alongside accuracy in the same table. The methodological commitment: calibration is not a separate workstream from accuracy but one of seven readings on the same instrument. The full calibration thread (D2 → D15 → D20 → D24) returns to this view on TruthfulQA, sycophancy, and RewardBench respectively.
+> **Calibration in HELM.** [D-2](/lesson/2) introduced calibration as a property of the *scoring rule* (acc vs. acc_norm and the reliability-diagram framing). HELM treats it as a first-class scenario-level *metric* — Expected Calibration Error reported alongside accuracy in the same table. The methodological commitment: calibration is not a separate workstream from accuracy but one of seven readings on the same instrument. The full calibration thread ([D-2](/lesson/2) → [D-15](/lesson/15) → [D-20](/lesson/20) → [D-24](/lesson/24)) returns to this view on TruthfulQA, sycophancy, and RewardBench respectively.
 
 ### A scenario in detail: HELM's MMLU run
 
@@ -148,7 +148,7 @@ To make the scenario × metric structure concrete, take HELM's treatment of MMLU
 - **Reporting:** the result is published as an *interval*, not a point estimate. Bootstrapped standard errors are computed by resampling the per-item scores with replacement and are reported alongside the mean.
 - **Comparison:** HELM headlines a **mean win rate** — fraction of (scenario, model-pair) cells where model $A$ beats model $B$ — rather than an averaged accuracy across scenarios. A win rate is rank-based and survives the cross-scenario unit problem (you cannot meaningfully average BLEU on summarization with accuracy on MMLU).
 
-The forward-pointer here is **D15** (TruthfulQA), which appeared as a HELM scenario from the start and inherited HELM's measurement philosophy — including the calibration-vs-truthfulness reading that D15 unpacks.
+The forward-pointer here is **[D-15](/lesson/15)** (TruthfulQA), which appeared as a HELM scenario from the start and inherited HELM's measurement philosophy — including the calibration-vs-truthfulness reading that [D-15](/lesson/15) unpacks.
 
 ### HELM as harness — the framework, not the suite
 
@@ -157,7 +157,7 @@ The other half of "HELM" is `crfm-helm`, the Python framework that runs the suit
 - **Install:** `pip install crfm-helm`. Repository: `github.com/stanford-crfm/helm`. License: Apache-2.0.
 - **Core abstractions:** `Scenario` (loads a dataset and produces `Instance` objects), `Adapter` (formats prompts — few-shot, multiple-choice, generation), `Metric` (scores model outputs — exact-match, F1, calibration, bias-classifier-based, etc.), `Runner` (orchestrates the pipeline, caches per-prompt model calls). Compared to `lm-evaluation-harness`'s task-centric design, HELM's separation of `Scenario`/`Adapter`/`Metric` makes it easier to swap in a new metric on an existing scenario — useful when (e.g.) a new calibration measure appears.
 - **Caching:** HELM caches model responses by (model, prompt) key. Re-running a scenario with a new metric does not re-query the model. Important for cost control on a 50-scenario suite.
-- **Web UI:** HELM ships a static-site frontend at `crfm.stanford.edu/helm/` that renders the scenario × metric × model matrix. You can drill into individual prompts and the model's full output — this *prompt-level transparency* is the same first-principle as Day 1's "an evaluation is a pipeline."
+- **Web UI:** HELM ships a static-site frontend at `crfm.stanford.edu/helm/` that renders the scenario × metric × model matrix. You can drill into individual prompts and the model's full output — this *prompt-level transparency* is the same first-principle as [D-1](/lesson/1)'s "an evaluation is a pipeline."
 - **Sub-leaderboards:** as of 2026 the HELM project hosts several sibling leaderboards — HELM Classic (the original 16-scenario suite), HELM Lite (a faster 9-scenario suite, December 2023), HELM MMLU (full 57-subject MMLU, May 2024), HELM Capabilities (March 2025; MMLU-Pro + GPQA + IFEval + WildBench + Omni-MATH at ~1,000 instances each), HELM Safety, MedHELM, and others. Each is a curated scenario set served by the same harness.
 
 ```bash
@@ -197,7 +197,7 @@ Consider a model card that reports MMLU = 85.0. It supports the claim "this mode
 - "This model is fair" (demographic-conditioned accuracy gaps may be 5–15 points even at high overall accuracy).
 - "This model is safe to deploy on user inputs" (toxicity rate is uncorrelated with MMLU).
 
-A HELM-style report makes those four properties first-class, comparable, and uncomparably more decision-relevant than the headline accuracy number on its own. This is also the methodological philosophy that **D22** (LLM-as-judge biases) returns to: judges, like models, must be evaluated on multiple axes, because the single-number compression is what allows systemic biases to hide.
+A HELM-style report makes those four properties first-class, comparable, and uncomparably more decision-relevant than the headline accuracy number on its own. This is also the methodological philosophy that **[D-22](/lesson/22)** (LLM-as-judge biases) returns to: judges, like models, must be evaluated on multiple axes, because the single-number compression is what allows systemic biases to hide.
 
 The trade-off is honest: a HELM-style evaluation costs roughly $K$× a single-benchmark eval, where $K$ is the number of scenarios. The 2022 paper's 30 models × 42 scenarios run reportedly cost ~$50,000 in API calls. HELM Lite cut this by an order of magnitude by dropping the most expensive scenarios (calibration on log-likelihood-only models, MS MARCO retrieval) and by reducing to a single random seed. The cost-vs-coverage trade-off is permanent and is itself an evaluation-design dimension you should reason about before clicking *run*.
 
@@ -247,7 +247,7 @@ When you read someone else's eval, look for:
 - [ ] **Paired** comparisons when comparing two models on the same data, not unpaired intervals.
 - [ ] Per-subject / per-scenario breakdowns where the noise floor is stated, not buried.
 - [ ] Whether multiple seeds were used (HELM Classic: yes, ≥3; HELM Lite: 1; lm-eval-harness: configurable, default 1).
-- [ ] Coverage of *non-accuracy* metrics where applicable: calibration (D2 → D24), robustness (D6/D19), fairness/bias (D16), efficiency (D25).
+- [ ] Coverage of *non-accuracy* metrics where applicable: calibration ([D-2](/lesson/2) → [D-24](/lesson/24)), robustness ([D-6](/lesson/6)/[D-19](/lesson/19)), fairness/bias ([D-16](/lesson/16)), efficiency ([D-25](/lesson/25)).
 
 When you write one, treat reporting a single point estimate as a defect — analogous to reporting a physics measurement without an error bar.
 
@@ -257,16 +257,16 @@ When you write one, treat reporting a single point estimate as a defect — anal
 
 **Backward.**
 
-- D-1 — picks up the "evaluation is a pipeline" framing and adds the missing piece: every step of the pipeline produces a number with an *uncertainty interval*, not a point estimate.
-- D-2 — picks up the calibration mechanic introduced as a scoring-rule property and lifts it to a scenario-level *metric* reported alongside accuracy in HELM's matrix.
+- [D-1](/lesson/1) — picks up the "evaluation is a pipeline" framing and adds the missing piece: every step of the pipeline produces a number with an *uncertainty interval*, not a point estimate.
+- [D-2](/lesson/2) — picks up the calibration mechanic introduced as a scoring-rule property and lifts it to a scenario-level *metric* reported alongside accuracy in HELM's matrix.
 
 **Forward.**
 
-- D-6 — explains *why* point estimates are even less trustworthy than the CI math suggests: if the data is contaminated, even a perfectly tight CI is centered on the wrong number.
-- D-7 — explains why the noise floor matters increasingly more as benchmarks age: when SOTA approaches the ceiling, every visible "improvement" lands inside the ±0.5-point envelope and the benchmark stops discriminating.
-- D-15 — TruthfulQA was a HELM scenario from the start and inherited HELM's measurement philosophy, exposing a calibration-vs-truthfulness trade only visible in the multi-metric matrix.
-- D-22 — generalizes the multi-metric philosophy to LLM-as-judge: a judge that scores high on agreement-with-humans but high on position-bias is not a good judge, and only a multi-axis report surfaces that.
-- D-24 — completes the calibration thread (D2 → D15 → D20 → D24): reward-model confidence is itself a calibration story and inherits today's statistical-hygiene discipline.
+- [D-6](/lesson/6) — explains *why* point estimates are even less trustworthy than the CI math suggests: if the data is contaminated, even a perfectly tight CI is centered on the wrong number.
+- [D-7](/lesson/7) — explains why the noise floor matters increasingly more as benchmarks age: when SOTA approaches the ceiling, every visible "improvement" lands inside the ±0.5-point envelope and the benchmark stops discriminating.
+- [D-15](/lesson/15) — TruthfulQA was a HELM scenario from the start and inherited HELM's measurement philosophy, exposing a calibration-vs-truthfulness trade only visible in the multi-metric matrix.
+- [D-22](/lesson/22) — generalizes the multi-metric philosophy to LLM-as-judge: a judge that scores high on agreement-with-humans but high on position-bias is not a good judge, and only a multi-axis report surfaces that.
+- [D-24](/lesson/24) — completes the calibration thread ([D-2](/lesson/2) → [D-15](/lesson/15) → [D-20](/lesson/20) → [D-24](/lesson/24)): reward-model confidence is itself a calibration story and inherits today's statistical-hygiene discipline.
 
 ## Takeaways
 
@@ -279,14 +279,14 @@ When you write one, treat reporting a single point estimate as a defect — anal
 
 ## Glossary
 
-- **Wilson interval**: a binomial confidence interval that stays inside $[0, 1]$ near the boundaries and is the standard fix to the symmetric normal approximation when $\hat{p}$ is near $0$ or $1$ [introduced D-5].
-- **paired bootstrap**: nonparametric CI on a *paired* statistic — for two models on the same items, resample the per-item differences $d_i$ with replacement; tighter than unpaired comparisons by 2–5× when models are correlated [introduced D-5].
-- **sampling-noise floor**: the irreducible Bernoulli SE on accuracy at a given $n$ and $p$; ~±0.4 points at $n = 14{,}000$, ~±2.4 at $n = 1{,}000$, ~±4.5 at $n = 250$ at $p \approx 0.85$ [introduced D-5].
-- **scenario × metric matrix**: HELM's structural reframing of evaluation — every model evaluated on every applicable (scenario, metric) cell rather than one benchmark × accuracy [introduced D-5].
-- **mean win rate**: HELM's headline ranking statistic — fraction of (scenario, model-pair) cells where one model beats another; rank-based and unit-free across heterogeneous metrics [introduced D-5].
-- **scenario coverage**: fraction of a fixed scenario set on which a given model has been evaluated; HELM's 17.9% → 96.0% lift quantified the pre/post-HELM gap [introduced D-5].
-- **Expected Calibration Error (ECE)**: gap between a model's stated confidence and its empirical accuracy, binned and averaged; reported by HELM as a per-scenario metric alongside accuracy [introduced D-2 · reused].
-- **paired test / per-item difference**: comparison statistic $d_i = \mathbb{1}[A_i] - \mathbb{1}[B_i]$ over a shared test set; the variance term $-2\,\mathrm{Cov}(A, B)$ is what makes the paired CI tighter than the marginals [introduced D-5].
+- **Wilson interval**: a binomial confidence interval that stays inside $[0, 1]$ near the boundaries and is the standard fix to the symmetric normal approximation when $\hat{p}$ is near $0$ or $1$ [introduced D-5](/lesson/5).
+- **paired bootstrap**: nonparametric CI on a *paired* statistic — for two models on the same items, resample the per-item differences $d_i$ with replacement; tighter than unpaired comparisons by 2–5× when models are correlated [introduced D-5](/lesson/5).
+- **sampling-noise floor**: the irreducible Bernoulli SE on accuracy at a given $n$ and $p$; ~±0.4 points at $n = 14{,}000$, ~±2.4 at $n = 1{,}000$, ~±4.5 at $n = 250$ at $p \approx 0.85$ [introduced D-5](/lesson/5).
+- **scenario × metric matrix**: HELM's structural reframing of evaluation — every model evaluated on every applicable (scenario, metric) cell rather than one benchmark × accuracy [introduced D-5](/lesson/5).
+- **mean win rate**: HELM's headline ranking statistic — fraction of (scenario, model-pair) cells where one model beats another; rank-based and unit-free across heterogeneous metrics [introduced D-5](/lesson/5).
+- **scenario coverage**: fraction of a fixed scenario set on which a given model has been evaluated; HELM's 17.9% → 96.0% lift quantified the pre/post-HELM gap [introduced D-5](/lesson/5).
+- **Expected Calibration Error (ECE)**: gap between a model's stated confidence and its empirical accuracy, binned and averaged; reported by HELM as a per-scenario metric alongside accuracy [introduced D-2 · reused](/lesson/2).
+- **paired test / per-item difference**: comparison statistic $d_i = \mathbb{1}[A_i] - \mathbb{1}[B_i]$ over a shared test set; the variance term $-2\,\mathrm{Cov}(A, B)$ is what makes the paired CI tighter than the marginals [introduced D-5](/lesson/5).
 
 ## References
 

@@ -398,10 +398,17 @@ export async function getGlossary(): Promise<GlossaryEntry[]> {
  * annotation so the glossary page can render plain text. Conservative:
  * flattens `**bold**`, `_em_`, and `[text](url)` links; backticks are
  * preserved for code-like terms inside the gloss.
+ *
+ * The `[introduced …]` annotation has two on-disk shapes — the legacy
+ * bare form `[introduced D-N · reused]` and the linked form
+ * `[introduced D-N · reused](/lesson/N)` introduced when every cross-day
+ * reference was normalised. Both are stripped here (annotation first,
+ * then any remaining bare links) so the global /glossary page renders
+ * the gloss prose only.
  */
 function stripGlossMarkdown(s: string): string {
   return s
-    .replace(/\[introduced[^\]]*\]/gi, "")
+    .replace(/\[introduced[^\]]*\](\(\/lesson\/\d+\))?/gi, "")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/_([^_]+)_/g, "$1")
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")

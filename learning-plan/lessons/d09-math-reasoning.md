@@ -40,11 +40,11 @@ By the end of this lesson, you will be able to:
 
 ## Prerequisites & callback
 
-Three earlier lessons are load-bearing today. **D2** introduced log-likelihood scoring and the difference between `acc` and `acc_norm`; today's PRM aggregation $\min_t r_t$ is built on the same per-token scoring intuition pushed to the step level. **D4** introduced chain-of-thought as a prompting strategy; this lesson is the empirical anchor — GSM8K is *why* D4 mattered. **D8** introduced reasoning-evaluation framing (process vs. outcome, faithfulness vs. correctness); today's ORM-vs-PRM contrast is the most-studied operationalization of that distinction. If any of these feel hazy, skim those lessons before going further.
+Three earlier lessons are load-bearing today. **[D-2](/lesson/2)** introduced log-likelihood scoring and the difference between `acc` and `acc_norm`; today's PRM aggregation $\min_t r_t$ is built on the same per-token scoring intuition pushed to the step level. **[D-4](/lesson/4)** introduced chain-of-thought as a prompting strategy; this lesson is the empirical anchor — GSM8K is *why* [D-4](/lesson/4) mattered. **[D-8](/lesson/8)** introduced reasoning-evaluation framing (process vs. outcome, faithfulness vs. correctness); today's ORM-vs-PRM contrast is the most-studied operationalization of that distinction. If any of these feel hazy, skim those lessons before going further.
 
 ## The opening hook
 
-Math is where the field first saw, cleanly and reproducibly, that *how you prompt* can move a frontier model from below the random-guessing line to near-ceiling on the same benchmark. The 2022 chain-of-thought (CoT) result on GSM8K — PaLM 540B going from ~18% with direct prompting to ~57% with eight CoT exemplars (Wei et al. 2022) — is the canonical demonstration that what looks like a "capability gap" can also be a *prompting gap*. D4 introduced CoT as a prompting strategy; today's lesson is the empirical anchor for why D4 mattered.
+Math is where the field first saw, cleanly and reproducibly, that *how you prompt* can move a frontier model from below the random-guessing line to near-ceiling on the same benchmark. The 2022 chain-of-thought (CoT) result on GSM8K — PaLM 540B going from ~18% with direct prompting to ~57% with eight CoT exemplars (Wei et al. 2022) — is the canonical demonstration that what looks like a "capability gap" can also be a *prompting gap*. [D-4](/lesson/4) introduced CoT as a prompting strategy; today's lesson is the empirical anchor for why [D-4](/lesson/4) mattered.
 
 But math evaluation is also where the field first hit a wall that pure outcome scoring couldn't get past. A model can reach the right number through wrong reasoning; a model can hallucinate a clean derivation that ends in the wrong number. Outcome supervision rewards the first; process supervision (Lightman et al. 2023, PRM800K) is the field's structural answer. This is a multi-anchor lesson — GSM8K is the primary, MATH and PRM800K live as companions inside the same anchor block — and the densest day in Week 2. Budget your reading attention accordingly.
 
@@ -96,13 +96,13 @@ Wei et al. (2022) reported the canonical numbers on GSM8K with PaLM 540B, 8-shot
 | Chain-of-thought (8 exemplars) | ~57% |
 | CoT + self-consistency (Wang et al. 2022, maj@40) | ~74% |
 
-That is roughly a **40-point swing** from a prompt change with frozen weights — which is the strongest empirical case in the literature for D4's claim that prompt formatting is part of the evaluation pipeline, not a confound to control away. The mechanism is that arithmetic is a *serial* computation: each operation depends on the previous, and a transformer's single forward pass at the answer position cannot carry the working state. Generating the intermediate tokens turns the model's KV cache into scratch paper.
+That is roughly a **40-point swing** from a prompt change with frozen weights — which is the strongest empirical case in the literature for [D-4](/lesson/4)'s claim that prompt formatting is part of the evaluation pipeline, not a confound to control away. The mechanism is that arithmetic is a *serial* computation: each operation depends on the previous, and a transformer's single forward pass at the answer position cannot carry the working state. Generating the intermediate tokens turns the model's KV cache into scratch paper.
 
-**Self-consistency** (Wang et al. 2022) sharpens this further. Sample $k$ CoT chains at $T > 0$, take the *plurality vote* over their final answers (`maj@k`). Different reasoning paths that arrive at the same number reinforce each other; idiosyncratic errors don't. Reported as a +17.9 percentage-point gain on GSM8K over greedy CoT for PaLM 540B. The cost is $k$× sampling, which D25 returns to as the inference-time-scaling story.
+**Self-consistency** (Wang et al. 2022) sharpens this further. Sample $k$ CoT chains at $T > 0$, take the *plurality vote* over their final answers (`maj@k`). Different reasoning paths that arrive at the same number reinforce each other; idiosyncratic errors don't. Reported as a +17.9 percentage-point gain on GSM8K over greedy CoT for PaLM 540B. The cost is $k$× sampling, which [D-25](/lesson/25) returns to as the inference-time-scaling story.
 
 ### GSM8K's saturation status (mid-2026)
 
-Frontier models cleared 95% on GSM8K by mid-2024, and many recent system cards (o1, Claude 3.7-class) drop GSM8K reporting entirely in favor of MATH/AIME. Per D7's saturation framing, the per-model 95% CI on a 1,319-item benchmark at $p = 0.97$ is roughly $\sqrt{0.97 \cdot 0.03 / 1319} \approx 0.0047$, or $\pm 0.9$ points — and label-noise audits (GSM-Symbolic, GSM8K-Platinum) suggest mislabeling rates exceed frontier-model error rates, so GSM8K above ~95% is mostly measuring the test set's mistakes. The pedagogical value remains; the ranking value is gone.
+Frontier models cleared 95% on GSM8K by mid-2024, and many recent system cards (o1, Claude 3.7-class) drop GSM8K reporting entirely in favor of MATH/AIME. Per [D-7](/lesson/7)'s saturation framing, the per-model 95% CI on a 1,319-item benchmark at $p = 0.97$ is roughly $\sqrt{0.97 \cdot 0.03 / 1319} \approx 0.0047$, or $\pm 0.9$ points — and label-noise audits (GSM-Symbolic, GSM8K-Platinum) suggest mislabeling rates exceed frontier-model error rates, so GSM8K above ~95% is mostly measuring the test set's mistakes. The pedagogical value remains; the ranking value is gone.
 
 ### Companion: MATH (Hendrycks et al. 2021)
 
@@ -141,11 +141,11 @@ Failure modes in the wild:
 - **Numerically equivalent, symbolically not.** $\sqrt{2}$ vs. $1.414$ — handled with a numeric-tolerance fallback (e.g., `abs(a - b) < 1e-6`).
 - **Multi-part answers.** `(2, 3)` vs. `\{2, 3\}` vs. `2, 3` — handled by tuple/set parsers, but evaluator implementations diverge here.
 
-Two papers reporting different MATH numbers for the same model often differ on the equivalence checker, not the model — D1's "evaluation is a pipeline" point applied to a nastier scoring rule.
+Two papers reporting different MATH numbers for the same model often differ on the equivalence checker, not the model — [D-1](/lesson/1)'s "evaluation is a pipeline" point applied to a nastier scoring rule.
 
 #### MATH's saturation and the MATH-500 split
 
-The original 5,000-item test set is largely used in the **MATH-500** form introduced by Lightman et al. (2023) for PRM800K: 4,500 test problems were moved into training, leaving a 500-item held-out set. Most modern reports cite *MATH-500* even when they say "MATH". As of early 2026, frontier reasoning models score in the **90–96%** range on MATH-500 — the benchmark is approaching saturation but hasn't fully cleared, partly because Level 5 problems still discriminate between models. AIME 2024/2025 is the natural successor at the frontier (D25).
+The original 5,000-item test set is largely used in the **MATH-500** form introduced by Lightman et al. (2023) for PRM800K: 4,500 test problems were moved into training, leaving a 500-item held-out set. Most modern reports cite *MATH-500* even when they say "MATH". As of early 2026, frontier reasoning models score in the **90–96%** range on MATH-500 — the benchmark is approaching saturation but hasn't fully cleared, partly because Level 5 problems still discriminate between models. AIME 2024/2025 is the natural successor at the frontier ([D-25](/lesson/25)).
 
 ### Companion: PRM800K / process supervision (Lightman et al. 2023)
 
@@ -217,7 +217,7 @@ flowchart TB
 
 #### Why this matters beyond math
 
-PRM-style supervision is a *transparency-rewarding* training signal: it pays the model for legible step-by-step reasoning, not just for getting the answer. That makes it directly relevant to the safety case for chain-of-thought, and it is one of the load-bearing techniques behind the o1-class reasoning models that close Week 4 (D25). We return to the safety angle below.
+PRM-style supervision is a *transparency-rewarding* training signal: it pays the model for legible step-by-step reasoning, not just for getting the answer. That makes it directly relevant to the safety case for chain-of-thought, and it is one of the load-bearing techniques behind the o1-class reasoning models that close Week 4 ([D-25](/lesson/25)). We return to the safety angle below.
 
 ## Running these benchmarks
 
@@ -235,7 +235,7 @@ lm_eval \
 
 `gsm8k` defaults to 8-shot CoT and exact-match scoring on the post-`####` integer. `hendrycks_math` defaults to 4-shot CoT and uses the harness's bundled equivalence checker on `\boxed{...}` extractions. The 4-shot vs. 8-shot detail is part of the pipeline — and a paper reporting "MATH 4-shot" vs. another's "MATH 0-shot CoT" is comparing different evaluations.
 
-For PRM-style verifier scoring at evaluation time you typically *don't* use lm-eval-harness — you sample $N$ candidates, score each with a separately-loaded PRM (e.g., the OpenAI PRM800K-trained model or one of the open Math-Shepherd / RLHFlow PRMs), and report best-of-$N$ accuracy. This sits at the boundary between "static eval" and "inference-time scaling" (D25).
+For PRM-style verifier scoring at evaluation time you typically *don't* use lm-eval-harness — you sample $N$ candidates, score each with a separately-loaded PRM (e.g., the OpenAI PRM800K-trained model or one of the open Math-Shepherd / RLHFlow PRMs), and report best-of-$N$ accuracy. This sits at the boundary between "static eval" and "inference-time scaling" ([D-25](/lesson/25)).
 
 ## ⏵ Check yourself — equivalence pipeline
 
@@ -244,7 +244,7 @@ A model's MATH output ends with `\boxed{\frac{\sqrt{4}}{4}}`; the gold answer is
 <details>
 <summary>Show answer</summary>
 
-The **extraction** stage succeeds — both outputs have a clean `\boxed{...}` and the extractor pulls the inner LaTeX. The catch happens in the **symbolic-equivalence** stage: the parsed expressions are $\sqrt{4}/4$ and $1/2$, which a normalization pass alone (which only collapses `\frac` ↔ `\dfrac`, `\tfrac` ↔ `\frac`, whitespace, sign placement) would *not* recognize as equal because the strings still differ syntactically. SymPy's `simplify(a - b) == 0` or a numeric-tolerance fallback is needed to evaluate $\sqrt{4} = 2$ and arrive at $1/2$. Two papers' reported MATH numbers for the same model often differ on exactly this stage's robustness, which is D1's "evaluation is a pipeline" point applied to a nastier scoring rule.
+The **extraction** stage succeeds — both outputs have a clean `\boxed{...}` and the extractor pulls the inner LaTeX. The catch happens in the **symbolic-equivalence** stage: the parsed expressions are $\sqrt{4}/4$ and $1/2$, which a normalization pass alone (which only collapses `\frac` ↔ `\dfrac`, `\tfrac` ↔ `\frac`, whitespace, sign placement) would *not* recognize as equal because the strings still differ syntactically. SymPy's `simplify(a - b) == 0` or a numeric-tolerance fallback is needed to evaluate $\sqrt{4} = 2$ and arrive at $1/2$. Two papers' reported MATH numbers for the same model often differ on exactly this stage's robustness, which is [D-1](/lesson/1)'s "evaluation is a pipeline" point applied to a nastier scoring rule.
 
 </details>
 
@@ -265,22 +265,22 @@ GSM8K and MATH look like the same evaluation — math problems scored on final-a
 
 The pedagogically clean lesson is that GSM8K isolates the *serial-computation* benefit of CoT (you literally need scratch paper for 8-step arithmetic), while MATH adds the *insight-search* benefit (the model has to find the right transformation, not just execute it). Both are real; they're just different reasons CoT works.
 
-> **Safety researcher's note.** Mathematical CoT looks like the cleanest possible case for chain-of-thought *faithfulness* — the model writes out arithmetic, you can check each step, and a wrong step usually breaks the answer. But Turpin et al. 2023 (*Language Models Don't Always Say What They Think*, referenced on D4) showed that CoT explanations systematically *omit* the actual causes of model decisions, even on benchmark-style multiple-choice tasks. Math is a partial exception — wrong arithmetic steps usually do break the answer — but PRM-style training is *also* a pressure on transparency: optimize the model to write *legible* reasoning, and the model can learn to produce reasoning that *looks* legible whether or not it reflects the actual computation. The PRM800K result is genuine progress; it is also a place where the measure (legibility-as-judged-by-annotators) is now a target. D17 (situational awareness) and D24 (reward-model evaluation) take this further. The short version: faithful-looking CoT is necessary for safety claims about reasoning, and not yet sufficient.
+> **Safety researcher's note.** Mathematical CoT looks like the cleanest possible case for chain-of-thought *faithfulness* — the model writes out arithmetic, you can check each step, and a wrong step usually breaks the answer. But Turpin et al. 2023 (*Language Models Don't Always Say What They Think*, referenced on [D-4](/lesson/4)) showed that CoT explanations systematically *omit* the actual causes of model decisions, even on benchmark-style multiple-choice tasks. Math is a partial exception — wrong arithmetic steps usually do break the answer — but PRM-style training is *also* a pressure on transparency: optimize the model to write *legible* reasoning, and the model can learn to produce reasoning that *looks* legible whether or not it reflects the actual computation. The PRM800K result is genuine progress; it is also a place where the measure (legibility-as-judged-by-annotators) is now a target. [D-17](/lesson/17) (situational awareness) and [D-24](/lesson/24) (reward-model evaluation) take this further. The short version: faithful-looking CoT is necessary for safety claims about reasoning, and not yet sufficient.
 
 ## Cross-references
 
 **Backward.**
 
-- D-2 — log-likelihood scoring and the `acc`/`acc_norm` mechanic generalize directly to per-step scores; PRM aggregation is the same idea pushed to the step level.
-- D-4 — chain-of-thought as a prompting strategy was introduced abstractly there; today's PaLM 540B 18%→57% gap on GSM8K is its empirical anchor.
-- D-8 — the process-vs-outcome distinction was framed conceptually for reasoning evaluation; ORM-vs-PRM is its most-studied operationalization.
+- [D-2](/lesson/2) — log-likelihood scoring and the `acc`/`acc_norm` mechanic generalize directly to per-step scores; PRM aggregation is the same idea pushed to the step level.
+- [D-4](/lesson/4) — chain-of-thought as a prompting strategy was introduced abstractly there; today's PaLM 540B 18%→57% gap on GSM8K is its empirical anchor.
+- [D-8](/lesson/8) — the process-vs-outcome distinction was framed conceptually for reasoning evaluation; ORM-vs-PRM is its most-studied operationalization.
 
 **Forward.**
 
-- D-15 — factuality-and-truthfulness picks up the right-answer-wrong-reasoning pattern in the verbal domain (correct claims supported by fabricated evidence).
-- D-22 — LLM-as-judge generalizes the verifier-on-step-quality idea beyond math to open-ended generation; the PRM is the canonical structured-domain precedent.
-- D-24 — reward-model evaluation is where ORM/PRM training quality gets its own benchmark suite; today's lesson supplies the construct.
-- D-25 — reasoning models internalize chain-of-thought into a long internal trace and report a single answer, with token-budget as a first-class evaluation axis. PRM-style step scoring is one of the training signals that makes that shift possible; AIME 2024/2025 replaces MATH-500 at the frontier.
+- [D-15](/lesson/15) — factuality-and-truthfulness picks up the right-answer-wrong-reasoning pattern in the verbal domain (correct claims supported by fabricated evidence).
+- [D-22](/lesson/22) — LLM-as-judge generalizes the verifier-on-step-quality idea beyond math to open-ended generation; the PRM is the canonical structured-domain precedent.
+- [D-24](/lesson/24) — reward-model evaluation is where ORM/PRM training quality gets its own benchmark suite; today's lesson supplies the construct.
+- [D-25](/lesson/25) — reasoning models internalize chain-of-thought into a long internal trace and report a single answer, with token-budget as a first-class evaluation axis. PRM-style step scoring is one of the training signals that makes that shift possible; AIME 2024/2025 replaces MATH-500 at the frontier.
 
 ## Takeaways
 
@@ -293,14 +293,14 @@ The pedagogically clean lesson is that GSM8K isolates the *serial-computation* b
 
 ## Glossary
 
-- **chain-of-thought (CoT)**: prompting strategy that elicits intermediate reasoning steps before the final answer. Anchored empirically on GSM8K (PaLM 540B 18%→57%) [introduced D-4 · reused].
-- **answer extraction**: the deterministic step that pulls a candidate answer out of free-form model output before scoring. On GSM8K it is the integer after `####`; on MATH it is the contents of the last `\boxed{...}` [introduced D-9].
-- **LaTeX equivalence checking**: the normalization plus symbolic/numeric pipeline that decides whether two LaTeX expressions denote the same mathematical object. The dominant source of evaluator disagreement on MATH [introduced D-9].
-- **outcome reward model (ORM)**: verifier trained on a single binary label per solution (final answer matches gold or not); one bit of training signal per solution [introduced D-9].
-- **process reward model (PRM)**: verifier trained on per-step human labels in $\{-1, 0, +1\}$; one label per step per solution [introduced D-9].
-- **min-step PRM aggregation**: the standard rule $\text{score}(s_1, \ldots, s_T) = \min_t r_{\text{PRM}}(s_t \mid s_{<t})$ for ranking candidate solutions; product is a stricter alternative [introduced D-9].
-- **best-of-$N$ selection**: sample $N$ candidate solutions from a generator, score each with a verifier (ORM or PRM), pick the highest-scoring. The inference-time-scaling axis that connects to D25 [introduced D-9].
-- **MATH-500**: the 500-item held-out subset of the original 5,000-item MATH test set, introduced by Lightman et al. (2023) for PRM800K. Most modern "MATH" reports cite MATH-500 [introduced D-9].
+- **chain-of-thought (CoT)**: prompting strategy that elicits intermediate reasoning steps before the final answer. Anchored empirically on GSM8K (PaLM 540B 18%→57%) [introduced D-4 · reused](/lesson/4).
+- **answer extraction**: the deterministic step that pulls a candidate answer out of free-form model output before scoring. On GSM8K it is the integer after `####`; on MATH it is the contents of the last `\boxed{...}` [introduced D-9](/lesson/9).
+- **LaTeX equivalence checking**: the normalization plus symbolic/numeric pipeline that decides whether two LaTeX expressions denote the same mathematical object. The dominant source of evaluator disagreement on MATH [introduced D-9](/lesson/9).
+- **outcome reward model (ORM)**: verifier trained on a single binary label per solution (final answer matches gold or not); one bit of training signal per solution [introduced D-9](/lesson/9).
+- **process reward model (PRM)**: verifier trained on per-step human labels in $\{-1, 0, +1\}$; one label per step per solution [introduced D-9](/lesson/9).
+- **min-step PRM aggregation**: the standard rule $\text{score}(s_1, \ldots, s_T) = \min_t r_{\text{PRM}}(s_t \mid s_{<t})$ for ranking candidate solutions; product is a stricter alternative [introduced D-9](/lesson/9).
+- **best-of-$N$ selection**: sample $N$ candidate solutions from a generator, score each with a verifier (ORM or PRM), pick the highest-scoring. The inference-time-scaling axis that connects to [D-25](/lesson/25) [introduced D-9](/lesson/9).
+- **MATH-500**: the 500-item held-out subset of the original 5,000-item MATH test set, introduced by Lightman et al. (2023) for PRM800K. Most modern "MATH" reports cite MATH-500 [introduced D-9](/lesson/9).
 
 ## References
 
@@ -364,7 +364,7 @@ The pedagogically clean lesson is that GSM8K isolates the *serial-computation* b
 1. **B** — the serial-computation argument. CoT works on GSM8K because each arithmetic step depends on the previous, and the model needs the intermediate tokens as scratch space; without them, the answer position can't carry the working state. A is wrong (no system-message change is implied by CoT exemplars), C is wrong (CoT is independent of temperature in the Wei et al. setup), D is unrelated.
 2. **B** — the standard two-stage pipeline (boxed-extraction + LaTeX normalization + symbolic/numeric equivalence). A and C are nonsensical for math equivalence; D works but is far slower and rarely the *standard* — it's an LLM-judge fallback when the symbolic checker fails.
 3. **B** — under $\min_t r_t$, the score is $\min(0.95, 0.91, 0.12, 0.94, 0.93) = 0.12$. ORM rates the solution highly (final answer matches), so ORM would *promote* it; PRM detects the broken step and demotes it. This is the canonical right-answer-wrong-reasoning case the Lightman et al. paper highlights.
-4. **A** — the CI math: $\sqrt{0.97 \cdot 0.03 / 1319} \approx 0.0047$, so $\pm 0.9$ points at 95%. The label-noise floor on GSM8K is now larger than that gap, so above ~95% you are measuring the test set's errors, not the model's. This is D7's saturation argument applied to GSM8K.
+4. **A** — the CI math: $\sqrt{0.97 \cdot 0.03 / 1319} \approx 0.0047$, so $\pm 0.9$ points at 95%. The label-noise floor on GSM8K is now larger than that gap, so above ~95% you are measuring the test set's errors, not the model's. This is [D-7](/lesson/7)'s saturation argument applied to GSM8K.
 5. **B** — the right-answer-wrong-reasoning failure mode is the structural reason ORM underperforms PRM at the hard-problem end. A is incorrect (the architectures are similar), C is incorrect (both are typically trained as supervised reward models), D conflates dataset size with the methodological claim.
 6. **B** — the proxy-becomes-target argument. Once "step legibility as judged by annotators" is the optimization target, the model can satisfy it without faithfulness — Turpin et al. 2023's central worry, applied to math reasoning specifically. A, C, D are unrelated to the faithfulness concern.
 

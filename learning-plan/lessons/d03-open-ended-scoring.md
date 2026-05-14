@@ -40,13 +40,13 @@ By the end of this lesson, you will be able to:
 
 ## Prerequisites & callback
 
-This lesson sits directly on D1's pipeline framing. D1 split every benchmark into (dataset, scoring rule, reporting convention) and showed that on multiple-choice the *scoring rule* box is set membership over `{A, B, C, D}`. D1 also flagged the MC-vs-free-form trade-off explicitly: MC removes generation-quality confounds at the cost of cue exploitation; free-form tests what users actually do but pushes all the difficulty into the similarity function. D3 is the deep dive on that second arm — same pipeline diagram, same "evaluation-as-code" framing, but the `Scoring rule` box is now an open research question. Bring D1's habit of asking *"what pipeline?"* with you, because for free-form the answer is no longer "n-shot, template, `acc` vs. `acc_norm`" but "EM vs. F1 vs. BLEU vs. judge".
+This lesson sits directly on [D-1](/lesson/1)'s pipeline framing. [D-1](/lesson/1) split every benchmark into (dataset, scoring rule, reporting convention) and showed that on multiple-choice the *scoring rule* box is set membership over `{A, B, C, D}`. [D-1](/lesson/1) also flagged the MC-vs-free-form trade-off explicitly: MC removes generation-quality confounds at the cost of cue exploitation; free-form tests what users actually do but pushes all the difficulty into the similarity function. [D-3](/lesson/3) is the deep dive on that second arm — same pipeline diagram, same "evaluation-as-code" framing, but the `Scoring rule` box is now an open research question. Bring [D-1](/lesson/1)'s habit of asking *"what pipeline?"* with you, because for free-form the answer is no longer "n-shot, template, `acc` vs. `acc_norm`" but "EM vs. F1 vs. BLEU vs. judge".
 
 ## The opening hook
 
-D1 ended with a sharp trade-off: multiple-choice scoring is automatic and cheap, but it only tests whether the model can pick a letter. Free-form generation tests what users actually do — typing a question and reading prose back — but somebody now has to decide whether the prose is *right*. That "somebody" used to be a regex. Then it was BLEU. Then it was ROUGE. Today it's increasingly another language model. None of these is a free lunch, and the failure modes are different for each.
+[D-1](/lesson/1) ended with a sharp trade-off: multiple-choice scoring is automatic and cheap, but it only tests whether the model can pick a letter. Free-form generation tests what users actually do — typing a question and reading prose back — but somebody now has to decide whether the prose is *right*. That "somebody" used to be a regex. Then it was BLEU. Then it was ROUGE. Today it's increasingly another language model. None of these is a free lunch, and the failure modes are different for each.
 
-This lesson is the deep dive on the free-form side of D1's contrast. We'll use **TriviaQA** (Joshi et al. 2017) as the lab — short-form factoid QA where the gold answer is one or a few tokens, so you can directly observe why exact match is too strict, why F1 helps a little, and why $n$-gram overlap metrics are a poor proxy for reasoning the moment outputs get longer than a noun phrase.
+This lesson is the deep dive on the free-form side of [D-1](/lesson/1)'s contrast. We'll use **TriviaQA** (Joshi et al. 2017) as the lab — short-form factoid QA where the gold answer is one or a few tokens, so you can directly observe why exact match is too strict, why F1 helps a little, and why $n$-gram overlap metrics are a poor proxy for reasoning the moment outputs get longer than a noun phrase.
 
 ## What changes when the answer is free-form
 
@@ -79,7 +79,7 @@ Why TriviaQA for *this* lesson? Three reasons:
 
 1. **Answers are short** — usually 1–4 tokens (a person, a place, a date). That makes EM and F1 mechanically clean to demonstrate; you can compute both by hand on a single example.
 2. **Answers have natural surface variation** — `Barack Obama` vs. `Obama` vs. `President Obama` vs. `Barack Hussein Obama II`. The dataset releases an *alias list* per question (Wikipedia redirects + manually curated) precisely because exact match against a single string would be unfair.
-3. **It contrasts with MMLU on D1.** Same kind of "factual knowledge" probe, but the model now has to *produce* the answer, not pick it. The gap between a model's MMLU score and its TriviaQA closed-book score tells you something about generation vs. recognition.
+3. **It contrasts with MMLU on [D-1](/lesson/1).** Same kind of "factual knowledge" probe, but the model now has to *produce* the answer, not pick it. The gap between a model's MMLU score and its TriviaQA closed-book score tells you something about generation vs. recognition.
 
 A canonical lm-evaluation-harness run:
 
@@ -197,7 +197,7 @@ Both metrics fail in the same families of ways. Pick any of these and you can co
 
 The deeper point: $n$-gram overlap is a proxy for "writes the same words in roughly the same order." For short factoid answers (TriviaQA), there's not much room for the proxy to fail. For anything longer, the proxy starts measuring fluency and surface form rather than meaning.
 
-> **Safety researcher's note.** A model trained to optimize BLEU (rare today, common in pre-2019 MT work) is a small instance of a recurring pattern: an imperfect proxy metric becomes a training objective and the model finds the cheapest way to maximize it — typically by producing $n$-grams that pattern-match the reference distribution rather than the reference *meaning*. This is the entry-level Goodhart story, and it generalizes: if you train against an LLM-as-judge (D22) or a reward model (D24), the model finds judge/RM-specific shortcuts. The metric drift is not a hypothetical — it's the default outcome unless you actively defend against it. We don't foreground Goodhart on D3, but this is where the curriculum starts collecting examples.
+> **Safety researcher's note.** A model trained to optimize BLEU (rare today, common in pre-2019 MT work) is a small instance of a recurring pattern: an imperfect proxy metric becomes a training objective and the model finds the cheapest way to maximize it — typically by producing $n$-grams that pattern-match the reference distribution rather than the reference *meaning*. This is the entry-level Goodhart story, and it generalizes: if you train against an LLM-as-judge ([D-22](/lesson/22)) or a reward model ([D-24](/lesson/24)), the model finds judge/RM-specific shortcuts. The metric drift is not a hypothetical — it's the default outcome unless you actively defend against it. We don't foreground Goodhart on [D-3](/lesson/3), but this is where the curriculum starts collecting examples.
 
 ## ⏵ Check yourself — what the brevity penalty does (and doesn't)
 
@@ -238,13 +238,13 @@ Other embedding-based metrics — **MoverScore**, **BLEURT** (a BERT fine-tuned 
 
 After RLHF, every aligned LLM ships with (or near) a **reward model** — a classifier trained on pairwise human preferences that scores any (prompt, response). Stiennon et al. (2020) showed reward models trained on human comparisons of summaries produced summaries that humans preferred over those optimizing ROUGE — early, direct evidence that the RM was a better target than the $n$-gram metric.
 
-You can use a reward model as an evaluator: score each candidate response, aggregate. The catch is **calibration** — RMs are confident in ways that don't always match human judgments, and they encode the preferences of whoever labeled them. D24 is a full reprise on RewardBench and the calibration thread; the takeaway here is just that "use a trained scorer instead of a hand-coded metric" is the modern alternative.
+You can use a reward model as an evaluator: score each candidate response, aggregate. The catch is **calibration** — RMs are confident in ways that don't always match human judgments, and they encode the preferences of whoever labeled them. [D-24](/lesson/24) is a full reprise on RewardBench and the calibration thread; the takeaway here is just that "use a trained scorer instead of a hand-coded metric" is the modern alternative.
 
 ### 3. LLM-as-judge
 
 The frontier of automatic open-ended evaluation is **LLM-as-judge**: prompt a strong model (GPT-4, Claude) with the question, the reference (or not), and the candidate, and ask it to score or compare. Zheng et al. (2023, NeurIPS) — *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena* — established this methodology and documented its biases (position, verbosity, self-preference, bandwagon). On agreeable open-ended tasks, GPT-4-as-judge agrees with humans at roughly the level humans agree with each other (~80%).
 
-This is the metric that's eaten the field for open-ended evaluation since 2023. **D22** is the full lesson; the pointer here is that when you see a paper score Llama-3 against GPT-4 on a free-form benchmark, the scorer is increasingly another LLM rather than BLEU/ROUGE, with all that implies for cost, reproducibility, and judge-specific systematic error.
+This is the metric that's eaten the field for open-ended evaluation since 2023. **[D-22](/lesson/22)** is the full lesson; the pointer here is that when you see a paper score Llama-3 against GPT-4 on a free-form benchmark, the scorer is increasingly another LLM rather than BLEU/ROUGE, with all that implies for cost, reproducibility, and judge-specific systematic error.
 
 ## ⏵ Check yourself — picking the simplest sufficient metric
 
@@ -257,7 +257,7 @@ You are evaluating three systems and need to pick a metric for each. (i) A close
 
 (ii) **BLEU (e.g., `sacrebleu`) at system level, optionally with COMET as a complement.** Reiter's structured review explicitly defends this regime: system-level MT comparison with multiple references is where BLEU's per-sentence noise washes out and its correlations with human judgment become defensible. COMET adds a learned-metric perspective for free.
 
-(iii) **LLM-as-judge with multiple judges, or reward-model scoring (D24).** $n$-gram overlap is paraphrase-blind on long outputs; embedding-based metrics drift as embedding errors accumulate over hundreds of tokens. The defensible move is the most expensive one — judge with multiple models to absorb judge-specific biases, and budget for it. If multi-judge is out of reach, BERTScore is a defensible-but-weaker fallback.
+(iii) **LLM-as-judge with multiple judges, or reward-model scoring ([D-24](/lesson/24)).** $n$-gram overlap is paraphrase-blind on long outputs; embedding-based metrics drift as embedding errors accumulate over hundreds of tokens. The defensible move is the most expensive one — judge with multiple models to absorb judge-specific biases, and budget for it. If multi-judge is out of reach, BERTScore is a defensible-but-weaker fallback.
 
 The unifying rule: **simplest sufficient metric that captures the property you care about**. (i) wants surface match — overlap is sufficient. (ii) wants relative system ranking with low noise — corpus BLEU at system level is sufficient. (iii) wants meaning-level judgment — only a learned scorer is sufficient.
 
@@ -270,26 +270,26 @@ For the rest of the curriculum, the rule of thumb is:
 | Task shape | Metric | Why |
 | --- | --- | --- |
 | Short factoid QA (TriviaQA, NQ) | EM + F1 with alias expansion | Answers are short; alias sets handle most surface variation. |
-| Math/code with verifiable answers (GSM8K, HumanEval) | Exact match on extracted answer / `pass@k` | Answer is a number or a program output — checkable. (D9, D11) |
-| Long-form generation (summarization, open-ended) | LLM-as-judge with multiple judges or reward-model scoring | $n$-gram overlap is too weak; embedding-based is better but still misses meaning-level errors. (D22, D24) |
+| Math/code with verifiable answers (GSM8K, HumanEval) | Exact match on extracted answer / `pass@k` | Answer is a number or a program output — checkable. ([D-9](/lesson/9), [D-11](/lesson/11)) |
+| Long-form generation (summarization, open-ended) | LLM-as-judge with multiple judges or reward-model scoring | $n$-gram overlap is too weak; embedding-based is better but still misses meaning-level errors. ([D-22](/lesson/22), [D-24](/lesson/24)) |
 | Translation, system-level comparison | BLEU + COMET | BLEU is defensible *at system level* with multiple references; COMET is the modern complement. |
 | Anything where you need fast, cheap, reproducible | The simplest sufficient metric — usually EM or F1 if you can get away with it | Cost and reproducibility matter. Don't reach for an LLM judge if regex would do. |
 
-Most modern capability evals deliberately pick tasks with checkable answers (GSM8K, MATH, HumanEval, GPQA) precisely so they can avoid this whole question. The price is that "checkability" filters out the most realistic generation tasks — which is why D22 and D24 exist.
+Most modern capability evals deliberately pick tasks with checkable answers (GSM8K, MATH, HumanEval, GPQA) precisely so they can avoid this whole question. The price is that "checkability" filters out the most realistic generation tasks — which is why [D-22](/lesson/22) and [D-24](/lesson/24) exist.
 
 ## Cross-references
 
 **Backward.**
 
-- D-1 — picks up the MC vs. free-form contrast and the "scoring rule" box in the pipeline diagram; today's lesson is the deep dive on what fills that box when the output space is open.
+- [D-1](/lesson/1) — picks up the MC vs. free-form contrast and the "scoring rule" box in the pipeline diagram; today's lesson is the deep dive on what fills that box when the output space is open.
 
 **Forward.**
 
-- D-9 — picks up *exact match on extracted answer* as the scoring rule for math (GSM8K), where the answer is a number you can pull out of a chain of reasoning.
-- D-11 — picks up *checkable-answer* scoring for code via `pass@k` — the unit test is the similarity function.
-- D-15 — picks up factuality scoring (TruthfulQA), where free-form correctness is harder than TriviaQA-style alias matching because the failure mode is plausible-but-wrong.
-- D-22 — full lesson on **LLM-as-judge**: the modern default for long-form open-ended evaluation, with its biases (position, verbosity, self-preference) named and measured.
-- D-24 — full lesson on **reward-model evaluation** (RewardBench), closing the calibration thread and reprising the "trained scorer instead of a hand-coded metric" lineage from Stiennon et al. 2020.
+- [D-9](/lesson/9) — picks up *exact match on extracted answer* as the scoring rule for math (GSM8K), where the answer is a number you can pull out of a chain of reasoning.
+- [D-11](/lesson/11) — picks up *checkable-answer* scoring for code via `pass@k` — the unit test is the similarity function.
+- [D-15](/lesson/15) — picks up factuality scoring (TruthfulQA), where free-form correctness is harder than TriviaQA-style alias matching because the failure mode is plausible-but-wrong.
+- [D-22](/lesson/22) — full lesson on **LLM-as-judge**: the modern default for long-form open-ended evaluation, with its biases (position, verbosity, self-preference) named and measured.
+- [D-24](/lesson/24) — full lesson on **reward-model evaluation** (RewardBench), closing the calibration thread and reprising the "trained scorer instead of a hand-coded metric" lineage from Stiennon et al. 2020.
 
 ## Takeaways
 
@@ -297,19 +297,19 @@ Most modern capability evals deliberately pick tasks with checkable answers (GSM
 2. **TriviaQA**'s closed-book `rc.nocontext` configuration scores predictions with **exact match against alias sets**; alias expansion is the blunt-but-necessary fix for EM's strictness on natural surface variation. *(LO 2)*
 3. **EM** is too strict; **token-level F1** with bag-of-tokens overlap and the *max-over-aliases* reduction is the workable default for short-form QA. The Mona Lisa worked example yields EM = 0, F1 = 0.75 — partial credit via recall. *(LO 3)*
 4. **BLEU** (Papineni et al. 2002) and **ROUGE** (Lin 2004) are $n$-gram overlap metrics — paraphrase-blind, ordering-fragile, formatting-brittle, single-reference-noisy. The brevity penalty fixes only the length-gaming pathology, not the others. Defensible at *system level* with *multiple references* on the tasks they were designed for; misleading otherwise (Callison-Burch et al. 2006; Reiter 2018). *(LO 4)*
-5. **Semantic alternatives** trade compute and reproducibility for better human-judgment correlation: embedding-based (BERTScore, BLEURT, COMET), reward-model-based (Stiennon et al. 2020 lineage; D24), LLM-as-judge (Zheng et al. 2023; D22). *(LO 6)*
+5. **Semantic alternatives** trade compute and reproducibility for better human-judgment correlation: embedding-based (BERTScore, BLEURT, COMET), reward-model-based (Stiennon et al. 2020 lineage; [D-24](/lesson/24)), LLM-as-judge (Zheng et al. 2023; [D-22](/lesson/22)). *(LO 6)*
 6. Pick the **simplest sufficient metric** your task admits — overlap for short factoid QA, system-level BLEU for MT, judge-based for long-form. Reach for an LLM judge only when nothing cheaper captures the property you care about, and budget for the judge's biases and cost. *(LO 5)*
 
 ## Glossary
 
-- **exact match (EM)**: the strictest free-form scoring rule — $\text{EM} = 1$ iff the normalized prediction exactly equals one of the normalized gold aliases. The official TriviaQA metric for short-form QA [introduced D-3].
-- **token-level F1**: harmonic mean of precision and recall over bag-of-(normalized-)tokens overlap between prediction and reference; reported as the *max* over aliases when multiple aliases exist [introduced D-3].
-- **alias expansion**: the practice of pre-collecting equivalent surface forms (Wikipedia redirects, manual curation) per question so EM/F1 don't penalize valid paraphrases. Necessary but finite — any free-form answer has infinite valid surface forms [introduced D-3].
-- **SQuAD-style normalization**: lowercase, strip punctuation, drop English articles (`a`, `an`, `the`), collapse whitespace; inherited from Rajpurkar et al. 2016 and reused across most short-form-QA harnesses [introduced D-3].
-- **BLEU**: corpus-level modified $n$-gram precision (n = 1..4, geometric mean) with a brevity penalty for short hypotheses; defensible for system-level MT with multiple references, indefensible for individual-text scoring (Reiter 2018) [introduced D-3].
-- **ROUGE**: $n$-gram (ROUGE-N) or longest-common-subsequence (ROUGE-L) recall-oriented analog of BLEU, designed for summarization where reference-content coverage is the property being measured [introduced D-3].
-- **BERTScore**: contextual-embedding cosine-similarity scoring (Zhang et al. 2020); handles paraphrase but stumbles on negation, long outputs, and encoder-choice non-comparability [introduced D-3].
-- **LLM-as-judge**: prompting a strong language model to score or compare candidate responses; the modern default for long-form open-ended evaluation, with documented position / verbosity / self-preference / bandwagon biases (Zheng et al. 2023). Foregrounded D-22 [introduced D-3 · used here].
+- **exact match (EM)**: the strictest free-form scoring rule — $\text{EM} = 1$ iff the normalized prediction exactly equals one of the normalized gold aliases. The official TriviaQA metric for short-form QA [introduced D-3](/lesson/3).
+- **token-level F1**: harmonic mean of precision and recall over bag-of-(normalized-)tokens overlap between prediction and reference; reported as the *max* over aliases when multiple aliases exist [introduced D-3](/lesson/3).
+- **alias expansion**: the practice of pre-collecting equivalent surface forms (Wikipedia redirects, manual curation) per question so EM/F1 don't penalize valid paraphrases. Necessary but finite — any free-form answer has infinite valid surface forms [introduced D-3](/lesson/3).
+- **SQuAD-style normalization**: lowercase, strip punctuation, drop English articles (`a`, `an`, `the`), collapse whitespace; inherited from Rajpurkar et al. 2016 and reused across most short-form-QA harnesses [introduced D-3](/lesson/3).
+- **BLEU**: corpus-level modified $n$-gram precision (n = 1..4, geometric mean) with a brevity penalty for short hypotheses; defensible for system-level MT with multiple references, indefensible for individual-text scoring (Reiter 2018) [introduced D-3](/lesson/3).
+- **ROUGE**: $n$-gram (ROUGE-N) or longest-common-subsequence (ROUGE-L) recall-oriented analog of BLEU, designed for summarization where reference-content coverage is the property being measured [introduced D-3](/lesson/3).
+- **BERTScore**: contextual-embedding cosine-similarity scoring (Zhang et al. 2020); handles paraphrase but stumbles on negation, long outputs, and encoder-choice non-comparability [introduced D-3](/lesson/3).
+- **LLM-as-judge**: prompting a strong language model to score or compare candidate responses; the modern default for long-form open-ended evaluation, with documented position / verbosity / self-preference / bandwagon biases (Zheng et al. 2023). Foregrounded [D-22](/lesson/22) [introduced D-3 · used here](/lesson/3).
 
 ## References
 
@@ -322,7 +322,7 @@ Most modern capability evals deliberately pick tasks with checkable answers (GSM
 - **Secondary.** Reiter, E. (2018). *A Structured Review of the Validity of BLEU.* Computational Linguistics 44(3). https://aclanthology.org/J18-3002/
 - **Secondary.** Zhang, T., Kishore, V., Wu, F., Weinberger, K. Q., & Artzi, Y. (2020). *BERTScore: Evaluating Text Generation with BERT.* ICLR. arXiv:1904.09675.
 - **Secondary.** Stiennon, N., Ouyang, L., Wu, J., Ziegler, D., Lowe, R., Voss, C., Radford, A., Amodei, D., & Christiano, P. (2020). *Learning to Summarize from Human Feedback.* NeurIPS. arXiv:2009.01325.
-- **Secondary.** Zheng, L., Chiang, W.-L., Sheng, Y., et al. (2023). *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena.* NeurIPS Datasets and Benchmarks. arXiv:2306.05685. (Full treatment on D-22.)
+- **Secondary.** Zheng, L., Chiang, W.-L., Sheng, Y., et al. (2023). *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena.* NeurIPS Datasets and Benchmarks. arXiv:2306.05685. (Full treatment on [D-22](/lesson/22).)
 
 ## Quiz
 
@@ -366,7 +366,7 @@ Most modern capability evals deliberately pick tasks with checkable answers (GSM
 - A. ROUGE-L's longest-common-subsequence formulation remains the gold standard for summarization; embedding- and judge-based alternatives add compute without measurably improving human correlation.
 - B. LLM-as-judge is strictly dominant on long-form outputs; ROUGE-L and BERTScore are obsolete and should not appear in modern summarization papers.
 - C. Each metric trades cost, reproducibility, and human-correlation differently — report the simplest sufficient one your task and budget admit.
-- D. Reward-model scoring (D-24) is the only defensible option for long-form generation, since $n$-gram and embedding metrics provably fail to track human preference.
+- D. Reward-model scoring ([D-24](/lesson/24)) is the only defensible option for long-form generation, since $n$-gram and embedding metrics provably fail to track human preference.
 
 <details>
 <summary>Answers</summary>
@@ -376,6 +376,6 @@ Most modern capability evals deliberately pick tasks with checkable answers (GSM
 3. **B** — `nocontext` strips the evidence documents so the model must answer from its parameters; this is how lm-evaluation-harness's `triviaqa` task is configured by default.
 4. **B** — soft contextual-embedding similarity is the core idea; A and D are false (BERTScore is per-sentence and reports P/R/F1), and C is wrong (BERTScore needs a reference).
 5. **D** — Reiter's review is precisely an argument *against* assuming BLEU deltas equate to quality gains, especially at sentence level or with single references. A, B, and C all match the review's conclusions.
-6. **C** — the lesson's "where each metric earns its keep" framing: ROUGE-L is the cheap reproducible baseline, BERTScore adds paraphrase tolerance, LLM-as-judge correlates best with humans on long-form but costs more and brings its own biases (D-22). A, B, and D each overclaim a single metric.
+6. **C** — the lesson's "where each metric earns its keep" framing: ROUGE-L is the cheap reproducible baseline, BERTScore adds paraphrase tolerance, LLM-as-judge correlates best with humans on long-form but costs more and brings its own biases ([D-22](/lesson/22)). A, B, and D each overclaim a single metric.
 
 </details>
