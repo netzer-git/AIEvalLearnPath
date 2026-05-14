@@ -6,10 +6,41 @@ week: 4
 week_theme: Frontier evaluation methods
 anchor_benchmark: OSWorld
 harness: Inspect
-reading_time_minutes: 28
+reading_time_minutes: 32
+prerequisites: [26]
+key_terms:
+  - OS-agent action surface
+  - cross-application indirect-PI
+  - file-clipboard-dialog channels
+  - execution-based scoring
+  - observation modality
+  - set-of-marks
+  - accessibility tree
+  - success-rate-on-real-OS
+goodhart_role: absent
+calibration_role: absent
 ---
 
 # Day 27 — OS-level agents: OSWorld and the cross-application indirect-PI surface
+
+## TL;DR
+
+D26's web agent acted inside a browser tab; D27's OS agent drives the whole machine — file system, clipboard, terminal, system dialogs, every installed application. **OSWorld** (Xie et al. 2024) measures that capability across **369 tasks** inside a real Ubuntu/Windows/macOS VM with execution-based post-condition scoring. The structural consequence: every artifact rendered on screen — files written by another app, clipboard contents, dialog boxes, email bodies, filenames in a directory listing — becomes an indirect-prompt-injection channel, qualitatively wider than the single retrieved-page channel D26 named.
+
+## Learning objectives
+
+By the end of this lesson, you will be able to:
+
+1. **(L2)** State the three properties — screenshot-first observation, unbounded action surface, persistent OS-level side effects — that distinguish an OS-level agent from D26's web agent.
+2. **(L2)** Describe OSWorld's construction (369 tasks across LibreOffice, GIMP, VS Code, Chromium, Thunderbird, VLC, file manager, terminal, and multi-application workflows; canonical Ubuntu VM with Windows/macOS images; execution-based post-condition Python scoring) and its three observation modalities (screenshot-only, accessibility tree, set-of-marks).
+3. **(L3)** *Apply* OSWorld's release-time numbers (12.24% GPT-4V vs. 72.36% best human) and 2026 frontier numbers (~70–80%) to compute the human-vs-model gap and identify which terms the gap composes from.
+4. **(L4)** *Analyze* a list of candidate observation channels (file, clipboard, dialog, email body, terminal output, screenshot-of-screenshot, HTTP status code) and identify which are cross-application indirect-PI channels and which are not.
+5. **(L5)** *Evaluate* a system-card claim of "Model X scored 78% on OSWorld-Verified" and surface the four conditioning variables — observation modality, agent scaffold, contamination posture, paired safety probe — without which the number is uninterpretable.
+6. **(L4)** Contrast OSWorld with WindowsAgentArena, AndroidWorld, Spider2-V, and OS-Harm and explain which slice of the OS-agent surface each isolates.
+
+## Prerequisites & callback
+
+This lesson is the cross-application generalization of **D26**. The web-agent action surface (D26: click / type / goto inside a single browser tab; observations are DOM trees or rendered pages; the indirect-PI threat model rides on attacker-controlled retrieved web content) is exactly the special case OSWorld widens — the browser is now one application among many, and every artifact the agent reads or writes becomes prompt context. **D13**'s multimodal-observation framing is also load-bearing: every OS-agent observation is a screenshot (with optional accessibility-tree augmentation), so D13's perception-conditioned-reasoning load and D26's planning-and-tool-use load compose. **D12**'s Agent-Computer Interface point — small interface choices move scores as much as model gains — recurs at the OS layer with a wider action vocabulary.
 
 ## The opening hook
 
@@ -95,7 +126,20 @@ The 60-point gap to humans was the headline finding. As of mid-2026, frontier pr
 
 As with D7 and D13: **treat any specific 2026 number as drift-prone**. Verify against current vendor system cards or the OSWorld leaderboard before quoting. What's stable is the trajectory and its implication: the per-task ceiling is no longer the bottleneck; the bottleneck has moved to the *long-horizon* regime that D28's METR autonomy suite measures.
 
-The Goodhart sub-thread from D12 and D26 applies here too: most top OSWorld scores come from agent *scaffolds* — multi-step planners, custom prompt templates, retry-and-reflect loops, RL-finetuned grounding heads — that are themselves the system under test, not just the underlying model. A 75% OSWorld score from `Model + ScaffoldA` and a 75% from `Model + ScaffoldB` are not the same evaluation. The benchmark itself has been stable since 2024; what has been optimized is the harness around the model.
+A practical caveat worth flagging up front: most top OSWorld scores come from agent *scaffolds* — multi-step planners, custom prompt templates, retry-and-reflect loops, RL-finetuned grounding heads — that are themselves the system under test, not just the underlying model. A 75% OSWorld score from `Model + ScaffoldA` and a 75% from `Model + ScaffoldB` are not the same evaluation. The benchmark itself has been stable since 2024; what has been optimized is the harness around the model. We pick this thread up below.
+
+## ⏵ Check yourself — observation-modality drift
+
+Same model, same OSWorld task suite, three runs: screenshot-only scores 28%, accessibility-tree scores 41%, set-of-marks scores 36%. Which axis is doing most of the work in the 13-point spread, and what is the analogous Week-1 reflex this should trigger when you read a single "Model X scored 41% on OSWorld" headline?
+
+<details>
+<summary>Show answer</summary>
+
+The 13-point spread is observation-modality drift: the model is the same, the *pipeline* (how on-screen widgets are exposed to the prompt) is different. Accessibility-tree feeds give the model named, structured widget descriptors and bypass the GUI-grounding sub-problem that screenshot-only runs force the model to solve from pixels. Set-of-marks (numbered overlays on detected widgets) sits in between — easier than raw pixels, weaker than fully-named a11y nodes.
+
+The Week-1 reflex is D1's: *an evaluation is a pipeline, not a number*. A 41% OSWorld claim without a stated observation modality is the OS-agent analogue of an MMLU number with no `acc` vs. `acc_norm` declaration. Demand the modality before treating the score as a measurement.
+
+</details>
 
 ## Web agents vs. OS agents — the action-surface generalization
 
@@ -157,6 +201,19 @@ The structural property: **every artifact rendered on screen is prompt context t
 
 OSWorld itself is a *capability* benchmark; it does not measure indirect-PI vulnerability directly. The relevant follow-up is **OS-Harm** (Kuntz et al. 2025, arXiv:2506.14866), built on top of the OSWorld environment and explicitly measuring three safety axes — deliberate user misuse, prompt-injection attacks, and unintended unsafe actions — across 150 tasks spanning email clients, code editors, and browsers. OS-Harm is the OSWorld-environment counterpart to AgentDojo's web-environment work. As of 2026 every frontier model evaluated on OS-Harm shows non-trivial vulnerability to static prompt injections — the surface is real, not hypothetical.
 
+## ⏵ Check yourself — IPI channel inventory
+
+You're reviewing an OS-agent system card that reports an "indirect-PI evaluation" probing exactly two channels: attacker-controlled web pages and attacker-controlled email bodies. Under D27's framing, which OS-specific channels does the eval implicitly trust, and what is the right next question to ask the safety team?
+
+<details>
+<summary>Show answer</summary>
+
+The eval covers a strict subset of the cross-application IPI surface — roughly the union of D26's web-page channel and the most obvious extension to mail. It implicitly trusts at least: files written by one application and read by another; clipboard contents (an untyped global channel any process can write); system dialogs (whose text the agent renders and reads as observation); terminal output and `ls`-rendered filenames; and the recursive case where the agent's own screenshots embed text from any of the above.
+
+The right question is not "is the published attack-success rate low?" but "*which channels did the eval actually probe, and which channels did it implicitly trust?*" The OS-agent action surface is the union of all on-screen content; a 2-channel safety probe under-reports the threat surface in the same way a HarmBench ASR without an over-refusal number under-reports D19. OS-Harm (Kuntz et al. 2025) is the OSWorld-environment counterpart designed to widen this probe.
+
+</details>
+
 ## The harness — Inspect (`inspect_evals/osworld`)
 
 OSWorld ships its own benchmark-native runner (the `xlang-ai/OSWorld` repo's `run.py`), which is what the original paper measures with. For this curriculum's safety-leaning Week 4, the canonical harness is **Inspect** (UK AI Safety Institute), which exposes OSWorld via `inspect_evals/osworld`. The Inspect implementation:
@@ -209,15 +266,11 @@ OSWorld is the broadest current OS-agent benchmark, but it is one entry in a sma
 
 The taxonomy: **OSWorld** for the canonical Linux-desktop capability number; **WindowsAgentArena** when Windows-specific surface matters; **AndroidWorld** for mobile; **Spider2-V** for data-engineering verticals; **OS-Harm** for the safety axis on top of OSWorld. Each isolates a different slice; OSWorld is the broadest substrate, which is why it anchors today.
 
-## Forward pointer
+## OS-agent benchmark fragility
 
-D28 closes the curriculum on **METR's autonomy suite** (RE-Bench plus general autonomous tasks), where the question shifts from "can the agent complete one OSWorld task" to "can the agent complete a multi-day, multi-task project with minimal supervision". OSWorld's per-task scoring assumes a defined target end-state; METR's autonomy suite measures *horizon length* — how long can the agent stay productive without human course-correction. The two compose: OSWorld measures whether each unit of autonomous work is doable; METR measures how many units chain together before the agent loses the plot. Combined with D21's dangerous-capability framing, the policy-relevant frontier is the *product* of (capable, autonomous, dangerous) — and OSWorld is the per-step capability term in that product.
+Two benchmark-fragility pressures worth naming, both inherited from the wider scaffold-as-system-under-test pattern in D12 and D26 rather than novel to OSWorld:
 
-## Goodhart aside (brief)
-
-Two Goodhart-flavored pressures worth naming:
-
-1. **Scaffold-as-system-under-test.** As above. Top OSWorld numbers come from agent scaffolds explicitly engineered against OSWorld task patterns (planner prompts, retry policies, RL-tuned grounding modules). The 2024–2026 jump from ~12% to ~75% reflects both base-model improvement and scaffold-specialization; the two are hard to separate from leaderboard scores alone. Same issue as D12 (SWE-Bench scaffolds) and D26 (web-agent scaffolds), one layer wider.
+1. **Scaffold-as-system-under-test.** Top OSWorld numbers come from agent scaffolds explicitly engineered against OSWorld task patterns (planner prompts, retry policies, RL-tuned grounding modules). The 2024–2026 jump from ~12% to ~75% reflects both base-model improvement and scaffold-specialization; the two are hard to separate from leaderboard scores alone. Same issue as D12 (SWE-Bench scaffolds) and D26 (web-agent scaffolds), one layer wider.
 2. **Task-content leakage.** OSWorld's task instructions and post-condition scripts are public on GitHub since April 2024. A frontier model trained after that point may have ingested the task descriptions and the answer-checking logic, which can be exploited by a scaffold that retrieves the eval's own GitHub at agent-init. Treat 2026-era scores with the same D6 contamination skepticism MMLU and HumanEval invited.
 
 > **Safety researcher's note.** Two things worth holding from this lesson, even if you never run OSWorld yourself.
@@ -226,29 +279,56 @@ Two Goodhart-flavored pressures worth naming:
 >
 > Second, the *blast radius* of a successful injection in an OS-agent context is much larger than in a web-agent context. A web agent that gets injected can exfiltrate data the user has typed, navigate to attacker-controlled URLs, or perform actions inside one site. An OS agent that gets injected can read the file system, run arbitrary shell commands, modify SSH keys, send emails, install software, and persist across sessions. The mitigation strategies inherited from D26 (input/output isolation, planner-doer separation, capability-bounded sub-agents) need to scale up correspondingly — and as of 2026 the methodology for doing that is still actively under development. This is why OSWorld + OS-Harm is the policy-relevant pair for computer-use deployment decisions, and why D28's autonomy framing brings the long-horizon dimension that turns each per-task vulnerability into a multi-task amplification problem.
 
+## Cross-references
+
+**Backward.**
+
+- D-26 — web-agent action surface (browser tab, DOM observation, retrieved-page IPI channel) is the special case OSWorld widens to the whole OS; AgentDojo's IPI threat model generalizes to the file/clipboard/dialog/email/terminal union.
+- D-13 — every OS-agent observation is a screenshot; the perception-conditioned-reasoning load D13 named composes with the planning-and-tool-use load here, and the visual-prompt-injection recursion compounds at OS scale.
+- D-12 — the Agent-Computer Interface point: small interface choices (observation modality on OSWorld) move scores as much as model gains; scaffold-as-system-under-test recurs at the OS layer.
+- D-11 — execution-based scoring (the HumanEval pattern) is the methodological move OSWorld imports — per-task post-condition Python checks state, no LLM judge in the loop.
+- D-19 — direct-jailbreak threat model; OS-agent IPI is the indirect generalization with a tool-action consequence and a wider blast radius.
+- D-10 — RGB-counterfactual setup; OS-level IPI is the relaxed version (attacker-controlled, no warning, action consequence on the OS surface).
+- D-6 — contamination skepticism applies; OSWorld task scripts and post-conditions have been public on GitHub since April 2024.
+
+**Forward.**
+
+- D-28 — METR autonomy suite shifts the question from "can the agent complete one OSWorld task" to "how many OS-level tasks can chain together before supervision is needed." OSWorld measures the per-step capability term in the policy-relevant (capable, autonomous, dangerous) product; D28 measures the horizon term.
+- D-21 — dangerous-capability framing pairs with autonomy: OS-level capability + long-horizon autonomy + uplift on hazardous tasks is the policy-relevant frontier-safety question, and OSWorld + OS-Harm is the per-step capability/safety pair the autonomy lesson composes onto.
+
 ## Takeaways
 
-1. OS-level agents operate the whole machine — every observation is a screenshot (plus optional accessibility-tree feed), every action is mouse/keyboard, every artifact is real and persistent. This is the cross-application generalization of D26's browser-bounded web agent and the agent-side specialization of D13's multimodal-reasoning framing.
-2. OSWorld (Xie et al. 2024, NeurIPS 2024 D&B, arXiv:2404.07972) is **369 tasks** across LibreOffice (Calc/Writer/Impress), GIMP, VS Code, Chromium, Thunderbird, VLC, file manager, terminal, and multi-application workflows, run inside a real Ubuntu VM with **execution-based post-condition scoring** (Python scripts that inspect resulting VM state).
-3. Roughly one-third of OSWorld tasks are cross-application "workflow" tasks. About 15% are completable from terminal alone; observation-modality choice (screenshot vs. a11y tree vs. set-of-marks) is a major pipeline-drift source.
-4. Release-time GPT-4V scored **12.24%** vs. **72.36%** human; 2026 frontier scaffolds reach **70–80%** on OSWorld / OSWorld-Verified, approaching or surpassing the human baseline. Verify specific numbers against current system cards.
-5. The cross-application indirect-PI surface is the OS-specific safety story: files written by one app and read by another, clipboard contents, system dialogs, email bodies, terminal output, filenames, and PDFs are all observation-context channels that a third party can write to. Every artifact rendered on screen is prompt-context the model conditions on; the threat model from D26 widens accordingly.
-6. **OS-Harm** (arXiv:2506.14866) is the OSWorld-built safety counterpart; **WindowsAgentArena**, **AndroidWorld**, and **Spider2-V** are the Windows / mobile / data-engineering siblings. OSWorld is the broadest current Linux-desktop substrate.
-7. Agent scaffolds are part of the system under test on OSWorld in the same way they are on D12 (SWE-Bench) and D26 (web agents); a scaffold trained against OSWorld can score well via specialization, not generalization. Read scores with that caveat.
+1. OS-level agents operate the whole machine — every observation is a screenshot (plus optional accessibility-tree feed), every action is mouse/keyboard, every artifact is real and persistent. This is the cross-application generalization of D26's browser-bounded web agent and the agent-side specialization of D13's multimodal-reasoning framing. *(LO 1)*
+2. OSWorld (Xie et al. 2024, NeurIPS 2024 D&B, arXiv:2404.07972) is **369 tasks** across LibreOffice (Calc/Writer/Impress), GIMP, VS Code, Chromium, Thunderbird, VLC, file manager, terminal, and multi-application workflows, run inside a real Ubuntu/Windows/macOS VM with **execution-based post-condition scoring** (Python scripts that inspect resulting VM state). *(LO 2)*
+3. Roughly one-third of OSWorld tasks are cross-application "workflow" tasks. About 15% are completable from terminal alone; observation-modality choice (screenshot vs. a11y tree vs. set-of-marks) is a major pipeline-drift source — same model, different modality, 5–15 point swings. *(LO 2)*
+4. Release-time GPT-4V scored **12.24%** vs. **72.36%** human (a 60-point gap); 2026 frontier scaffolds reach **70–80%** on OSWorld / OSWorld-Verified, approaching or surpassing the human baseline. The gap composes from base-model improvement *and* scaffold specialization — not separable from leaderboard scores alone. Verify specific numbers against current system cards. *(LO 3)*
+5. The cross-application indirect-PI surface is the OS-specific safety story: files written by one app and read by another, clipboard contents, system dialogs, email bodies, terminal output, filenames, and PDFs are all observation-context channels that a third party can write to. Every artifact rendered on screen is prompt-context the model conditions on; the threat model from D26 widens accordingly. *(LO 4)*
+6. **OS-Harm** (arXiv:2506.14866) is the OSWorld-built safety counterpart; **WindowsAgentArena**, **AndroidWorld**, and **Spider2-V** are the Windows / mobile / data-engineering siblings. OSWorld is the broadest current Linux-desktop substrate. *(LO 6)*
+7. Reading a 78%-on-OSWorld claim requires four conditioning variables stated alongside it: observation modality, agent scaffold, contamination posture, and a paired safety probe. A capability number alone is not a deployability claim. *(LO 5)*
+
+## Glossary
+
+- **OS-agent action surface**: the set of state transitions an agent operating a real OS can produce per step — mouse, keyboard, shell, file-system writes, clipboard writes, dialog interactions. Widens D26's browser-bounded action surface to the union of all installed-application action spaces [introduced D-27].
+- **cross-application indirect-PI**: indirect prompt injection where attacker-controlled text enters the agent's observation context through artifacts produced by one application and rendered by another (e.g., a CSV cell rendered in a spreadsheet). Generalizes D26's retrieved-web-page channel [introduced D-27].
+- **file-clipboard-dialog channels**: the canonical trio of OS-specific IPI channels — files written by one app and read by another, the global clipboard, system-dialog text — plus extensions (email bodies, terminal output, filenames). All are cooperative-channel features no application designer treated as adversarial [introduced D-27].
+- **execution-based scoring**: per-task post-condition Python script that inspects resulting VM state and returns 0/1. Same family as HumanEval (D11), SWE-Bench (D12), WebArena (D26); applied here to OS-level state [introduced D-11 · reused].
+- **observation modality**: the format in which on-screen widgets are exposed to the model — screenshot-only, accessibility tree, set-of-marks. A major pipeline-drift source on OSWorld; the same model can score very differently across the three [introduced D-27].
+- **set-of-marks (SoM)**: perception-aid pipeline where detected interactive elements are overlaid with numbered marks on a screenshot, and the agent emits actions by mark index instead of (x, y). Yang et al. 2023 [introduced D-27].
+- **success-rate-on-real-OS**: per-task binary success aggregated across the 369-task OSWorld suite, reported as a percentage. Distinct from trajectory-quality scores; orthogonal to safety probes such as OS-Harm [introduced D-27].
+- **scaffold-as-system-under-test**: the convention from D12 / D26 that a benchmark score reflects (model + scaffold), not the model alone. Recurs here at the OS layer; agent scaffolds (planners, retry loops, RL-tuned grounding) are RL-tuned against OSWorld task patterns [introduced D-12 · reused].
 
 ## References
 
-- **Anchor.** Xie, T., et al. (2024). *OSWorld: Benchmarking Multimodal Agents for Open-Ended Tasks in Real Computer Environments.* NeurIPS 2024 Datasets and Benchmarks Track. arXiv:2404.07972. https://arxiv.org/abs/2404.07972
-- **Project site + leaderboard.** https://os-world.github.io/
-- **Code.** https://github.com/xlang-ai/OSWorld
-- **Inspect harness coverage.** UK AISI Inspect Evals — OSWorld. https://ukgovernmentbeis.github.io/inspect_evals/evals/assistants/osworld/ ; https://github.com/UKGovernmentBEIS/inspect_evals/tree/main/src/inspect_evals/osworld
-- **Safety counterpart on OSWorld env.** Kuntz, T., et al. (2025). *OS-Harm: A Benchmark for Measuring Safety of Computer Use Agents.* NeurIPS 2025 Spotlight. arXiv:2506.14866. https://arxiv.org/abs/2506.14866
-- **Foil — historical predecessor.** Liu, X., et al. (2023). *AgentBench: Evaluating LLMs as Agents.* ICLR 2024. arXiv:2308.03688. https://arxiv.org/abs/2308.03688
-- **Foil — Windows.** Bonatti, R., et al. (2024). *Windows Agent Arena: Evaluating Multi-Modal OS Agents at Scale.* arXiv:2409.08264. https://arxiv.org/abs/2409.08264
-- **Foil — Android.** Rawles, C., et al. (2024). *AndroidWorld: A Dynamic Benchmarking Environment for Autonomous Agents.* ICLR 2025. arXiv:2405.14573. https://arxiv.org/abs/2405.14573
-- **Foil — data engineering.** Lei, F., et al. (2024). *Spider 2.0: Evaluating Language Models on Real-World Enterprise Text-to-SQL Workflows.* ICLR 2025 Oral. arXiv:2411.07763. https://arxiv.org/abs/2411.07763
-- **Task-level analysis.** Epoch AI. *What does OSWorld tell us about AI's ability to use computers?* https://epoch.ai/blog/what-does-osworld-tell-us-about-ais-ability-to-use-computers
-- **Cross-reference D26 web-agent indirect-PI.** Debenedetti, E., et al. (2024). *AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents.* arXiv:2406.13352. https://arxiv.org/abs/2406.13352
+- **Anchor.** Xie, T., Zhang, D., Chen, J., Li, X., Zhao, S., Cao, R., Hua, T. J., Cheng, Z., Shin, D., Lei, F., Liu, Y., Xu, Y., Zhou, S., Savarese, S., Xiong, C., Zhong, V., & Yu, T. (2024). *OSWorld: Benchmarking Multimodal Agents for Open-Ended Tasks in Real Computer Environments.* NeurIPS 2024 Datasets and Benchmarks Track. arXiv:2404.07972. https://arxiv.org/abs/2404.07972
+- **Anchor — project site, leaderboard, code.** OSWorld team. https://os-world.github.io/ ; https://github.com/xlang-ai/OSWorld
+- **Harness.** UK AISI. *Inspect Evals — OSWorld.* https://ukgovernmentbeis.github.io/inspect_evals/evals/assistants/osworld/ ; https://github.com/UKGovernmentBEIS/inspect_evals/tree/main/src/inspect_evals/osworld
+- **Secondary — safety counterpart on OSWorld env.** Kuntz, T., et al. (2025). *OS-Harm: A Benchmark for Measuring Safety of Computer Use Agents.* NeurIPS 2025 Spotlight. arXiv:2506.14866. https://arxiv.org/abs/2506.14866
+- **Secondary — historical predecessor.** Liu, X., et al. (2023). *AgentBench: Evaluating LLMs as Agents.* ICLR 2024. arXiv:2308.03688. https://arxiv.org/abs/2308.03688
+- **Secondary — Windows.** Bonatti, R., et al. (2024). *Windows Agent Arena: Evaluating Multi-Modal OS Agents at Scale.* arXiv:2409.08264. https://arxiv.org/abs/2409.08264
+- **Secondary — Android.** Rawles, C., et al. (2024). *AndroidWorld: A Dynamic Benchmarking Environment for Autonomous Agents.* ICLR 2025. arXiv:2405.14573. https://arxiv.org/abs/2405.14573
+- **Secondary — data engineering.** Lei, F., et al. (2024). *Spider 2.0: Evaluating Language Models on Real-World Enterprise Text-to-SQL Workflows.* ICLR 2025 Oral. arXiv:2411.07763. https://arxiv.org/abs/2411.07763
+- **Secondary — task-level analysis.** Epoch AI. *What does OSWorld tell us about AI's ability to use computers?* https://epoch.ai/blog/what-does-osworld-tell-us-about-ais-ability-to-use-computers
+- **Secondary — D26 web-agent indirect-PI cross-reference.** Debenedetti, E., et al. (2024). *AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents.* arXiv:2406.13352. https://arxiv.org/abs/2406.13352
 
 ## Quiz
 
@@ -266,12 +346,12 @@ Two Goodhart-flavored pressures worth naming:
 - C. The agent's terminal screenshots are compared pixel-by-pixel to reference screenshots and graded by SSIM with a fixed 0.95 acceptance threshold.
 - D. Crowd annotators rate each completed trajectory on a five-point Likert scale and the median rating is reported as the per-task score.
 
-**Q3.** OSWorld's release-time paper reports which baseline numbers?
+**Q3.** Given OSWorld's release-time numbers — best-human-baseline 72.36% and GPT-4V 12.24% on the 369-task suite — **compute** the human-vs-model gap and identify what the gap describes:
 
-- A. GPT-4V at 12.24% success vs. 72.36% best-human-baseline on the 369-task benchmark.
-- B. GPT-4 (text-only) at 56.1% vs. 88.4% best-human-baseline on the same 369-task suite.
-- C. Claude 3.5 Sonnet at 30.6% vs. 74.5% best-human-baseline averaged over five random seeds.
-- D. The paper reports only model numbers; OSWorld did not collect a human baseline at release.
+- A. ~60 points; the human-vs-GPT-4V gap on the 369-task OSWorld benchmark at release in April 2024.
+- B. ~12 points; the size of OSWorld's accessibility-tree-only subset relative to the full screenshot-only run.
+- C. ~72 points; a contamination-corrected ceiling once the 15% terminal-completable tasks are removed from the suite.
+- D. ~24 points; the OSWorld-Verified vs. OSWorld delta on Claude-Opus-class 2026 models.
 
 **Q4.** Which of the following is **not** a cross-application indirect-PI channel that becomes available in the OS-agent setting beyond what D26 web agents face?
 
@@ -287,11 +367,11 @@ Two Goodhart-flavored pressures worth naming:
 - C. 78% exceeds the 72.36% best-human baseline, so the agent is strictly better than humans across the OSWorld task distribution and adjacent OS-use settings.
 - D. The number must be wrong because the original OSWorld paper reported only ~12% for GPT-4V at release in early 2024 on the same evaluation harness.
 
-**Q6.** Why does the indirect-prompt-injection threat model widen between D26 (web agents) and D27 (OS agents)?
+**Q6.** Why does the indirect-prompt-injection threat model widen primarily because of a *structural* property between D26 (web agents) and D27 (OS agents)?
 
 - A. OS agents support more natural-language locales than web agents do, and indirect-prompt-injection severity scales linearly with the vocabulary size of the deployed tokenizer.
 - B. The OS agent's context is the union of all observations, so files, clipboard, dialogs, mail, and terminal output are all injection channels; the web agent had only one such channel.
-- C. Web agents are sandboxed; OS agents are not. (This is true but not the structural reason for the widened indirect-PI surface.)
+- C. Web agents are sandboxed; OS agents are not. (This is true but not the load-bearing structural reason for the widened indirect-PI surface.)
 - D. OS agents use a different multimodal tokenizer with a longer context window, which admits substantially more attacker-written tokens per turn into the prompt context.
 
 <details>
@@ -299,7 +379,7 @@ Two Goodhart-flavored pressures worth naming:
 
 1. **C** — the action-surface generalization is the structural fact this lesson is built on: web agent → one tab; OS agent → whole machine, with persistent side effects (files, clipboard, dialogs).
 2. **B** — execution-based scoring via per-task post-condition scripts is the methodological move that makes OSWorld a benchmark rather than a vibes-eval. Same family as HumanEval (D11), SWE-Bench (D12), WebArena (D26).
-3. **A** — 12.24% (GPT-4V) and 72.36% (best human) on the 369-task suite are the headline release-time numbers, per Xie et al. 2024.
+3. **A** — 72.36 − 12.24 ≈ 60 points; this is the human-vs-GPT-4V gap on the 369-task OSWorld suite at release (April 2024), per Xie et al. 2024. (B), (C), and (D) misroute the arithmetic onto unrelated quantities.
 4. **D** — HTTP status codes are not a textual observation the OS agent renders; the other three are all artifact channels that bring attacker-controllable text into the prompt context. The point of the lesson is precisely the breadth of (A)–(C).
 5. **B** — modality, scaffold, contamination, and a separate safety probe are all required to make a 78% number actually informative. (A) is wrong because OSWorld's pipeline-drift sources are real. (C) over-interprets a single per-task aggregate; D28's horizon-length question is where human-vs-agent comparison shifts. (D) ignores 18 months of frontier progress.
 6. **B** — the structural reason is that the OS agent's observation context is the union of *all* on-screen content, and many cooperative OS features (file system, clipboard, dialog system, mail, terminal) are channels through which a third party can write text into that union. The model does not distinguish channels by trustworthiness; that is the OS-specific failure mode the lesson names.

@@ -1,6 +1,7 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { migrateSectionSlugs } from "./content";
 
 const DATA_DIR = path.resolve(process.cwd(), "data");
 const PROGRESS_FILE = path.join(DATA_DIR, "progress.json");
@@ -50,9 +51,14 @@ export async function loadProgress(): Promise<ProgressData> {
     await ensureFile();
     const raw = await fs.readFile(PROGRESS_FILE, "utf-8");
     const parsed = JSON.parse(raw) as Partial<ProgressData>;
+    // Migrate legacy section slugs through the Stage 2.6 alias tables
+    // (see web/lib/content.ts). Read-side migration only — the file on
+    // disk keeps its original keys, so a rollback to the pre-rewrite
+    // curriculum would still see correct progress.
+    const sections = migrateSectionSlugs(parsed.sections ?? {});
     return {
       lessons: parsed.lessons ?? {},
-      sections: parsed.sections ?? {},
+      sections,
       weekly: parsed.weekly ?? {},
     };
   } catch {

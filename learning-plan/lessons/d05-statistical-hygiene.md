@@ -6,10 +6,39 @@ week: 1
 week_theme: Foundations of LLM evaluation
 anchor_benchmark: HELM
 harness: HELM (own harness)
-reading_time_minutes: 28
+reading_time_minutes: 32
+prerequisites: [1, 2]
+key_terms:
+  - Wilson interval
+  - paired bootstrap
+  - sampling-noise floor
+  - scenario × metric matrix
+  - mean win rate
+  - scenario coverage
+goodhart_role: absent
+calibration_role: absent
 ---
 
 # Day 5 — Statistical hygiene: sample size, error bars, scenario coverage
+
+## TL;DR
+
+A score is not a measurement; an *interval* is. At $n \approx 14{,}000$ and $p \approx 0.85$ the sampling-noise floor on accuracy is already ±0.4 points, and a per-subject breakdown at $n \approx 250$ is ±4.5 points — wider than most "improvements" you read about. Today's anchor — **HELM** (Liang et al. 2022/2023) — is the project that built statistical rigor (bootstrapped CIs, paired comparisons, mean win rate) and *scenario coverage* (16 scenarios × 7 metrics, not one benchmark × accuracy) into the same framework.
+
+## Learning objectives
+
+By the end of this lesson, you will be able to:
+
+1. **(L2)** State why a benchmark score without an uncertainty interval is incomplete, and recall the rough sampling-noise envelopes — ~±0.4 points at $n \approx 14{,}000$, ~±2.4 at $n = 1{,}000$, ~±4.5 at $n = 250$ — at $p \approx 0.85$.
+2. **(L3)** *Apply* the Bernoulli SE and Wilson interval to compute a 95% confidence interval for an observed accuracy at a stated $n$ and $\hat{p}$.
+3. **(L3)** *Apply* a paired-difference / paired-bootstrap framing to a comparison of two models on the same test items, and distinguish it from naively comparing two marginal CIs.
+4. **(L4)** *Analyze* HELM's scenario × metric matrix as a structural alternative to "one benchmark, one number" — decomposing what a single MMLU-style score does and does not support.
+5. **(L5)** *Evaluate* a small-$n$ safety-eval claim ("refusal rate 87.3% → 89.1% on $n = 200$") against the relevant Wilson CI and judge whether the reported delta is signal or noise.
+6. **(L4)** *Contrast* HELM (suite + harness with bootstrapped CIs and a per-scenario instance cap) with `lm-evaluation-harness`'s task-centric default, and identify which design moves enable the cost-vs-coverage trade-off.
+
+## Prerequisites & callback
+
+Two prior lessons are load-bearing today. **D1** framed an evaluation as a (dataset, scoring rule, reporting convention) **pipeline** and noted in passing that "with ~14k MMLU items, sampling noise alone is around ±0.4 points" — today does that math and asks what to assume when a 0.6-point delta is reported with no interval. **D2** introduced **calibration** as a property of the scoring rule (`acc` vs. `acc_norm`, the reliability-diagram framing); HELM lifts calibration into a *scenario-level metric* reported alongside accuracy, so D2's mechanic and today's structural argument meet inside the same scoring matrix.
 
 ## The opening hook
 
@@ -45,6 +74,17 @@ For $n = 14{,}042$ this barely moves the interval; for a 100-item subset it matt
 
 A useful rule of thumb to commit to memory: **at $p \approx 0.85$, a 95% CI of ±1 point requires roughly $n = 5{,}000$ items; ±0.5 points requires ~20,000.**
 
+## ⏵ Check yourself — the per-subject noise floor
+
+A model card reports MMLU = 85.0 overall and breaks out a 91.0 on "high school physics" and 80.0 on "college chemistry." Each subject has roughly 250 items. **Compute** the approximate 95% Wilson CI on each per-subject score and decide whether the 11-point gap supports the claim "the model is dramatically stronger at physics than chemistry."
+
+<details>
+<summary>Show answer</summary>
+
+At $n = 250$ and $\hat{p} \approx 0.85$, $\mathrm{SE} \approx \sqrt{0.85 \cdot 0.15 / 250} \approx 0.023$, so the 95% CI is roughly $\pm 1.96 \cdot 0.023 \approx \pm 0.045$, i.e. ±4.5 points. The two subject-level intervals are roughly $[86.5, 95.5]$ and $[75.5, 84.5]$ — they do *not* overlap, so a between-subject difference exists, but the precision is much weaker than the headline 85.0 ±0.5 implies. The load-bearing point is structural rather than purely numerical: per-subject accuracy is computed on ~250 items, so the 11-point gap is a *coarse* signal, and a 4-point per-subject gap (e.g., 89 vs. 85) would be entirely within noise. Per-subject leaderboards are doing 57 simultaneous noisy measurements, and any "this model is best at logic" claim built on a ~250-item subject is borderline-uninterpretable without intervals.
+
+</details>
+
 ## Two models, one comparison: paired vs. unpaired tests
 
 The interval above answers "how uncertain is my single number?" The downstream question — "is model A better than model B?" — is harder, because the two models are usually evaluated on the *same* test items.
@@ -73,6 +113,18 @@ HELM was published as *Holistic Evaluation of Language Models* (arXiv:2211.09110
 ### The methodological move: scenarios × metrics, not benchmarks × accuracy
 
 Pre-HELM evaluation reported one metric (accuracy) on each of a handful of benchmarks. HELM's signature contribution is the **scenario × metric matrix**: every model is evaluated on every (scenario, metric) cell where it makes sense.
+
+```mermaid
+flowchart TB
+    subgraph PRE["Pre-HELM: one number per model"]
+        M1["Model"] --> A1["MMLU accuracy → 85.0"]
+    end
+    subgraph HM["HELM: scenario × metric matrix"]
+        M2["Model"] --> S["16 core scenarios<br/>(QA, IR, summarization, …)"]
+        S --> Mx["× 7 metrics<br/>(accuracy, calibration, robustness,<br/>fairness, bias, toxicity, efficiency)"]
+        Mx --> V["Vector of comparable measurements<br/>+ bootstrapped CI per cell"]
+    end
+```
 
 The original 2022 release defined:
 
@@ -123,6 +175,17 @@ helm-run \
 
 > **Maintenance note.** The `crfm-helm` GitHub repo is on its v0.5.x release line as of early 2026 and continues to ship updates; the project hosts active sub-leaderboards (HELM Lite, MMLU, Capabilities, Long Context, Safety, MedHELM). Treat the harness as production-quality and the suites as evolving at HELM Lite / HELM Capabilities cadence — new scenarios get added; older ones don't refresh on a strict schedule.
 
+## ⏵ Check yourself — paired vs. marginal CIs
+
+Two models are evaluated on the same 1,000-item scenario. Their **marginal** 95% Wilson CIs are $[0.712, 0.766]$ and $[0.681, 0.737]$ — they overlap at $[0.712, 0.737]$. Decide whether you can conclude "no significant difference" from this overlap, and identify the **load-bearing** assumption that determines which test is the right one to run.
+
+<details>
+<summary>Show answer</summary>
+
+You cannot. Marginal-CI overlap is the wrong test when the two models are evaluated on the same items, because per-item scores are *paired* and typically highly correlated — similar-capability models tend to get the same items right. The correct test is a **paired bootstrap** on $d_i = \mathbb{1}[A_i] - \mathbb{1}[B_i]$, whose variance is $(\sigma_A^2 + \sigma_B^2 - 2\,\mathrm{Cov}(A, B))/n$. The covariance term is large and positive in the typical case, so the paired CI on the gap is much narrower than either marginal. The load-bearing assumption is the *pairing*: if the two models were evaluated on independent samples (e.g., different random subsets), the marginal-overlap reading would be appropriate, but that's almost never the case in practice. Many "no significant difference" claims you read in eval blog posts use the wrong test.
+
+</details>
+
 ## What scenario coverage actually buys you
 
 The "scenarios × metrics" matrix is more than a presentation choice. It changes what kind of claim you can make about a model.
@@ -140,12 +203,40 @@ The trade-off is honest: a HELM-style evaluation costs roughly $K$× a single-be
 
 ## A worked CI example
 
-Suppose you want to claim that model A beats model B on a 1,000-item scenario, and you observe accuracies 0.74 and 0.71. Should you believe the 3-point gap?
+> **Worked example.** You want to claim that model A beats model B on a 1,000-item scenario, observing accuracies 0.74 and 0.71. Should you believe the 3-point gap?
 
-- **Unpaired Wilson 95% CIs:** A is in [0.712, 0.766], B is in [0.681, 0.737]. The intervals **overlap** — naively, "no significant difference."
-- **Paired bootstrap on $d_i$:** if the per-item agreement between A and B is 0.85 (roughly typical for two similar-capability models), the SE of the *paired* difference is much smaller than the SE of either marginal. With $n = 1000$ and a paired SE around 0.0095, the 95% CI on the gap is roughly $[0.011, 0.049]$ — i.e., the gap is significant at $p < 0.05$ even though the marginal CIs overlapped.
+Step 1 — **Unpaired Wilson 95% CIs**, computed independently per model.
+
+For model A at $\hat{p}_A = 0.74, n = 1000, z = 1.96$:
+
+$$\mathrm{SE}_A \approx \sqrt{\frac{0.74 \cdot 0.26}{1000}} \approx 0.0139$$
+
+so the Wilson CI is approximately $[0.712, 0.766]$. For model B at $\hat{p}_B = 0.71$:
+
+$$\mathrm{SE}_B \approx \sqrt{\frac{0.71 \cdot 0.29}{1000}} \approx 0.0143$$
+
+so the Wilson CI is approximately $[0.681, 0.737]$.
+
+The intervals **overlap** on $[0.712, 0.737]$. Naive read: "no significant difference."
+
+Step 2 — **Paired bootstrap on $d_i$.** If the per-item agreement between A and B is 0.85 (roughly typical for two similar-capability models), the variance of the paired difference is
+
+$$\mathrm{Var}(\hat{d}) = \frac{\sigma_A^2 + \sigma_B^2 - 2\,\mathrm{Cov}(A, B)}{n}$$
+
+with the covariance term large and positive. Plugging in plausible numbers gives a paired SE of roughly $0.0095$, so the 95% CI on the gap is approximately $[0.011, 0.049]$ — i.e., the gap is significant at $p < 0.05$ even though the marginal CIs overlapped.
 
 The lesson: **overlapping marginal CIs do not imply a non-significant difference when the items are paired.** Many "no-significant-difference" claims you see in eval blog posts use the wrong test. HELM's bootstrap-of-the-difference (when it is reported) is the right one.
+
+## ⏵ Check yourself — the small-$n$ safety report
+
+A safety-eval report claims: *"refusal rate improved from 87.3% to 89.1% on $n = 200$ borderline prompts."* Decide whether this is a **defensible** claim of improvement and identify the right reflex.
+
+<details>
+<summary>Show answer</summary>
+
+At $n = 200$ and $\hat{p} \approx 0.88$, $\mathrm{SE} \approx \sqrt{0.88 \cdot 0.12 / 200} \approx 0.023$, so the 95% Wilson CI is roughly $\pm 4.5$ points. The 1.8-point delta is well *inside* the noise floor: any reading of the report should treat the change as indistinguishable from noise unless paired per-item scores are available (and even then a paired bootstrap on $n = 200$ has limited power for sub-2-point gaps). The right reflex is two-step: (1) compute the Wilson CI before reading the delta as evidence of progress; (2) ask whether the reported number is paired or marginal — if marginal, the case for improvement is weaker still. Safety-eval test sets are usually $n < 500$ and effect sizes are small; this is exactly the regime where the field's "no error bars" norm produces the most spurious "improvement" claims.
+
+</details>
 
 ## Practical checklist for reading or writing an eval report
 
@@ -160,54 +251,72 @@ When you read someone else's eval, look for:
 
 When you write one, treat reporting a single point estimate as a defect — analogous to reporting a physics measurement without an error bar.
 
-> **Safety researcher's note.** Statistical hygiene is doubly important for safety evals because their effect sizes are usually small. A capability benchmark might show a +12-point gap between Llama-3-8B and Llama-3-70B; a safety eval (refusal rate on borderline prompts, harm-classifier rate on jailbroken responses, sycophancy score) typically shows 1–3 point gaps between adjacent model versions, and the test sets are often $n < 500$. At $n = 300, p = 0.5$, the 95% CI is ±5.7 points — wider than every reported safety improvement in some recent model cards. If you read "refusal rate improved from 87.3% to 89.1% (n=200)," you are reading noise. The HELM Safety leaderboard is one of the only public safety reports that reports CIs as a default; the rest of the field has not caught up. When you build internal safety dashboards, build the CIs in from day one — they will save you from celebrating a regression.
+> **Safety researcher's note.** Statistical hygiene is doubly important for safety evals because their effect sizes are usually small. A capability benchmark might show a +12-point gap between Llama-3-8B and Llama-3-70B; a safety eval (refusal rate on borderline prompts, harm-classifier rate on jailbroken responses, sycophancy score) typically shows 1–3 point gaps between adjacent model versions, and the test sets are often $n < 500$. At $n = 300, p = 0.5$, the 95% CI is ±5.7 points — wider than every reported safety improvement in some recent model cards. The HELM Safety leaderboard is one of the only public safety reports that reports CIs as a default; the rest of the field has not caught up. When you build internal safety dashboards, build the CIs in from day one — they will save you from celebrating a regression.
 
-## Forward-pointers
+## Cross-references
 
-- **D6 (contamination)** explains *why* point estimates are even less trustworthy than the CI math suggests: if the data is contaminated, even a perfectly tight CI is centered on the wrong number.
-- **D7 (saturation)** explains why the noise floor matters increasingly more as benchmarks age: when the gap between SOTA and ceiling shrinks, every visible "improvement" lands inside the ±0.5-point envelope and the benchmark stops discriminating.
-- **D15 (TruthfulQA)** is a HELM scenario that inherited HELM's measurement philosophy and exposes a calibration-vs-truthfulness trade that only appears once you read the multi-metric matrix.
-- **D22 (LLM-as-judge)** generalizes the multi-metric philosophy to judges: a judge that scores high on agreement-with-humans but high on position-bias is not a good judge, and the only way to see that is to report both metrics.
-- **D24 (RewardBench)** completes the calibration thread (D2 → D15 → D20 → D24): reward-model confidence is itself a calibration story and inherits the same statistical-hygiene discipline.
+**Backward.**
+
+- D-1 — picks up the "evaluation is a pipeline" framing and adds the missing piece: every step of the pipeline produces a number with an *uncertainty interval*, not a point estimate.
+- D-2 — picks up the calibration mechanic introduced as a scoring-rule property and lifts it to a scenario-level *metric* reported alongside accuracy in HELM's matrix.
+
+**Forward.**
+
+- D-6 — explains *why* point estimates are even less trustworthy than the CI math suggests: if the data is contaminated, even a perfectly tight CI is centered on the wrong number.
+- D-7 — explains why the noise floor matters increasingly more as benchmarks age: when SOTA approaches the ceiling, every visible "improvement" lands inside the ±0.5-point envelope and the benchmark stops discriminating.
+- D-15 — TruthfulQA was a HELM scenario from the start and inherited HELM's measurement philosophy, exposing a calibration-vs-truthfulness trade only visible in the multi-metric matrix.
+- D-22 — generalizes the multi-metric philosophy to LLM-as-judge: a judge that scores high on agreement-with-humans but high on position-bias is not a good judge, and only a multi-axis report surfaces that.
+- D-24 — completes the calibration thread (D2 → D15 → D20 → D24): reward-model confidence is itself a calibration story and inherits today's statistical-hygiene discipline.
 
 ## Takeaways
 
-1. A score is not a measurement; an interval is. At $n = 14{,}000, p \approx 0.85$ the sampling-noise floor is roughly ±0.4 points; at $n = 250$ it is ±4.5 points. Per-subject breakdowns are much noisier than headline numbers.
-2. Use the Wilson interval near $p = 0$ or $p = 1$, and use a **bootstrap** when items are non-IID (passage-grouped, paired AB, scenario-grouped).
-3. Comparisons between two models on the same items are *paired*. Marginal CIs overlapping does not mean the gap is insignificant — paired bootstrap on $d_i$ gives the right interval.
-4. HELM's signature methodological move is the **scenario × metric** matrix: 16 core scenarios × 7 metrics (accuracy, calibration, robustness, fairness, bias, toxicity, efficiency) instead of one benchmark × accuracy. *Coverage*, not headline number, is the deliverable.
-5. HELM is also a harness (`crfm-helm`) with `Scenario` / `Adapter` / `Metric` / `Runner` abstractions, prompt-level caching, a static-site frontend, and several sub-leaderboards (Classic, Lite, MMLU, Capabilities, Safety, MedHELM).
-6. Safety evals are usually small-$n$ and report tiny effect sizes; they need *more* statistical hygiene than capability evals, not less.
+1. A score is not a measurement; an interval is. At $n = 14{,}000, p \approx 0.85$ the sampling-noise floor is roughly ±0.4 points; at $n = 250$ it is ±4.5 points. Per-subject breakdowns are much noisier than headline numbers. *(LO 1)*
+2. Use the Bernoulli SE and the Wilson interval to compute a 95% CI; near $p = 0$ or $p = 1$ Wilson is the defensible default, and a **bootstrap** is the right tool when items are non-IID (passage-grouped, paired AB, scenario-grouped). *(LO 2)*
+3. Comparisons between two models on the same items are *paired*. Marginal CIs overlapping does not mean the gap is insignificant — paired bootstrap on $d_i$ gives the right interval, often 2–5× tighter than the marginals. *(LO 3)*
+4. HELM's signature methodological move is the **scenario × metric** matrix: 16 core scenarios × 7 metrics (accuracy, calibration, robustness, fairness, bias, toxicity, efficiency) instead of one benchmark × accuracy. *Coverage* — not headline number — is the deliverable, evidenced by the 17.9% → 96.0% pre/post-HELM coverage shift. *(LO 4)*
+5. Small-$n$ safety reports are exactly the regime where the field's "no error bars" norm produces the most spurious "improvement" claims; the right reflex is to compute the Wilson CI before reading the delta. *(LO 5)*
+6. HELM as a *harness* (`crfm-helm`) implements `Scenario` / `Adapter` / `Metric` / `Runner` abstractions, prompt-level caching, and a 1,000-item-per-scenario cap that locks in the cost-vs-coverage trade-off — distinct from `lm-evaluation-harness`'s task-centric default. *(LO 6)*
+
+## Glossary
+
+- **Wilson interval**: a binomial confidence interval that stays inside $[0, 1]$ near the boundaries and is the standard fix to the symmetric normal approximation when $\hat{p}$ is near $0$ or $1$ [introduced D-5].
+- **paired bootstrap**: nonparametric CI on a *paired* statistic — for two models on the same items, resample the per-item differences $d_i$ with replacement; tighter than unpaired comparisons by 2–5× when models are correlated [introduced D-5].
+- **sampling-noise floor**: the irreducible Bernoulli SE on accuracy at a given $n$ and $p$; ~±0.4 points at $n = 14{,}000$, ~±2.4 at $n = 1{,}000$, ~±4.5 at $n = 250$ at $p \approx 0.85$ [introduced D-5].
+- **scenario × metric matrix**: HELM's structural reframing of evaluation — every model evaluated on every applicable (scenario, metric) cell rather than one benchmark × accuracy [introduced D-5].
+- **mean win rate**: HELM's headline ranking statistic — fraction of (scenario, model-pair) cells where one model beats another; rank-based and unit-free across heterogeneous metrics [introduced D-5].
+- **scenario coverage**: fraction of a fixed scenario set on which a given model has been evaluated; HELM's 17.9% → 96.0% lift quantified the pre/post-HELM gap [introduced D-5].
+- **Expected Calibration Error (ECE)**: gap between a model's stated confidence and its empirical accuracy, binned and averaged; reported by HELM as a per-scenario metric alongside accuracy [introduced D-2 · reused].
+- **paired test / per-item difference**: comparison statistic $d_i = \mathbb{1}[A_i] - \mathbb{1}[B_i]$ over a shared test set; the variance term $-2\,\mathrm{Cov}(A, B)$ is what makes the paired CI tighter than the marginals [introduced D-5].
 
 ## References
 
 - **Anchor.** Liang, P., Bommasani, R., Lee, T., Tsipras, D., Soylu, D., et al. (2022/2023). *Holistic Evaluation of Language Models.* TMLR. arXiv:2211.09110.
-- **HELM Classic launch post.** Stanford CRFM. *Holistic Evaluation of Language Models (HELM).* November 2022. https://crfm.stanford.edu/2022/11/17/helm.html
-- **HELM Lite launch post.** Stanford CRFM. *HELM Lite: Lightweight and Broad Capabilities Evaluation.* December 2023. https://crfm.stanford.edu/2023/12/19/helm-lite.html
-- **HELM MMLU launch post.** Stanford CRFM. *MMLU on HELM.* May 2024. https://crfm.stanford.edu/2024/05/01/helm-mmlu.html
-- **HELM Capabilities launch post.** Stanford CRFM. *HELM Capabilities.* March 2025. https://crfm.stanford.edu/2025/03/20/helm-capabilities.html
-- **HELM repository.** stanford-crfm/helm on GitHub. Apache-2.0. https://github.com/stanford-crfm/helm
-- **Wilson interval.** Wilson, E. B. (1927). *Probable Inference, the Law of Succession, and Statistical Inference.* JASA 22(158).
-- **Bootstrap.** Efron, B. (1979). *Bootstrap Methods: Another Look at the Jackknife.* Annals of Statistics 7(1).
-- **Eval-uncertainty critique.** Madaan, L., Singh, A. K., Schaeffer, R., Poulton, A., Koyejo, S., Stenetorp, P., Narang, S., & Hupkes, D. (2024). *Quantifying Variance in Evaluation Benchmarks.* arXiv:2406.10229. https://arxiv.org/abs/2406.10229 — empirical companion piece on bench-to-bench variance, seed variance, and monotonicity-during-training as evaluation metrics.
+- **Harness.** Stanford CRFM. *`crfm-helm` (HELM)*. Apache-2.0. https://github.com/stanford-crfm/helm
+- **Secondary.** Wilson, E. B. (1927). *Probable Inference, the Law of Succession, and Statistical Inference.* JASA 22(158).
+- **Secondary.** Efron, B. (1979). *Bootstrap Methods: Another Look at the Jackknife.* Annals of Statistics 7(1).
+- **Secondary.** Madaan, L., Singh, A. K., Schaeffer, R., Poulton, A., Koyejo, S., Stenetorp, P., Narang, S., & Hupkes, D. (2024). *Quantifying Variance in Evaluation Benchmarks.* arXiv:2406.10229. — empirical companion piece on bench-to-bench variance, seed variance, and monotonicity-during-training as evaluation metrics.
+- **Secondary.** Stanford CRFM. *HELM Classic launch post.* November 2022. https://crfm.stanford.edu/2022/11/17/helm.html
+- **Secondary.** Stanford CRFM. *HELM Lite: Lightweight and Broad Capabilities Evaluation.* December 2023. https://crfm.stanford.edu/2023/12/19/helm-lite.html
+- **Secondary.** Stanford CRFM. *MMLU on HELM.* May 2024. https://crfm.stanford.edu/2024/05/01/helm-mmlu.html
+- **Secondary.** Stanford CRFM. *HELM Capabilities.* March 2025. https://crfm.stanford.edu/2025/03/20/helm-capabilities.html
 
 ## Quiz
 
-**Q1.** A model scores 82.0% on a 1,000-item scenario. The approximate 95% Wilson CI is closest to:
+**Q1.** A model scores 82.0% on a 1,000-item scenario. **Compute** the approximate 95% Wilson CI on this estimate. The answer is closest to:
 
 - A. ±0.4 points
 - B. ±1.2 points
 - C. ±2.4 points
 - D. ±5.0 points
 
-**Q2.** Two models report MMLU scores of 85.1 and 85.5 on the full 14,042-item test set. Which conclusion is best supported?
+**Q2.** Two models report MMLU scores of 85.1 and 85.5 on the full 14,042-item test set, with no other information given. Which is the **most defensible reading** of the 0.4-point gap?
 
 - A. The 0.4-point gap is statistically significant under a paired bootstrap and headlines a real win for B.
 - B. The 0.4-point gap is within the ±0.4-to-±0.6-point sampling-noise envelope; the gap is plausibly noise.
 - C. The two models are statistically identical because their headline scores agree to one decimal digit.
 - D. You need at least 100,000 items to distinguish a sub-1-point gap under any reasonable Wilson test.
 
-**Q3.** Two models are evaluated on the same 1,000-item scenario. Their marginal 95% CIs overlap. Which test is most appropriate to determine whether one model is significantly better?
+**Q3.** Two models are evaluated on the same 1,000-item scenario and their marginal 95% CIs overlap. Which option **best captures** the load-bearing assumption that determines which significance test you should run?
 
 - A. Conclude that there is no significant difference because the two marginal Wilson CIs visibly overlap.
 - B. Run an unpaired Welch t-test on the two reported accuracies and check the p-value against $\alpha = 0.05$.
@@ -228,7 +337,7 @@ When you write one, treat reporting a single point estimate as a defect — anal
 - C. Cost-per-token (USD spent per output token at vendor list price)
 - D. Toxicity (rate of harmful generations flagged by a classifier)
 
-**Q6.** You read a safety-eval report claiming "refusal rate improved from 87.3% to 89.1% on n=200 borderline prompts." What is the right reflex?
+**Q6.** You read a safety-eval report claiming "refusal rate improved from 87.3% to 89.1% on $n = 200$ borderline prompts." What is the **right reflex**?
 
 - A. Believe the 1.8-point improvement; safety evaluations from major labs are usually statistically rigorous and adequately powered.
 - B. Compute the Wilson CI: at $n = 200$ near $p = 0.88$ it spans roughly ±4.5 points, so the 1.8-point delta is inside the noise floor.
@@ -239,8 +348,8 @@ When you write one, treat reporting a single point estimate as a defect — anal
 <summary>Answers</summary>
 
 1. **C** — $\mathrm{SE} = \sqrt{0.82 \cdot 0.18 / 1000} \approx 0.012$, so 95% CI is roughly $\pm 1.96 \cdot 0.012 \approx \pm 0.024$, i.e., ±2.4 points.
-2. **B** — at $n = 14{,}042, p \approx 0.85$, the per-model SE is about 0.30 points, so a 0.4-point gap is well within sampling noise. (A paired test could in principle resolve it, but only with the per-item scores in hand.)
-3. **C** — paired comparisons on the same test set have lower variance than unpaired tests because the per-item correlation is high. Marginal CIs can overlap while a paired CI excludes zero.
+2. **B** — at $n = 14{,}042, p \approx 0.85$, the per-model SE is about 0.30 points, so a 0.4-point gap is well within sampling noise. (A paired test could in principle resolve it, but only with the per-item scores in hand, which the report does not provide.)
+3. **C** — paired comparisons on the same test set have lower variance than unpaired tests because the per-item correlation is high. Marginal CIs can overlap while a paired CI excludes zero. The load-bearing assumption is the *pairing* of per-item scores across models.
 4. **B** — the scenarios × metrics matrix is HELM's structural innovation; it pushes evaluation from "one benchmark, one number" to "many scenarios, many metrics, all comparable."
 5. **C** — HELM's seven metrics are accuracy, calibration, robustness, fairness, bias, toxicity, and efficiency. Cost-per-token is related to (but not the same as) efficiency, which HELM operationalizes as wall-clock and energy-style measures, not dollars.
 6. **B** — at $n = 200, p \approx 0.88$, $\mathrm{SE} \approx \sqrt{0.88 \cdot 0.12 / 200} \approx 0.023$, so the 95% CI is about ±4.5 points. A 1.8-point delta is well inside the noise floor and the claim of "improvement" is not statistically supported on this sample size alone.

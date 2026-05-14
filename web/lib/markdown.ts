@@ -206,6 +206,65 @@ const rehypeMermaidPre: Plugin<[], Root> = () => {
   };
 };
 
+/**
+ * Tag `<details class="lesson-section">` blocks (produced by
+ * `rehypeWrapSections`) with a modifier class derived from the
+ * section's slug, so CSS can render them as distinctive pedagogical
+ * callouts:
+ *
+ *   .lesson-section--tldr        — "## TL;DR"
+ *   .lesson-section--objectives  — "## Learning objectives"
+ *   .lesson-section--prereq      — "## Prerequisites & callback"
+ *   .lesson-section--check       — "## ⏵ Check yourself — …"
+ *   .lesson-section--glossary    — "## Glossary"
+ *   .lesson-section--takeaways   — "## Takeaways"
+ *   .lesson-section--cross-refs  — "## Cross-references"
+ *
+ * Section-completion tracking via `rehypeWrapSections` is unchanged —
+ * these are real H2s, slugged and tickable like any other section.
+ *
+ * Stage 2.6.
+ */
+const PEDAGOGICAL_VARIANT_BY_SLUG: ReadonlyArray<{
+  match: (slug: string) => boolean;
+  variant: string;
+}> = [
+  { match: (s) => s === "tl-dr" || s === "tldr", variant: "tldr" },
+  { match: (s) => s === "learning-objectives", variant: "objectives" },
+  {
+    match: (s) =>
+      s === "prerequisites-callback" || s === "prerequisites-and-callback",
+    variant: "prereq",
+  },
+  { match: (s) => s.startsWith("check-yourself"), variant: "check" },
+  { match: (s) => s === "glossary", variant: "glossary" },
+  { match: (s) => s === "takeaways", variant: "takeaways" },
+  { match: (s) => s === "cross-references", variant: "cross-refs" },
+];
+
+const rehypeTagPedagogicalSections: Plugin<[], Root> = () => {
+  return (tree) => {
+    visit(tree, "element", (node: Element) => {
+      if (node.tagName !== "details") return;
+      const props = node.properties as Record<string, unknown> | undefined;
+      const className = props?.className;
+      const classes = Array.isArray(className) ? [...className] : [];
+      if (!classes.includes("lesson-section")) return;
+      const slug = props?.["data-section-slug"];
+      if (typeof slug !== "string") return;
+      for (const { match, variant } of PEDAGOGICAL_VARIANT_BY_SLUG) {
+        if (match(slug)) {
+          classes.push(`lesson-section--${variant}`);
+          break;
+        }
+      }
+      if (props) {
+        props.className = classes;
+      }
+    });
+  };
+};
+
 export async function markdownToHtml(markdown: string): Promise<string> {
   const file = await unified()
     .use(remarkParse)
@@ -220,6 +279,7 @@ export async function markdownToHtml(markdown: string): Promise<string> {
       keepBackground: false,
     })
     .use(rehypeWrapSections)
+    .use(rehypeTagPedagogicalSections)
     .use(rehypeStringify, { allowDangerousHtml: true })
     .process(markdown);
   return String(file);

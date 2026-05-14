@@ -6,12 +6,39 @@ week: 1
 week_theme: Foundations of LLM evaluation
 anchor_benchmark: MMLU
 harness: lm-evaluation-harness
-reading_time_minutes: 30
+reading_time_minutes: 32
+prerequisites: []
+key_terms:
+  - benchmark
+  - evaluation pipeline
+  - log-likelihood scoring
+  - acc vs acc_norm
+  - length bias
+  - macro- vs. micro-average
+  - capability overhang
+  - Goodhart's Law
+goodhart_role: callback
+calibration_role: absent
 ---
 
 # Day 1 — What is an LLM evaluation?
 
-## The opening question
+## TL;DR
+
+An LLM evaluation is not a number; it is the entire (dataset, scoring rule, reporting convention) pipeline that produced the number. Today's anchor — **MMLU**, the field's most-cited benchmark — makes that pipeline visible: 15,908 4-way multiple-choice questions across 57 subjects, scored by macro-averaged accuracy under a 5-shot prompt. The first job of this curriculum is to teach you to read the pipeline directly so two reports' disagreements decompose into *model* differences vs. *pipeline* differences.
+
+## Learning objectives
+
+By the end of this lesson, you will be able to:
+
+1. **(L2)** State the three pieces every benchmark consists of — dataset, scoring rule, reporting convention — and explain why all three are needed before a "score" is meaningful.
+2. **(L2)** Describe MMLU's canonical setup (4-way MC, 57 subjects, 5-shot, macro-average accuracy) and the difference between **letter-only** and **log-likelihood** scoring.
+3. **(L3)** *Apply* the macro-vs-micro distinction to a concrete subject-imbalance scenario, predicting which aggregator is more sensitive to small-subject performance.
+4. **(L4)** *Analyze* a numerical disagreement between two papers reporting MMLU on the *same checkpoint* and decompose it into pipeline axes (n-shot, template, `acc`/`acc_norm`, subset).
+5. **(L5)** *Evaluate* a model card claim of "MMLU = 89.5" and surface the right next question to ask before treating the number as a measurement.
+6. **(L4)** Frame Goodhart's Law as a curriculum-wide overlay and explain why **ranking** is more robust to pipeline drift than **scoring**.
+
+## The opening hook
 
 When you read that "GPT-5 scores 89.5 on MMLU", four things have happened that the headline number quietly hides:
 
@@ -46,6 +73,21 @@ Three pieces, every time:
 3. **A reporting convention.** How per-item scores roll up to a headline number. MMLU reports unweighted *macro*-average accuracy across the 57 subjects, which is *not* the same as *micro*-average accuracy across all 14,042 items because subjects have different sizes.
 
 A **benchmark** is the (dataset, scoring rule, reporting convention) triple. An **evaluation** is the result of running a specific model against that triple. People say "MMLU score" to mean both; we will be precise where it matters and loose where it doesn't.
+
+## ⏵ Check yourself — macro vs. micro
+
+Suppose a model scores 100% on MMLU's 13 humanities subjects (~3,500 items) and 60% on its remaining 44 subjects (~10,500 items). What is its **macro**-average and its **micro**-average accuracy, approximately, and which one would the MMLU paper report?
+
+<details>
+<summary>Show answer</summary>
+
+**Macro:** equal weight per subject. If 13 of 57 subjects are at 100% and 44 are at 60%, macro ≈ $(13 \times 1.0 + 44 \times 0.60) / 57 \approx 0.69$.
+
+**Micro:** equal weight per item. With 3,500 of 14,000 items at 100% and 10,500 at 60%, micro ≈ $(0.25 \times 1.0 + 0.75 \times 0.60) = 0.70$.
+
+MMLU reports **macro** (per the original paper). The two would diverge much more sharply if the lopsided subjects were small ones; macro penalizes weakness on rare subjects, which is the design intent — "knowledge breadth" is supposed to be evenly weighted across topics, not over-weighted toward whichever subject happens to have the most items.
+
+</details>
 
 ## Anchor: MMLU (Hendrycks et al. 2021)
 
@@ -107,6 +149,22 @@ a model can prefer (A) not because it knows the answer is (A) but because (A) is
 
 The two scores can disagree by a couple of points on the same model and data. Which one to trust depends on the option-length distribution: MMLU options are usually roughly equal-length, so the gap is small; HellaSwag has wildly varying option lengths and the gap is meaningful — Day 2 returns to this.
 
+## ⏵ Check yourself — `acc` vs. `acc_norm`
+
+A small open-weights model run on MMLU reports `acc = 0.42` and `acc_norm = 0.51`. The 9-point gap is large for MMLU specifically. **Compute** what this most plausibly tells you about either (a) the model or (b) the per-item option-length distribution in MMLU's test slice the model was evaluated on, and decide which explanation is load-bearing.
+
+<details>
+<summary>Show answer</summary>
+
+A 9-point `acc_norm` − `acc` gap on MMLU is *unusually* large because MMLU's options are typically of similar length. Two non-mutually-exclusive explanations:
+
+1. The MMLU subset being run has more option-length variance than a full-MMLU average (e.g., a single-subject run on Professional Law, where options are dense citation strings of variable length).
+2. The model's calibration of unnormalized log-probabilities is poor — it relies disproportionately on short-string preference (length bias), so byte-length normalization recovers latent knowledge.
+
+The load-bearing one is (2) — option-length variance alone rarely opens a 9-point gap on MMLU's full distribution. The pedagogical point is that the gap *itself* is a signal: a healthy MMLU run shows `acc_norm − acc ≈ 0–2 points`. Anything larger and the headline `acc` number is over-attributing to the *Yes/No-shape* of the options rather than to the model's knowledge.
+
+</details>
+
 ## Multiple-choice vs. free-form
 
 MMLU's MC format is what made it the field's lingua franca. The trade-off is sharp:
@@ -160,6 +218,21 @@ A subtle but important distinction:
 
 Ranking is more robust than scoring under pipeline drift. If a prompt-template change shifts every model down by three points, the ordering is preserved even though the magnitudes are not. Most leaderboards default to rank-based comparisons for headline claims; HELM reports both. The implication for the rest of this curriculum: when you see "improved from 82.3 to 84.1", check whether the rank changed too.
 
+## ⏵ Check yourself — pipeline drift
+
+Three models score 82.3, 79.0, and 75.7 on MMLU under template T1. After changing to template T2, the same three models score 78.8, 75.5, and 72.2 (a uniform −3.5-point shift). **Compute** the change in (a) the ordering and (b) the gap structure, and identify the property that survives.
+
+<details>
+<summary>Show answer</summary>
+
+(a) The ordering is unchanged: 82.3 > 79.0 > 75.7 maps to 78.8 > 75.5 > 72.2 — same model in 1st, 2nd, 3rd.
+
+(b) The pairwise gaps (3.3 and 3.3, then 3.3 and 3.3) are also preserved exactly because the shift is *uniform*. In real pipeline drift the shift is approximately uniform but not exactly; the *rank ordering* is the property that survives even when the gap structure does not.
+
+The lesson: a leaderboard that reports rank rather than score absorbs uniform-and-near-uniform pipeline drift "for free." A leaderboard that reports score does not.
+
+</details>
+
 This sets up the curriculum's recurring overlay, **Goodhart's Law**:
 
 > When a measure becomes a target, it ceases to be a good measure.
@@ -179,21 +252,53 @@ You cannot read any of these four off the headline number. Reading them off the 
 
 > **Safety researcher's note.** MMLU isn't a safety benchmark — it measures world-knowledge breadth. But for a safety-leaning practitioner, the capability score tells you something *relative*: if a model's MMLU score jumps significantly while its safety-eval scores stay flat, the model has gained planning and world-knowledge without gaining guardrail compliance. That delta — capability up, safety flat — is where risk concentrates. The shorthand for this in safety research is **capability overhang**: capability outpacing alignment. We'll return to it on Day 21 (WMDP, dangerous-capability evaluation) and Day 28 (METR's autonomy suite). The reason a curriculum on *evaluation* spends Week 1 on capability benchmarks before turning to safety is that you can't read the safety delta without first reading the capability number it's relative to.
 
+## Goodhart callback
+
+Goodhart's Law is a recurring overlay across this curriculum, foregrounded on five days (D6 contamination, D15 truthfulness, D17 situational awareness, D22 LLM-as-judge, D28 autonomy) and threaded through the rest. D1 is the first **callback** — the place where the *measure-vs-target* distinction is named, illustrated by MMLU's leaderboard retirement, and parked for the week to elaborate.
+
+The shape Goodhart takes here: when MMLU becomes the *score* labs optimize, the score's value as a *measure* of language understanding decays. The Open LLM Leaderboard's 2025 retirement wasn't because models stopped improving on MMLU; it was because the team judged that the improvement signal had decoupled from the underlying capability they were trying to track. We'll meet that decoupling mechanism explicitly under five different names — leakage (D6), incentive-structure (D15), situational conditioning (D17), measurement-instrument-as-target (D22), and selection-pressure (D28) — and ranking-vs-scoring is the first defensive move against it.
+
+## Cross-references
+
+**Backward.** None — this is the entry point.
+
+**Forward.**
+
+- D-2 — picks up *log-likelihood scoring* and the `acc` vs. `acc_norm` mechanic introduced here, then reframes around calibration.
+- D-3 — picks up *free-form scoring* (EM, F1, BLEU/ROUGE) where MC drops it.
+- D-5 — picks up *what is the CI on 89.5* — the statistical-hygiene gap left open today.
+- D-6 — picks up *was MMLU in training data?* (anchor: MMLU-Pro, contamination forensics).
+- D-7 — picks up *MMLU near-saturation* (anchor: GPQA, saturation-resistant successors).
+- D-21 — picks up *capability overhang* with WMDP as the dangerous-capability anchor.
+- D-28 — closes the curriculum on the autonomy frontier, where the capability-vs-alignment delta is the operational measure.
+
 ## Takeaways
 
-1. An evaluation is a (dataset, scoring rule, reporting convention) pipeline plus a model run — not a number.
-2. MMLU is the canonical knowledge benchmark — 4-way MC, 5-shot, 57 subjects, accuracy macro-averaged across subjects.
-3. MC formats are cheap and automatic but exploitable; free-form is realistic but hard to score.
-4. Leaderboards differ on n-shot, prompt template, and scoring rule — same model, different numbers, all "correct."
-5. Ranking is more robust than scoring. Goodhart's Law is the central tension: optimized scores degrade as measures.
+1. An evaluation is a (dataset, scoring rule, reporting convention) pipeline plus a model run — not a number. *(LO 1)*
+2. MMLU is the canonical knowledge benchmark — 4-way MC, 5-shot, 57 subjects, accuracy macro-averaged across subjects. *(LO 2)*
+3. Macro and micro averages can disagree by several points when subject sizes are uneven — choose the one that matches the construct you're measuring. *(LO 3)*
+4. Two papers reporting different MMLU numbers for the same checkpoint differ on n-shot, prompt template, scoring rule (`acc` vs. `acc_norm`), or subset — the pipeline, not the model. *(LO 4)*
+5. Before treating a headline MMLU number as a measurement, ask **"what pipeline?"** — n-shot, template, scoring, subset, harness. *(LO 5)*
+6. Ranking is more robust than scoring under pipeline drift; Goodhart's Law is the curriculum-wide overlay that makes ranking the defensive move. *(LO 6)*
 
 The rest of Week 1 unpacks the four hidden properties — calibration, scoring hygiene, contamination, saturation — that the headline number conceals.
+
+## Glossary
+
+- **benchmark**: the (dataset, scoring rule, reporting convention) triple. Distinct from an *evaluation*, which is the result of running a model against a benchmark [introduced D-1].
+- **evaluation pipeline**: the full chain — dataset → prompt template → model → scoring rule → aggregation — that produces a headline number. The framing for the rest of this curriculum [introduced D-1].
+- **log-likelihood scoring**: scoring an MC item by the model's $\log P(\text{option} \mid \text{prompt})$ rather than by sampling a letter. Required for base models; previewed here, mechanically unpacked on D2 [introduced D-1].
+- **`acc` vs. `acc_norm`**: lm-evaluation-harness reports both. `acc` is the argmax over summed log-likelihoods (length-biased toward shorter strings); `acc_norm` divides by byte length first [introduced D-1].
+- **length bias**: an MC scoring artifact where unnormalized log-likelihood prefers shorter options regardless of correctness. Defensible fix: byte-length normalization [introduced D-1].
+- **macro- vs. micro-average**: macro weights each subject equally; micro weights each item equally. They differ when subject sizes are uneven [introduced D-1].
+- **capability overhang**: capability gain outpacing alignment gain. The delta where safety risk concentrates; the reason a curriculum on *evaluation* covers capability before safety [introduced D-1].
+- **Goodhart's Law**: *"When a measure becomes a target, it ceases to be a good measure."* The curriculum's recurring overlay; foregrounded on D6, D15, D17, D22, D28 [introduced D-1].
 
 ## References
 
 - **Anchor.** Hendrycks, D., Burns, C., Basart, S., Zou, A., Mazeika, M., Song, D., & Steinhardt, J. (2021). *Measuring Massive Multitask Language Understanding.* ICLR. arXiv:2009.03300.
 - **Harness.** Gao, L., et al. *lm-evaluation-harness* (EleutherAI). https://github.com/EleutherAI/lm-evaluation-harness
-- **Leaderboard (archive).** Hugging Face. *Open LLM Leaderboard v1 + v2 archive docs.* https://huggingface.co/docs/leaderboards/en/open_llm_leaderboard/archive
+- **Secondary.** Hugging Face. *Open LLM Leaderboard v1 + v2 archive docs.* https://huggingface.co/docs/leaderboards/en/open_llm_leaderboard/archive
 - **Goodhart.** Strathern, M. (1997). *"Improving ratings": audit in the British University system.* European Review, 5(3) — the canonical concise formulation. (Goodhart's original 1975 phrasing was longer and about monetary policy.)
 
 ## Quiz
@@ -205,35 +310,35 @@ The rest of Week 1 unpacks the four hidden properties — calibration, scoring h
 - C. A sequence of prompts fed to the model in fixed order, with the final response taken as the headline score.
 - D. The model's averaged ranking position across all public leaderboards that report on that benchmark.
 
-**Q2.** Two papers report MMLU scores for the *same model checkpoint*: 80.4 and 78.1. Which of the following is **not** a typical source of the difference?
+**Q2.** Two papers report MMLU scores for the *same model checkpoint*: 80.4 and 78.1. Which of the following is **not** a typical source of the difference, holding the load-bearing assumption that the weights are identical?
 
 - A. One report used 5-shot, the other 0-shot.
 - B. One used `acc`, the other `acc_norm`.
 - C. One used a different prompt template.
 - D. The model was retrained between the two reports.
 
-**Q3.** Why is ranking more robust than scoring under prompt-template changes?
+**Q3.** Three models score 82.3, 79.0, and 75.7 on MMLU under prompt template T1. After switching to template T2, the same three models score 78.8, 75.5, and 72.2 (a uniform −3.5-point shift). **Compute** the rank ordering under T1 and T2, and identify the property that explains why ranking is more robust than scoring under prompt-template changes:
 
 - A. Ranking is derived from log-likelihoods while scoring uses raw generative output, which is template-sensitive.
 - B. A uniform shift in every model's score preserves the ordering.
 - C. Ranking is computed by averaging accuracy across many prompt templates per model before sorting.
 - D. Scoring is computed on the held-out test split rather than the few-shot dev set used to format prompts.
 
-**Q4.** Which is a **weakness** of multiple-choice formats like MMLU's?
+**Q4.** A model card claims "MMLU = 89.5" and reports nothing else. Which is the **most defensible** single-line characterization of the largest MC-format weakness this number leaves unaddressed?
 
-- A. They are far more expensive to run than free-form prompts because of the per-option likelihood passes.
-- B. They require an LLM-judge in the loop because letter extraction from continuations is unreliable.
-- C. Surface cues can substitute for genuine knowledge.
-- D. They cannot be batched across subjects without breaking the macro-average aggregation rule.
+- A. The number is far more expensive to compute than free-form prompts because of the per-option likelihood passes.
+- B. It requires an LLM-judge in the loop because letter extraction from continuations is unreliable.
+- C. Surface cues in the options can substitute for genuine knowledge.
+- D. The score cannot be batched across subjects without breaking the macro-average aggregation rule.
 
-**Q5.** Goodhart's Law applied to MMLU says that:
+**Q5.** Goodhart's Law applied to MMLU is **best read** as:
 
 - A. MMLU's accuracy is mathematically bounded above by 1, since accuracy is a probability over a finite item set.
 - B. Once MMLU is optimized as a target, it stops being a good measure.
 - C. MMLU's headline score saturates at 100% once frontier models reach the test-set ceiling.
 - D. MMLU is contaminated by definition because its items appear on publicly crawled web pages.
 
-**Q6.** You are evaluating a model on MMLU using log-likelihood scoring. You change the prompt template from `"A:"` to `"The correct answer is:"`. The model's weights are unchanged. Why might the score change?
+**Q6.** You are evaluating a model on MMLU using log-likelihood scoring. You change the prompt template from `"A:"` to `"The correct answer is:"`. The model's weights are unchanged, yet the score moves. What is the **load-bearing** mechanism?
 
 - A. The conditioning context changes, which can shift the argmax over option log-likelihoods.
 - B. Log-likelihood scoring is only compatible with the literal `A:` prompt format used in the original MMLU paper.
@@ -245,9 +350,9 @@ The rest of Week 1 unpacks the four hidden properties — calibration, scoring h
 
 1. **B** — see "What an evaluation actually consists of."
 2. **D** — A/B/C are all standard pipeline differences for the same checkpoint. Retraining produces a different checkpoint, which contradicts the stem.
-3. **B** — a uniform shift in scores preserves the ordering even when it changes the magnitudes.
-4. **C** — cue exploitation is the named MC failure mode.
-5. **B** — the canonical Goodhart formulation in evaluation context.
+3. **B** — a uniform shift in scores preserves the ordering even when it changes the magnitudes; under T1 the descending order is 82.3 > 79.0 > 75.7 and under T2 it is 78.8 > 75.5 > 72.2 — same three models in the same three ranks. (A is wrong because ranking can be computed from any score type. C is wrong: leaderboards use a single prompt template per model, not an average. D is wrong: both ranking and scoring are computed on the same test split.)
+4. **C** — cue exploitation is the named MC failure mode and the one a single number cannot rule out. (A is false: per-option likelihood passes are cheap. B is wrong: letter extraction is reliable enough for static MC. D is wrong: macro-aggregation works fine under batching — the issue is what the score *measures*, not how it is computed.)
+5. **B** — the canonical Goodhart formulation in evaluation context. (A is true but trivial; C describes saturation, not Goodhart per se; D conflates Goodhart with contamination, which the rest of Week 1 keeps separate.)
 6. **A** — log-likelihood is computed *conditional on the prompt*: the model is scoring $P(\text{option} \mid \text{prompt})$. Changing the prompt changes the prior context the next-token logits are conditioned on, even with frozen weights. This is one of the major sources of pipeline drift between papers.
 
 </details>

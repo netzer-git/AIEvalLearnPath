@@ -62,6 +62,20 @@ export default async function LessonPage({
           <span className="lesson-meta-sep">&middot;</span>
           {fm.reading_time_minutes} min
         </p>
+        {fm.prerequisites && fm.prerequisites.length > 0 && (
+          <p className="lesson-prereq-strip">
+            <span className="lesson-prereq-strip-label">Builds on</span>
+            {fm.prerequisites.map((p) => (
+              <Link
+                key={p}
+                href={`/lesson/${p}`}
+                className="lesson-prereq-chip"
+              >
+                D{p}
+              </Link>
+            ))}
+          </p>
+        )}
       </header>
       {warmupQuestions.length > 0 && (
         <QuizSection variant="warmup" questions={warmupQuestions} />

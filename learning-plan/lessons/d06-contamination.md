@@ -7,11 +7,42 @@ week_theme: Foundations of LLM evaluation
 anchor_benchmark: MMLU-Pro
 harness: lm-evaluation-harness
 reading_time_minutes: 28
+prerequisites: [1, 5]
+key_terms:
+  - test-set contamination
+  - decontamination
+  - paraphrase contamination
+  - n-gram overlap
+  - Min-K% Prob
+  - canary string
+  - membership inference
+  - exchangeability test
+goodhart_role: foregrounded
+calibration_role: absent
 ---
 
 # Day 6 — Test-set contamination
 
-## The opening question
+## TL;DR
+
+A test item is **contaminated** when a model has seen it (or a near-paraphrase of it) during training, so its score on that item reflects memorization rather than generalization. Contamination is the mechanical, byte-level form Goodhart's Law takes for static public benchmarks — and today's anchor, **MMLU-Pro** (Wang et al. 2024), is the canonical "harden MMLU against it" response: 12,032 reasoning-heavy items across 14 disciplines, with 10 answer choices per item instead of 4. The structural lesson is that contamination is not fixed by a smarter metric; it is fixed by benchmark redesigns that make leakage harder by construction.
+
+## Learning objectives
+
+By the end of this lesson, you will be able to:
+
+1. **(L2)** Distinguish the four flavors of contamination — verbatim, paraphrase, indirect/distributional, post-training — and name the detection family that targets each.
+2. **(L2)** Describe MMLU-Pro's construction (12,032 items across 14 disciplines, 4→10 answer options, multi-source curation) and the partial contamination defenses it bakes in.
+3. **(L3)** *Apply* the Min-K% Prob mechanic to a candidate string — bottom-K% of token log-probabilities, averaged — and explain why it separates seen from unseen text.
+4. **(L4)** *Analyze* the MMLU → MMLU-Pro redesign and decompose which choices target contamination, which target saturation, and which target cue exploitation.
+5. **(L5)** *Evaluate* a lab's "decontaminated" claim and surface what residual contamination — paraphrase, indirect, post-training — n-gram filtering cannot mitigate.
+6. **(L4)** Frame contamination as the canonical Goodhart-collapse mechanism for static public benchmarks and explain why structural defenses (private splits, post-cutoff sampling) beat metric-level fixes.
+
+## Prerequisites & callback
+
+This lesson is load-bearing on two prior days. **D1** framed an evaluation as a (dataset, scoring rule, reporting convention) pipeline and parked Goodhart's Law as a recurring overlay; today is the first day where Goodhart is *foregrounded* as the lesson's central mechanism, and the answer to "what hides behind the headline 89.5?" we left open in D1's *What the headline number doesn't tell you* is "some non-trivial fraction of the test items leaked." **D5** framed the statistical-hygiene question — sampling noise, confidence intervals, cross-lab comparability — and contamination is the systematic-bias counterpart to that random-error story: a 1-point CI on a contaminated benchmark just gives you a precise estimate of a biased quantity. If you have not internalized the *evaluation-as-pipeline* framing (D1) and the *systematic vs. random error* distinction (D5), today will read as forensics; with them, today reads as the diagnosis.
+
+## The opening hook
 
 You measure a meter stick by laying it next to itself. The reading is exactly one meter. Are you a careful experimentalist?
 
@@ -40,23 +71,7 @@ flowchart LR
     MORE --> WEB
 ```
 
-The loop is the point. Once the benchmark is on the leaderboard, every release produces blog posts, HuggingFace dataset cards, Reddit threads explaining sample items — all of which become *next* year's pretraining.
-
-## Why contamination IS the Goodhart story
-
-We have been circling Goodhart's Law all week, but Day 6 is where it becomes mechanical rather than philosophical. Restate it:
-
-> When a measure becomes a target, it ceases to be a good measure.
-
-For a static public benchmark, the *causal mechanism* by which Goodhart bites is contamination. There is no mysterious "the model is now optimizing the wrong thing" — the corruption is concrete, namespaced, and bytewise: the test items end up in the pretraining set. The training-and-evaluation pipeline, viewed end-to-end, is now training-on-the-test-set with extra steps. The benchmark's headline number is no longer an estimate of generalization; it is an estimate of how much of the test set the model memorized, plus a residual generalization signal that gets harder to disentangle as the contamination fraction rises.
-
-Three things follow:
-
-- **Contamination compounds with leaderboard popularity.** The more attention a benchmark gets, the faster it leaks. MMLU was the most-cited LLM benchmark of 2021–2024 (Day 1) and consequently among the most-contaminated.
-- **Contamination is asymmetric across labs.** Labs that aggressively decontaminate report lower numbers than labs that don't, all else equal. This is one reason cross-lab leaderboard comparisons should be read with caution (Day 5).
-- **The Goodhart "fix" is not a better metric — it is a benchmark redesign.** MMLU-Pro, GPQA (Day 7), LiveCodeBench (Day 11), ARC-AGI's private split, and FrontierMath (Day 25) are all responses to the same diagnosis: the answer to a contaminated benchmark is not "compute it more carefully" but "build a benchmark that is structurally harder to contaminate."
-
-This is the throughline for the rest of the curriculum. Wherever you see a "v2" benchmark replacing a "v1" — Open LLM Leaderboard v1→v2 (Day 1), MMLU→MMLU-Pro (today), HumanEval→LiveCodeBench (Day 11), ARC-AGI-1→ARC-AGI-2 (referenced under Day 7) — the upgrade is, at its core, a Goodhart-collapse response.
+The loop is the point. Once the benchmark is on the leaderboard, every release produces blog posts, Hugging Face dataset cards, Reddit threads explaining sample items — all of which become *next* year's pretraining.
 
 ## Anchor: MMLU-Pro (Wang et al. 2024)
 
@@ -75,7 +90,7 @@ MMLU-Pro is the canonical "hardened MMLU" — a re-curated successor designed to
 
 **Why 4 → 10 choices is the headline change.** A 4-choice MC item has a random-guess baseline of 25%. A 10-choice item has a random-guess baseline of 10%. The difference matters in two ways:
 
-1. **Headroom**: top frontier models scored ~86–90% on MMLU but only ~60–75% on MMLU-Pro at release, restoring the dynamic range that saturation had collapsed (more on this Day 7).
+1. **Headroom.** Top frontier models scored ~86–90% on MMLU but only ~60–75% on MMLU-Pro at release, restoring the dynamic range that saturation had collapsed (more on this Day 7).
 2. **Cue exploitation is harder.** With 4 options a model can rule out two and coin-flip; with 10 options it has to actually localize the answer. This is also why the paper reports MMLU-Pro is *less prompt-sensitive* than MMLU: with more distractors, surface-feature heuristics carry less of the score, so the score depends more on the underlying knowledge and less on the prompt template (sensitivity drops from ~4–5% on MMLU to ~2% on MMLU-Pro across 24 prompt styles).
 
 **Where contamination resistance specifically comes in.** MMLU-Pro's contamination defenses are *partial and indirect*, and the paper is honest about this. The four mechanisms:
@@ -86,6 +101,19 @@ MMLU-Pro is the canonical "hardened MMLU" — a re-curated successor designed to
 - **Reasoning-heavy authoring** shifts items toward problems where the path-to-answer matters, not just the surface form.
 
 What MMLU-Pro does **not** do: it does not use a private held-out set, does not procedurally generate items, and does not refresh over time. It is a static public benchmark, which means the same Goodhart loop will eventually catch up to it. The paper's own framing is essentially "buy us a few years of headroom while the field figures out structurally contamination-resistant designs" — see ARC-AGI's private split (Chollet 2019; ARC-AGI-2 in Chollet et al. 2025) or LiveCodeBench's post-cutoff sampling (Jain et al. 2024, Day 11) for those structurally-resistant designs.
+
+## ⏵ Check yourself — 4-vs-10 mechanics
+
+A pure-guesser scores 25% on MMLU and 10% on MMLU-Pro. A frontier model scores 88% on MMLU and 72% on MMLU-Pro. **Compute** the *signal-to-noise headroom* — defined here informally as (model score − random baseline) / (1 − random baseline) — under each benchmark, and identify which of the two design changes (random-baseline drop vs. item curation) explains more of the headline gap.
+
+<details>
+<summary>Show answer</summary>
+
+Headroom on MMLU: $(0.88 - 0.25) / (1 - 0.25) = 0.63 / 0.75 = 0.84$. Headroom on MMLU-Pro: $(0.72 - 0.10) / (1 - 0.10) = 0.62 / 0.90 \approx 0.69$. The frontier model's headroom drops from 0.84 to 0.69 — a 15-percentage-point loss of "fraction-of-room-above-random" capability, even though the raw-accuracy drop is 16 points.
+
+Most of the raw-accuracy drop is *not* from the random-baseline change (the baseline change moves the floor, not the ceiling); it is from item curation — dropping memorized "too-easy" items and adding harder, less-indexed new ones. The 4→10 change does important secondary work (reducing cue exploitation, lowering prompt sensitivity), but the dominant headline-gap driver is the curation, not the option count. The pedagogical point: a redesign that *only* changed the option count would have produced a much smaller gap. Combining the two is what restored the dynamic range.
+
+</details>
 
 ## Detection methods
 
@@ -107,8 +135,8 @@ def is_contaminated(test_item: str, train_doc: str, n: int = 13) -> bool:
     return bool(ngrams(test_item, n) & ngrams(train_doc, n))
 ```
 
-**Strengths:** simple, exact, fast with hash-based indexing.
-**Weaknesses:** misses paraphrases; misses items that are quoted with a single edit ("Q: A wave travels at 200 m/s" → "Q. A wave is moving at 200 m/s"); requires access to the training corpus, which proprietary labs do not release.
+**Strengths.** Simple, exact, fast with hash-based indexing.
+**Weaknesses.** Misses paraphrases; misses items that are quoted with a single edit (`"Q: A wave travels at 200 m/s"` → `"Q. A wave is moving at 200 m/s"`); requires access to the training corpus, which proprietary labs do not release.
 
 The GPT-3 paper found, surprisingly, that running on decontaminated splits barely changed the headline numbers — but it also reported >90% contamination rates on Quac, SQuADv2, and DROP, which is hard to read as anything other than "13-gram overlap is a noisy signal at scale" (Brown et al. 2020). Either the test detected too aggressively, or contamination didn't matter for those benchmarks; Brown et al. did not resolve which.
 
@@ -126,8 +154,8 @@ $$
 
 where $S_K$ is the bottom-$K$% of $L$ by value. Higher (less negative) values suggest membership in the pretraining set; the typical $K$ is 20%. The paper reports a 7.4% AUC improvement on the WIKIMIA membership-inference benchmark over previous methods (Shi et al. 2023).
 
-**Strengths:** black-box; no corpus needed.
-**Weaknesses:** detects *memorization*, not contamination per se — a model can memorize without test-set leakage and vice versa; later work (Min-K%++, Zhang et al. 2024) refined the calibration. AUCs are typically 0.6–0.75 for typical-length test items, which is "above chance" but not "smoking gun."
+**Strengths.** Black-box; no corpus needed.
+**Weaknesses.** Detects *memorization*, not contamination per se — a model can memorize without test-set leakage and vice versa; later work (Min-K%++, Zhang et al. 2024) refined the calibration. AUCs are typically 0.6–0.75 for typical-length test items, which is "above chance" but not "smoking gun."
 
 ### 3. Canary strings
 
@@ -152,8 +180,8 @@ if completion.startswith("A,C,B,D,A"):
 
 Canaries are how some benchmark authors fingerprint their datasets — BIG-Bench famously embedded a canary GUID specifically asking models *not* to be trained on it (and that GUID is in plenty of training corpora anyway).
 
-**Strengths:** unambiguous when triggered; quantifies memorization.
-**Weaknesses:** only detects contamination of the specific canary you planted, not all of the test set; requires foresight before training.
+**Strengths.** Unambiguous when triggered; quantifies memorization.
+**Weaknesses.** Only detects contamination of the specific canary you planted, not all of the test set; requires foresight before training.
 
 ### 4. Membership inference attacks (MIA)
 
@@ -167,10 +195,25 @@ $$
 
 where $\theta_{\text{train}}$ is the target model and $\theta_{\text{ref}}$ is a reference model trained on similar data without $x$. If $\Lambda(x)$ is anomalously high, $x$ is likely a training member.
 
-**Strengths:** statistically principled; works for paraphrase contamination if the reference model is well-chosen.
-**Weaknesses:** strong MIAs require shadow-model training, which is computationally infeasible at LLM scale; recent work (Duan et al. 2024) finds membership inference is *near chance* for typical LLM test items — that is, MIA against frontier LLMs barely works. Min-K% and friends are practical compromises against this difficulty.
+**Strengths.** Statistically principled; works for paraphrase contamination if the reference model is well-chosen.
+**Weaknesses.** Strong MIAs require shadow-model training, which is computationally infeasible at LLM scale; recent work (Duan et al. 2024) finds membership inference is *near chance* for typical LLM test items — that is, MIA against frontier LLMs barely works. Min-K% and friends are practical compromises against this difficulty.
 
 A related and increasingly-influential approach: Oren et al. (2023), *Proving Test Set Contamination in Black Box Language Models* (ICLR 2024), uses **exchangeability**. If a model has seen a benchmark in canonical order, it will assign higher likelihood to the canonical ordering than to shuffled orderings. The test is a black-box, finite-sample exact false-positive-rate procedure that has flagged contamination in several published models.
+
+## ⏵ Check yourself — what does Min-K% actually compute?
+
+You compute Min-K% Prob with $K = 20$ on a 50-token candidate string. Walk through the procedure: how many log-probs end up in $S_K$, and why does averaging *only* the bottom 10 (rather than all 50) sharpen the seen/unseen distinction?
+
+<details>
+<summary>Show answer</summary>
+
+With $K = 20$ and $T = 50$, $|S_K| = 0.20 \times 50 = 10$. You compute all 50 token log-probabilities $\log P(x_t \mid x_{<t})$, sort them ascending, take the lowest 10, and average those.
+
+Why the bottom and not all 50? The hypothesis is that *seen* text was memorized in its entirety, so even its hardest-to-predict tokens still got above-average probability mass — the floor is high. *Unseen* text contains some genuinely low-probability tokens (rare names, unusual phrasings, surprising answers) that the model could not have predicted from local context alone — the floor is low. Averaging the full 50 tokens lets the easy, high-probability tokens (function words, common collocations) dominate, washing out the seen/unseen signal that lives in the bottom of the distribution. Restricting to $S_K$ amplifies the discriminative slice: you are asking "how predictable was this string at its hardest points?" and that is exactly where memorization shows up.
+
+This is a classic robust-statistics move (use a tail rather than a mean), and it is also why the choice of $K$ matters: too small ($K = 5\%$) and you over-rely on a noisy 2–3 tokens; too large ($K = 50\%$) and you re-include the easy tokens you wanted to exclude. The paper's $K = 20\%$ is the empirically-tuned middle.
+
+</details>
 
 ## Decontamination — what labs (claim to) do
 
@@ -183,78 +226,143 @@ Standard practice as of 2026, with the caveat that most lab decontamination prot
 
 What labs don't do, despite claims: full deduplication against every paraphrase or commentary about the benchmark. That is intractable for a popular benchmark like MMLU. The honest framing is *partial decontamination*.
 
+## ⏵ Check yourself — corpus-vs-API forensics
+
+You are an external auditor handed only API access to a closed-weights frontier model. You suspect MMLU contamination. Decompose which detection methods are available to you, which are not, and which is the **load-bearing** one for the API-only setting — and explain why Duan et al. (2024) is the right caveat to keep in mind.
+
+<details>
+<summary>Show answer</summary>
+
+Available: Min-K% Prob (needs only per-token log-probs, which the API exposes for many providers), the Oren et al. (2023) exchangeability test (needs only sequence-likelihood comparisons across permutations), and the canary check *if* you happened to plant a canary before training — which, as an external auditor, you almost certainly did not. Not available: n-gram overlap (needs the corpus, which is closed) and standard MIA with shadow models (needs training reference models, which costs the same order of compute as training the target).
+
+The load-bearing one is **the exchangeability test**. Min-K% measures memorization, not contamination per se, and its AUC of 0.6–0.75 makes it suggestive but not conclusive on any single benchmark. The exchangeability test is statistically tighter — it offers an exact finite-sample false-positive-rate guarantee — and its falsifiable null ("the model assigns equal likelihood to every permutation of the benchmark's items") maps directly onto "the model has not seen this benchmark in canonical order."
+
+The Duan et al. (2024) caveat: any per-item membership inference signal is small at frontier scale, because one item's contribution to a 10T-token training run is statistical noise. So aggregate-level tests (a whole benchmark's order-likelihood; many items' Min-K% averaged) work better than per-item ones. The right reflex when an auditor reports "Min-K% flags item 273" is to ask "what happens at the *benchmark* level?" — that is where the signal accumulates.
+
+</details>
+
 ## Conceptual contrast: contamination vs. memorization vs. overfitting
 
 Three terms that get conflated:
 
-- **Memorization**: the model has stored a verbatim training-data substring and can regurgitate it. Studied by Carlini et al. (2021, 2022) — large LLMs memorize a measurable fraction of their training data and can be made to emit it under the right prompt.
-- **Contamination**: the test set is a subset of (or overlaps with) the training set. Memorization of contaminated items inflates benchmark scores.
-- **Overfitting**: the classical ML notion, where train-set loss falls while held-out loss rises. Modern LLM training is data-bounded enough that classical overfitting is rare; the failure mode at scale is contamination, not overfitting.
+- **Memorization.** The model has stored a verbatim training-data substring and can regurgitate it. Studied by Carlini et al. (2021, 2022) — large LLMs memorize a measurable fraction of their training data and can be made to emit it under the right prompt.
+- **Contamination.** The test set is a subset of (or overlaps with) the training set. Memorization of contaminated items inflates benchmark scores.
+- **Overfitting.** The classical ML notion, where train-set loss falls while held-out loss rises. Modern LLM training is data-bounded enough that classical overfitting is rare; the failure mode at scale is contamination, not overfitting.
 
 Memorization is necessary but not sufficient for contamination-driven score inflation; contamination is necessary but not sufficient for inflated scores (a model can be exposed to a test item and still get it wrong if memorization didn't take). The cleanest evidence for contamination-driven inflation is a benchmark redesign: when MMLU-Pro launched, GPT-4-class models dropped 16–33 percentage points, and that gap is the upper bound on the contamination + saturation contribution to MMLU's reported score.
 
-## Forward pointers
+## Goodhart foregrounded
 
-- **Day 7 (GPQA / saturation)** picks up where this lesson leaves off: contamination is the Goodhart mechanism, saturation is its visible consequence on the leaderboard. They are two views of the same problem.
-- **Day 11 (HumanEval / LiveCodeBench)** revisits contamination on a code benchmark, where the leak rate is even higher because GitHub is in pretraining wholesale. LiveCodeBench's *post-cutoff problem sampling* is the structurally-resistant design alternative.
-- **Day 15 (TruthfulQA)** is a different incentive-shape Goodhart: not data leakage but the benchmark's reward structure (refusal beats truth on contested items). Same Goodhart, different mechanism.
-- **Day 17 (SAD)** is the deepest version: models that know they're being evaluated and behave differently when they detect it. That is contamination of the *situational* kind — the model has learned what evaluation contexts look like and conditions on the fact that it's in one.
+We have been circling Goodhart's Law all week, but Day 6 is where it becomes mechanical rather than philosophical. Restate it:
+
+> When a measure becomes a target, it ceases to be a good measure.
+
+For a static public benchmark, the *causal mechanism* by which Goodhart bites is contamination. There is no mysterious "the model is now optimizing the wrong thing" — the corruption is concrete, namespaced, and bytewise: the test items end up in the pretraining set. The training-and-evaluation pipeline, viewed end-to-end, is now training-on-the-test-set with extra steps. The benchmark's headline number is no longer an estimate of generalization; it is an estimate of how much of the test set the model memorized, plus a residual generalization signal that gets harder to disentangle as the contamination fraction rises.
+
+Three things follow:
+
+- **Contamination compounds with leaderboard popularity.** The more attention a benchmark gets, the faster it leaks. MMLU was the most-cited LLM benchmark of 2021–2024 (Day 1) and consequently among the most-contaminated.
+- **Contamination is asymmetric across labs.** Labs that aggressively decontaminate report lower numbers than labs that don't, all else equal. This is one reason cross-lab leaderboard comparisons should be read with caution (Day 5).
+- **The Goodhart "fix" is not a better metric — it is a benchmark redesign.** MMLU-Pro, GPQA (Day 7), LiveCodeBench (Day 11), ARC-AGI's private split, and FrontierMath (Day 25) are all responses to the same diagnosis: the answer to a contaminated benchmark is not "compute it more carefully" but "build a benchmark that is structurally harder to contaminate."
+
+This is the throughline for the rest of the curriculum, and D6 is the day where the pattern is named. The other foregrounded Goodhart days each instantiate a *different* mechanism by which a measure decouples from the construct it was supposed to track:
+
+- **D6 (today) — leakage.** The test set ends up in the training set. The mechanism is byte-level overlap.
+- **D15 (TruthfulQA) — incentive shape.** The benchmark's reward structure rewards refusals over truth on contested items, so optimizing the score teaches the model to refuse rather than to be truthful.
+- **D17 (SAD) — situational conditioning.** The model learns what evaluation contexts look like and conditions on the fact that it is being evaluated, behaving differently than it would in deployment.
+- **D22 (LLM-as-judge) — measurement-instrument-as-target.** When the judge model is itself a frontier LLM, optimizing the judged score teaches the model to produce text that the judge prefers, not text that humans would prefer.
+- **D28 (METR autonomy) — selection pressure.** Frontier-capability benchmarks measure the *envelope* of what current models can do; once we are training to push that envelope, the envelope itself is the optimization target and the measurement-versus-target gap is the entire field's terminal Goodhart problem.
+
+Wherever you see a "v2" benchmark replacing a "v1" — Open LLM Leaderboard v1→v2 (Day 1), MMLU→MMLU-Pro (today), HumanEval→LiveCodeBench (Day 11), ARC-AGI-1→ARC-AGI-2 (Day 7) — the upgrade is, at its core, a Goodhart-collapse response of the D6 leakage variety, retrofitted with one or more of the structural defenses we listed: private splits, post-cutoff sampling, procedural generation, refresh-over-time. The D6 lesson is that *no metric-level fix* is sufficient; the architectural move has to be at the dataset-and-release level.
 
 > **Safety researcher's note.** Contamination matters for safety evals more than for capability evals, and in the opposite direction. On capabilities, contamination *inflates* scores — bad, but the mistake is "this model is more capable than reality." On safety, contamination of red-team prompts and jailbreaks (Day 19, HarmBench) into post-training data means the model has seen the attack format and learned to refuse it — *deflating* measured attack success rates without genuine robustness gains. A model that refuses every attack pattern in your held-out set might be safer; or it might just have memorized the patterns, with no transfer to novel attacks. The asymmetry: an inflated capability score is embarrassing; a deflated unsafe-response rate is dangerous. Worth carrying into Week 3.
 
+## Cross-references
+
+**Backward.**
+
+- D-1 — picks up the "what hides behind the headline number?" thread parked under *What the headline number doesn't tell you*; today instantiates the *contamination* item on that list with mechanism + forensics + benchmark redesign.
+- D-1 — picks up the *Goodhart's Law* curriculum-wide overlay introduced as a callback there; today is the first **foregrounded** Goodhart lesson and sets the pattern for D-15, D-17, D-22, and D-28.
+- D-5 — picks up the systematic-bias counterpart to D-5's random-error story: a tight CI on a contaminated benchmark is a precise estimate of a biased quantity, which is not what the CI's framing implied.
+
+**Forward.**
+
+- D-7 — picks up *saturation* as the visible leaderboard consequence of the contamination loop; GPQA is the saturation-resistant successor and shares MMLU-Pro's "harder by construction" diagnosis.
+- D-11 — picks up *contamination on a code benchmark*, where leak rates are even higher because GitHub is in pretraining wholesale; LiveCodeBench's post-cutoff problem sampling is the structurally-resistant design alternative.
+- D-15 — picks up the *incentive-shape* form of Goodhart on TruthfulQA, where the benchmark's reward structure (refusal beats truth on contested items) is the decoupling mechanism rather than data leakage.
+- D-17 — picks up the *situational-conditioning* form of Goodhart with SAD: models that recognize evaluation contexts and behave differently when they detect them.
+- D-22 — picks up the *measurement-instrument-as-target* form of Goodhart with LLM-as-judge, where optimizing for a judge model's preferences decouples from human preference.
+- D-25 — picks up FrontierMath as a structural-defense exemplar: a private-split benchmark whose canonical items never appear in public data at all.
+- D-28 — picks up the *selection-pressure* form of Goodhart on METR's autonomy suite, the curriculum-closing instance of the same mechanism.
+
 ## Takeaways
 
-1. **Contamination is the Goodhart-collapse mechanism for benchmarks.** Once a public benchmark is the optimization target, the leaderboard incentivizes its presence on the open web, which is the pretraining set.
-2. **Three flavors:** verbatim, paraphrase, indirect/distributional. N-gram overlap catches verbatim; Min-K% Prob and MIA partially catch the rest; nothing catches indirect contamination cleanly.
-3. **MMLU-Pro (Wang et al. 2024)** hardens MMLU via 4→10 answer choices, 12,032 reasoning-heavy curated items across 14 disciplines, and removal of the easiest (most-likely-memorized) MMLU items — a partial defense, not a structural one.
-4. **Detection has tiers of access.** Corpus access → n-gram overlap. Weights → Min-K% Prob, MIA. API only → exchangeability tests (Oren et al. 2023). Frontier-LLM membership inference is currently near chance per Duan et al. (2024).
-5. **Structural defenses beat metrics.** Private test splits (ARC-AGI), post-cutoff sampling (LiveCodeBench), procedural generation (BABILong), and held-out evaluation environments are how contamination-resistant benchmarks are built. MMLU-Pro is partial; the post-2024 trend is structural.
+1. A test item is contaminated if the model has seen it (or a near-paraphrase) in training; the four flavors — verbatim, paraphrase, indirect/distributional, post-training — leak at different rates and need different forensics. *(LO 1)*
+2. MMLU-Pro (Wang et al. 2024) hardens MMLU via 4→10 answer choices, 12,032 reasoning-heavy curated items across 14 disciplines, and removal of the easiest (most-likely-memorized) MMLU items — a partial defense, not a structural one. *(LO 2)*
+3. Min-K% Prob averages only the bottom-K% of token log-probabilities because that is where the seen/unseen signal lives — memorized text has a high floor, unseen text has a low floor; the easy tokens above $S_K$ wash the signal out. *(LO 3)*
+4. The MMLU → MMLU-Pro redesign decomposes into curation (drops too-easy items, adds harder less-indexed ones — targets contamination + saturation) and option-count (4→10 — targets cue exploitation + raises random-baseline floor); curation is the dominant headline-gap driver. *(LO 4)*
+5. A "decontaminated" claim resting only on n-gram filtering cannot mitigate paraphrase contamination, indirect/distributional contamination, or post-training contamination via crowd-worker prompts; the most defensible reading is *partial* decontamination. *(LO 5)*
+6. Contamination is the canonical Goodhart-collapse mechanism for static public benchmarks; structural defenses — private splits, post-cutoff sampling, procedural generation, refresh-over-time — beat metric-level fixes because the leak is at the dataset-and-release level, not the scoring level. *(LO 6)*
+
+## Glossary
+
+- **test-set contamination**: the test set (or a paraphrase of it) appears in the model's training data, so scores reflect memorization rather than generalization [introduced D-6].
+- **decontamination**: pre-training pipeline step that filters known benchmark items out of the training corpus, typically via 13-gram overlap; "partial decontamination" is the honest framing because paraphrase and indirect contamination survive [introduced D-6].
+- **paraphrase contamination**: a reworded version of a test item appears in training; defeats n-gram overlap detection and motivates membership-inference and exchangeability tests [introduced D-6].
+- **n-gram overlap**: contamination detection via shared 13-grams between test items and training documents (Brown et al. 2020); the workhorse method when corpus access is available [introduced D-6].
+- **Min-K% Prob**: black-box contamination detector (Shi et al. 2023) that averages the bottom-K% of token log-probabilities under the target model; higher (less negative) values suggest training-set membership [introduced D-6].
+- **canary string**: a uniquely-formatted, low-perplexity-impossible string deliberately inserted into training data to test for memorization after training (Carlini et al. 2019, *The Secret Sharer*) [introduced D-6].
+- **membership inference**: the broader family of techniques (LiRA, Min-K%, exchangeability) that try to decide, for an input, whether it was in the training set; near-chance at frontier-LLM scale per Duan et al. (2024) [introduced D-6].
+- **exchangeability test**: black-box contamination detector (Oren et al. 2023) that compares the model's likelihood of a benchmark in canonical order vs. shuffled orderings; offers an exact finite-sample false-positive-rate guarantee [introduced D-6].
 
 ## References
 
 - **Anchor.** Wang, Y., Ma, X., Zhang, G., Ni, Y., Chandra, A., Guo, S., Ren, W., Arulraj, A., He, X., Jiang, Z., Li, T., Ku, M., Wang, K., Zhuang, A., Fan, R., Yue, X., & Chen, W. (2024). *MMLU-Pro: A More Robust and Challenging Multi-Task Language Understanding Benchmark.* NeurIPS 2024 Datasets & Benchmarks Track. arXiv:2406.01574. https://arxiv.org/abs/2406.01574
-- **GPT-3 contamination protocol.** Brown, T., et al. (2020). *Language Models are Few-Shot Learners.* NeurIPS 2020. arXiv:2005.14165. (See §4 / Appendix C for the 13-gram overlap method.)
-- **Min-K% Prob.** Shi, W., Ajith, A., Xia, M., Huang, Y., Liu, D., Blevins, T., Chen, D., & Zettlemoyer, L. (2023). *Detecting Pretraining Data from Large Language Models.* ICLR 2024. arXiv:2310.16789.
-- **Min-K%++.** Zhang, J., et al. (2024). *Min-K%++: Improved Baseline for Detecting Pre-Training Data from Large Language Models.* arXiv:2404.02936.
-- **Canary / memorization.** Carlini, N., Liu, C., Erlingsson, Ú., Kos, J., & Song, D. (2019). *The Secret Sharer: Evaluating and Testing Unintended Memorization in Neural Networks.* USENIX Security 2019. arXiv:1802.08232.
-- **MIA on LLMs.** Carlini, N., et al. (2021). *Extracting Training Data from Large Language Models.* USENIX Security 2021. arXiv:2012.07805.
-- **MIA from first principles (LiRA).** Carlini, N., Chien, S., Nasr, M., Song, S., Terzis, A., & Tramèr, F. (2022). *Membership Inference Attacks From First Principles.* IEEE S&P 2022. arXiv:2112.03570.
-- **MIA-near-chance critique.** Duan, M., et al. (2024). *Do Membership Inference Attacks Work on Large Language Models?* arXiv:2402.07841.
-- **Exchangeability test.** Oren, Y., Meister, N., Chatterji, N., Ladhak, F., & Hashimoto, T. B. (2023). *Proving Test Set Contamination in Black Box Language Models.* ICLR 2024. arXiv:2310.17623.
-- **ARC-AGI structural design.** Chollet, F. (2019). *On the Measure of Intelligence.* arXiv:1911.01547. https://arxiv.org/abs/1911.01547 (introduces the ARC-AGI evaluation framework and its private-split design.) Chollet, F., et al. (2025). *ARC-AGI-2: A New Challenge for Frontier AI Reasoning Systems.* arXiv:2505.11831. https://arxiv.org/abs/2505.11831
-- **Open LLM Leaderboard v2 (MMLU → MMLU-Pro).** Hugging Face Leaderboards docs (v2 launched June 2024, retired March 2025). https://huggingface.co/docs/leaderboards/en/open_llm_leaderboard/archive
+- **Harness.** Gao, L., et al. *lm-evaluation-harness* (EleutherAI). https://github.com/EleutherAI/lm-evaluation-harness — supports MMLU-Pro via the standard MC log-likelihood scoring path; the leaderboard adoption used LightEval but the harness implementation is canonical for reproduction.
+- **Secondary.** Brown, T., et al. (2020). *Language Models are Few-Shot Learners.* NeurIPS 2020. arXiv:2005.14165 — see §4 / Appendix C for the 13-gram overlap protocol that defines the GPT-3 contamination methodology.
+- **Secondary.** Shi, W., Ajith, A., Xia, M., Huang, Y., Liu, D., Blevins, T., Chen, D., & Zettlemoyer, L. (2023). *Detecting Pretraining Data from Large Language Models.* ICLR 2024. arXiv:2310.16789 — Min-K% Prob.
+- **Secondary.** Zhang, J., et al. (2024). *Min-K%++: Improved Baseline for Detecting Pre-Training Data from Large Language Models.* arXiv:2404.02936.
+- **Secondary.** Carlini, N., Liu, C., Erlingsson, Ú., Kos, J., & Song, D. (2019). *The Secret Sharer: Evaluating and Testing Unintended Memorization in Neural Networks.* USENIX Security 2019. arXiv:1802.08232 — canary strings + the exposure metric.
+- **Secondary.** Carlini, N., et al. (2021). *Extracting Training Data from Large Language Models.* USENIX Security 2021. arXiv:2012.07805.
+- **Secondary.** Carlini, N., Chien, S., Nasr, M., Song, S., Terzis, A., & Tramèr, F. (2022). *Membership Inference Attacks From First Principles.* IEEE S&P 2022. arXiv:2112.03570 — the LiRA likelihood-ratio framing.
+- **Secondary.** Duan, M., et al. (2024). *Do Membership Inference Attacks Work on Large Language Models?* arXiv:2402.07841 — MIA-near-chance critique at frontier scale.
+- **Secondary.** Oren, Y., Meister, N., Chatterji, N., Ladhak, F., & Hashimoto, T. B. (2023). *Proving Test Set Contamination in Black Box Language Models.* ICLR 2024. arXiv:2310.17623 — exchangeability test.
+- **Secondary.** Chollet, F. (2019). *On the Measure of Intelligence.* arXiv:1911.01547. https://arxiv.org/abs/1911.01547 — introduces the ARC-AGI evaluation framework and its private-split design. Chollet, F., et al. (2025). *ARC-AGI-2: A New Challenge for Frontier AI Reasoning Systems.* arXiv:2505.11831. https://arxiv.org/abs/2505.11831
+- **Secondary.** Hugging Face. *Open LLM Leaderboard v2 archive docs* (v2 launched June 2024 with MMLU-Pro replacing MMLU; retired March 2025). https://huggingface.co/docs/leaderboards/en/open_llm_leaderboard/archive
+- **Goodhart.** Strathern, M. (1997). *"Improving ratings": audit in the British University system.* European Review, 5(3) — the canonical concise formulation. Goodhart's original 1975 phrasing was longer and about monetary policy; Strathern's compression is the version this lesson uses.
+- **Goodhart.** Manheim, D., & Garrabrant, S. (2018). *Categorizing Variants of Goodhart's Law.* arXiv:1803.04585 — the four-mechanism taxonomy (regressional, extremal, causal, adversarial); contamination on a static public benchmark is most cleanly an *adversarial* Goodhart, where the optimizer's incentive structure rewrites the data-generating process the metric was defined over.
 
 ## Quiz
 
-**Q1.** Which of the following best states why contamination is the canonical Goodhart-collapse mechanism for static benchmarks?
+**Q1.** Which is the most defensible reading of why contamination is the canonical Goodhart-collapse mechanism for static public benchmarks?
 
 - A. Saturation drags every benchmark's headline accuracy toward 100% over time, leaving no headroom for further capability gains and forcing the leaderboard into ties at the ceiling.
 - B. It becomes an optimization target, gets indexed online, and leaks into pretraining — so the score reflects memorization rather than generalization.
 - C. Reference answers in popular benchmarks are written by crowd workers with inconsistent rubrics, so different graders disagree about edge cases and any reported number carries a large grader-variance term.
 - D. Researchers cherry-pick few-shot prompt templates per task, and the resulting multiple-comparisons effect across templates inflates the headline number with no training-data leakage required.
 
-**Q2.** What is the single biggest mechanical change MMLU-Pro makes vs. MMLU?
+**Q2.** Which option best captures the structural difference MMLU-Pro introduces vs. MMLU?
 
 - A. It uses generative scoring instead of log-likelihood.
 - B. It expands answer choices from 4 to 10.
 - C. It drops to a 5-subject subset.
 - D. It moves to a chat-template-only prompt.
 
-**Q3.** What does Min-K% Prob compute, and why is it "low for unseen text, high for seen text"?
+**Q3.** What does Min-K% Prob compute, and why is it "low for unseen text, high for seen text"? **Compute** the procedure step by step before reading the options.
 
 - A. It averages log-probs of the bottom-K% tokens; unseen text has some genuinely-low-probability tokens that drag the mean down, while memorized text stays uniformly high even at its weakest tokens.
 - B. It computes a Bayesian posterior over training-set membership by integrating across the full pretraining corpus, using the model's perplexity ratio against a held-out reference distribution as the likelihood term.
 - C. It is the rank of an inserted canary string among equivalently-random non-inserted sequences, normalized by population size to give an exposure score in bits of memorization.
 - D. It is the 13-gram overlap fraction between a candidate test string and the training corpus, scaled by document length to estimate the verbatim contamination rate at corpus scale.
 
-**Q4.** A lab decontaminates against a benchmark using 13-gram overlap on its pretraining corpus. Which type of contamination is **least** mitigated?
+**Q4.** A lab decontaminates against a benchmark using 13-gram overlap on its pretraining corpus. Which type of contamination is **least** mitigated, and why is paraphrase the load-bearing failure mode of n-gram detection?
 
 - A. A test item appearing verbatim in a Common Crawl page.
 - B. A test item appearing on a Hugging Face dataset card.
 - C. A reworded version of a test item appearing in a textbook PDF.
 - D. The test items appearing in a published JSON answer key.
 
-**Q5.** Why does Duan et al. (2024) find that membership inference attacks against frontier LLMs are near chance, and what does this imply for contamination forensics?
+**Q5.** Duan et al. (2024) find that membership inference attacks against frontier LLMs are near chance. Which option best explains the load-bearing reason and its implication for contamination forensics?
 
 - A. Strong MIAs require an infinite ensemble of shadow models trained without each candidate item, which is theoretically impossible to construct under the standard learning-theoretic assumptions used by LiRA.
 - B. Each training item contributes too little to a frontier-scale loss landscape for the membership signal to be detectable. Implication: pre-training decontamination beats post-hoc detection.
@@ -271,11 +379,11 @@ Memorization is necessary but not sufficient for contamination-driven score infl
 <details>
 <summary>Answers</summary>
 
-1. **B** — the contamination loop (benchmark → leaderboard target → web indexing → pretraining → inflated score) is the mechanism. See "Why contamination IS the Goodhart story."
+1. **B** — the contamination loop (benchmark → leaderboard target → web indexing → pretraining → inflated score) is the mechanism. See "Goodhart foregrounded." The other options describe real but distinct phenomena: A is saturation (Day 7), C is grader variance (Day 3 / Day 22), D is the prompt-template multiple-comparisons artifact (Day 1 / Day 4) — none is the *Goodhart* mechanism on a static public benchmark.
 2. **B** — 4 → 10 answer choices is the headline mechanical change; it raises the random baseline from 25% to 10% and reduces cue-exploitation room. The other changes (reasoning-heavy items, 14-discipline grouping) are downstream of the questions and the curation, not of the format change.
 3. **A** — Min-K% averages the *bottom* K% of token log-probs. Memorized text lacks the genuinely-low-probability tokens that unseen text has. (B describes a fully Bayesian approach that's intractable; C is the canary exposure metric; D is n-gram overlap.)
-4. **C** — paraphrase contamination is the failure mode of n-gram overlap detection. A reworded textbook PDF would not share a 13-gram with the original test item but is still contamination. Min-K% Prob and exchangeability tests are the partial counters.
-5. **B** — the Duan et al. result is the empirical version of the obvious information-theoretic point: one item's contribution to the loss landscape of a 10T-token training run is tiny, so distinguishing "trained on" from "not trained on" from likelihoods alone is statistically near impossible at frontier scale. Implication: pre-training decontamination is more reliable than post-hoc detection.
+4. **C** — paraphrase contamination is the failure mode of n-gram overlap detection. A reworded textbook PDF would not share a 13-gram with the original test item but is still contamination. Min-K% Prob and exchangeability tests are the partial counters; that paraphrase contamination is the *load-bearing* failure of the n-gram method is exactly why the field developed those black-box alternatives.
+5. **B** — the Duan et al. result is the empirical version of the obvious information-theoretic point: one item's contribution to the loss landscape of a 10T-token training run is tiny, so distinguishing "trained on" from "not trained on" from likelihoods alone is statistically near impossible at frontier scale. Implication: pre-training decontamination is more reliable than post-hoc detection. (A misstates the LiRA assumptions; C reverses the direction of the scale dependence; D is not standard practice for frontier LLMs in 2026.)
 6. **B** — the safety-researcher's-note point. Contamination of safety prompts into training data deflates measured attack success without genuine robustness gains, the mirror image of capability-score inflation.
 
 </details>
