@@ -7,7 +7,7 @@ week_theme: Capability benchmarks
 anchor_benchmark: MMMU
 harness: VLMEvalKit (benchmark-native MMMU runner mapped through it)
 reading_time_minutes: 31
-prerequisites: [1]
+prerequisites: [1, 5, 7]
 key_terms:
   - multimodal LLM
   - perception-vs-reasoning axis
@@ -40,7 +40,7 @@ By the end of this lesson, you will be able to:
 
 ## Prerequisites & callback
 
-Today's lesson is load-bearing on **[D-1](/lesson/1)**'s pipeline framing — that an evaluation is a *(dataset, scoring rule, reporting convention) pipeline* rather than a number — and reuses it directly. Multimodal evaluation does not redefine the pipeline; it widens the input stage of the *same* pipeline, adding two new pipeline-drift sources (image preprocessing, image-token interleaving) on top of the four [D-1](/lesson/1) named (n-shot, prompt template, scoring rule, subset). The Week-2 capability-benchmark thread the lesson sits inside also reuses [D-7](/lesson/7)'s saturation framing (MMMU has its own MMMU-Pro arc) and [D-1](/lesson/1)'s *capability overhang* move (visual-channel safety is a second overhang axis). Everything about reading "Model X scored 84.7% on MMMU" inherits the [D-1](/lesson/1) reflex: ask **what pipeline?** before "is that good?".
+[D-7](/lesson/7) is the most load-bearing predecessor today: MMMU's already-deployed harder successor (MMMU-Pro) is a saturation arc in motion, and the saturation-then-redesign pattern from [D-7](/lesson/7) reapplies directly — visual-channel safety (FigStep-style typographic jailbreaks) sits as a second *capability-overhang* axis on the same template. [D-5](/lesson/5)'s per-discipline reporting machinery also returns: MMMU partitions across 6 disciplines × 30 subjects × 30 image types, and any aggregate number you read should be paired with a sub-domain breakdown for the same reasons [D-5](/lesson/5) catalogued. The pipeline shape ([D-1](/lesson/1)'s (dataset, scoring rule, reporting convention) triple) is preserved: multimodal evaluation widens the *input stage*, adding image preprocessing and image-token interleaving as two new drift sources on top of the original four (n-shot, prompt template, scoring rule, subset), but does not redefine the rule. Everything about reading "Model X scored 84.7% on MMMU" inherits the ask-the-pipeline-first reflex from Week 1.
 
 ## The opening hook
 

@@ -40,7 +40,7 @@ By the end of this lesson, you will be able to:
 
 ## Prerequisites & callback
 
-Today's lesson assumes two pieces of prior machinery. From **[D-1](/lesson/1)**, the framing that an evaluation is a *(dataset, scoring rule, reporting convention) pipeline* — ARC-Challenge's whole methodology lives inside that pipeline's *dataset* stage, in the form of the construction filter that selects which items survive into the test split. From **[D-4](/lesson/4)**, the framing of the prompting strategy as a fourth axis, with chain-of-thought vs. direct prompting producing 10–30-point swings on multi-step-reasoning benchmarks; ARC-Challenge sits at the *small-CoT-gap* end of that axis, which is itself diagnostic of what kind of reasoning the benchmark exercises. The Day-8 move is to introduce reasoning evaluation as a distinct *capability axis* from knowledge evaluation, opening Week 2's seven-day capability tour.
+Today's lesson assumes two pieces of prior machinery. From **[D-4](/lesson/4)**, the framing of the prompting strategy as a fourth axis, with chain-of-thought vs. direct prompting producing 10–30-point swings on multi-step-reasoning benchmarks; ARC-Challenge sits at the *small-CoT-gap* end of that axis, which is itself diagnostic of what kind of reasoning the benchmark exercises. From **[D-1](/lesson/1)**, the framing that an evaluation is a *(dataset, scoring rule, reporting convention) pipeline* — ARC-Challenge's whole methodology lives inside that pipeline's *dataset* stage, in the form of the construction filter that selects which items survive into the test split. The Day-8 move is to introduce reasoning evaluation as a distinct *capability axis* from knowledge evaluation, opening Week 2's seven-day capability tour.
 
 ## The opening hook
 

@@ -7,7 +7,7 @@ week_theme: Alignment, safety, robustness
 anchor_benchmark: IFEval
 harness: lm-evaluation-harness
 reading_time_minutes: 33
-prerequisites: [1]
+prerequisites: [1, 3, 6]
 key_terms:
   - verifiable instruction
   - instruction-level accuracy
@@ -40,7 +40,7 @@ By the end of this lesson, you will be able to:
 
 ## Prerequisites & callback
 
-[D-1](/lesson/1) set up an evaluation as a (dataset, scoring rule, reporting convention) pipeline in which everything outside the model is deterministic code. IFEval is that framing taken to its logical extreme: the scoring rule is *literally* deterministic Python, executed on the model's raw response. Today's pipeline is `prompt → model → response → check_fn(response, kwargs) → boolean → aggregate`, with no judge model, embedding model, or human rater anywhere in the loop. The contrast with [D-3](/lesson/3) (free-form scoring, where judges and embedding metrics are unavoidable) and the foreshadowing of [D-22](/lesson/22) (LLM-as-judge, where the judge biases IFEval avoids are catalogued) frame why this single design move — restrict to the verifiable slice — is worth a whole lesson.
+[D-3](/lesson/3) is the proximate predecessor: it catalogued the free-form-scoring problem (paraphrase-blind n-grams, negation-missing embeddings, the judge-bias tax) for which IFEval is the cleanest available answer on the *verifiable* slice. The contamination-resistant-successor reflex from [D-6](/lesson/6) returns when reading an IFEval gain after rule-based-reward post-training — was it capability or optimization-against-the-checker? [D-1](/lesson/1)'s pipeline framing is preserved at its logical extreme: the scoring rule is *literally* deterministic Python, executed on the model's raw response, with no judge, embedding model, or human rater anywhere in the loop. The foreshadowing of [D-22](/lesson/22) (LLM-as-judge, where the judge biases IFEval avoids are catalogued) closes the loop on why this single design move — restrict to the verifiable slice — is worth a whole lesson.
 
 ## The opening hook
 

@@ -7,7 +7,7 @@ week_theme: Foundations of LLM evaluation
 anchor_benchmark: TriviaQA
 harness: lm-evaluation-harness
 reading_time_minutes: 26
-prerequisites: [1]
+prerequisites: [1, 2]
 key_terms:
   - exact match (EM)
   - token-level F1
@@ -40,7 +40,7 @@ By the end of this lesson, you will be able to:
 
 ## Prerequisites & callback
 
-This lesson sits directly on [D-1](/lesson/1)'s pipeline framing. [D-1](/lesson/1) split every benchmark into (dataset, scoring rule, reporting convention) and showed that on multiple-choice the *scoring rule* box is set membership over `{A, B, C, D}`. [D-1](/lesson/1) also flagged the MC-vs-free-form trade-off explicitly: MC removes generation-quality confounds at the cost of cue exploitation; free-form tests what users actually do but pushes all the difficulty into the similarity function. [D-3](/lesson/3) is the deep dive on that second arm — same pipeline diagram, same "evaluation-as-code" framing, but the `Scoring rule` box is now an open research question. Bring [D-1](/lesson/1)'s habit of asking *"what pipeline?"* with you, because for free-form the answer is no longer "n-shot, template, `acc` vs. `acc_norm`" but "EM vs. F1 vs. BLEU vs. judge".
+[D-2](/lesson/2) is the proximate predecessor: it cashed out the *scoring rule* box of the pipeline as a concrete mechanic (`acc` vs. `acc_norm` length normalization, calibration as a metric over predicted vs. realized accuracy) on the multiple-choice slice. Today widens that box to the free-form slice — same pipeline, but the scoring rule is now an open research question (EM vs. F1 vs. BLEU vs. judge) rather than set membership over `{A, B, C, D}`. [D-1](/lesson/1)'s framing supplies the contrast: MC removes generation-quality confounds at the cost of cue exploitation; free-form tests what users actually do but pushes all the difficulty into the similarity function. Bring [D-2](/lesson/2)'s habit of asking *"what scoring rule, and what does it normalize?"* with you, because for free-form the answer is no longer "`acc` vs. `acc_norm`" but "EM vs. F1 vs. BLEU vs. judge".
 
 ## The opening hook
 
