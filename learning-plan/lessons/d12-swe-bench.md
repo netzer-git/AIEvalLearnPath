@@ -6,7 +6,7 @@ week: 2
 week_theme: Capability benchmarks
 anchor_benchmark: SWE-Bench Verified
 harness: benchmark-native (SWE-Bench harness, Docker)
-reading_time_minutes: 33
+reading_time_minutes: 26
 prerequisites: [11]
 key_terms:
   - "% Resolved"
@@ -95,6 +95,28 @@ From 12 popular Python repositories — `django`, `scikit-learn`, `sympy`, `matp
 | `PASS_TO_PASS` | List of test IDs that pass at `base_commit` and must still pass after the model's patch is applied |
 
 The original benchmark contains **2,294** instances across the 12 repositories. The dominant repo by instance count is Django (~850), then sympy (~386) and scikit-learn (~229); Flask contributes 11. Skew matters: a model that's good at Django ORM bugs will look good on aggregate even if it's weak elsewhere.
+
+### Example item
+
+A single SWE-Bench instance is a JSON record bundling the issue text, the repo state, and the held-out gold patches. Example (Django, abbreviated):
+
+```json
+{
+  "repo": "django/django",
+  "instance_id": "django__django-13447",
+  "base_commit": "0ed7d155635da32e7bef4ed9b5f1f8a8da9b4f0f",
+  "problem_statement": "ModelChoiceField does not provide value of invalid choice when raising ValidationError. The error message uses 'invalid_choice' but does not include the offending value, making debugging form errors harder.",
+  "hints_text": "",
+  "created_at": "2020-09-23T13:42:11Z",
+  "version": "3.2",
+  "patch": "diff --git a/django/forms/models.py b/django/forms/models.py\n@@ ...\n-            raise ValidationError(self.error_messages['invalid_choice'], code='invalid_choice')\n+            raise ValidationError(\n+                self.error_messages['invalid_choice'],\n+                code='invalid_choice',\n+                params={'value': value},\n+            )",
+  "test_patch": "diff --git a/tests/forms_tests/tests/test_modelchoicefield.py ...",
+  "FAIL_TO_PASS": ["tests/forms_tests/tests/test_modelchoicefield.py::ModelChoiceFieldTests::test_invalid_pk"],
+  "PASS_TO_PASS": ["tests/forms_tests/tests/test_modelchoicefield.py::ModelChoiceFieldTests::test_valid_pk", "..."]
+}
+```
+
+The model sees only `problem_statement` plus the repo at `base_commit`. Both `patch` (the maintainer's source-file fix) and `test_patch` (the maintainer's test) are held out. At evaluation time the harness applies `test_patch` plus the model's predicted patch and runs the test sets in Docker. The boolean `resolved` flag is set iff every test in `FAIL_TO_PASS` and `PASS_TO_PASS` passes.
 
 ### Scoring rule
 

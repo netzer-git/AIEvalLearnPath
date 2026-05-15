@@ -6,7 +6,7 @@ week: 2
 week_theme: Capability benchmarks
 anchor_benchmark: GSM8K + MATH (Hendrycks)
 harness: lm-evaluation-harness
-reading_time_minutes: 33
+reading_time_minutes: 26
 prerequisites: [2, 4, 8]
 key_terms:
   - chain-of-thought (CoT)
@@ -71,6 +71,8 @@ Three threads, one through-line: the CoT gap is what makes GSM8K's pedagogy work
 
 GSM8K is **8,500 grade-school math word problems** (7,473 train / 1,319 test), each requiring 2–8 multi-step arithmetic operations with natural-language reasoning. The problems are linguistically diverse, written by human contractors, and shipped with full natural-language solutions ending in a `####` delimiter followed by the final integer answer. It is the primary anchor of this lesson because its scoring rule is so spartan — exact match on a single integer — that the only thing that varies between "direct" and "CoT" is whether the model produces the intermediate arithmetic before the final number.
 
+### Example item — GSM8K
+
 A canonical item:
 
 ```
@@ -115,7 +117,7 @@ MATH is **12,500 competition-level mathematics problems** (7,500 train / 5,000 t
 
 Each problem ships with a full step-by-step LaTeX solution; the final answer is wrapped in `\boxed{...}`. That convention is the methodological focus: where GSM8K can scrape an integer after `####`, MATH requires *symbolic equivalence checking* on arbitrary LaTeX expressions.
 
-#### The boxed-LaTeX answer extraction problem
+#### Example item — MATH
 
 A typical MATH item:
 
@@ -154,6 +156,26 @@ The original 5,000-item test set is largely used in the **MATH-500** form introd
 The Cobbe et al. 2021 GSM8K paper introduced the verifier idea: train a *separate* model to score candidate solutions, sample $k$ candidates from the generator, and pick the highest-scoring one. The original verifier was trained on **outcomes**: did the final answer match? This is an **outcome-supervised reward model** (ORM).
 
 The Lightman et al. 2023 paper asked: what if we score each *step* instead?
+
+#### Example item — PRM800K
+
+The unit of supervision in PRM800K is one *step-level* label, not one problem. A row from the released `prm800k` JSONL (Lightman et al. 2023; schema simplified):
+
+```json
+{
+  "problem": "Find the sum of all integers $n$ such that $\\frac{n+6}{n}$ is an integer.",
+  "ground_truth_answer": "0",
+  "steps": [
+    {"text": "We can rewrite $\\frac{n+6}{n} = 1 + \\frac{6}{n}$.",            "rating": 1},
+    {"text": "So $\\frac{6}{n}$ must be an integer, meaning $n$ divides 6.",   "rating": 1},
+    {"text": "The divisors of 6 are $\\pm 1, \\pm 2, \\pm 3, \\pm 6$.",          "rating": 1},
+    {"text": "Summing the positive divisors: $1 + 2 + 3 + 6 = 12$.",          "rating": -1},
+    {"text": "So the answer is $\\boxed{12}$.",                                "rating": -1}
+  ]
+}
+```
+
+The last two steps carry `-1` labels even though the *prefix* (steps 1–3) is correct. The annotator's job is to mark the *first* incorrect step and every step downstream of it. A PRM trained on this signal learns to assign low probability to step 4 conditioned on the (correct) prefix — exactly the failure mode an outcome-only verifier cannot see, because outcome-only judges the final `12` against the gold `0` and produces the same "wrong" label whether the error happened in step 1 or step 4.
 
 #### ORM vs. PRM, formally
 

@@ -6,7 +6,7 @@ week: 2
 week_theme: Capability benchmarks
 anchor_benchmark: HumanEval (+ LiveCodeBench overlay)
 harness: benchmark-native (human-eval) + benchmark-native (LiveCodeBench)
-reading_time_minutes: 32
+reading_time_minutes: 29
 prerequisites: [1, 6]
 key_terms:
   - pass@k
@@ -75,6 +75,8 @@ The two non-obvious boxes are **the sandbox** (you are running model-generated c
 - **164 hand-written Python programming problems**, authored at OpenAI specifically *not* to be in pretraining (the paper notes this; in practice we will see this guarantee leaked anyway).
 - Each problem ships as a **function signature + docstring + canonical solution + a hidden test suite**, with **~7.7 unit tests per problem on average**.
 - Released as a Hugging Face dataset (`openai/openai_humaneval`) under **MIT license**.
+
+### Example item
 
 A canonical item — `HumanEval/0`, `has_close_elements` — looks like this:
 

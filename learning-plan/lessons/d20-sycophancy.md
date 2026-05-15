@@ -6,7 +6,7 @@ week: 3
 week_theme: Alignment, safety, robustness
 anchor_benchmark: Anthropic Sycophancy Evals (SycophancyEval)
 harness: Inspect
-reading_time_minutes: 31
+reading_time_minutes: 24
 prerequisites: [2, 15]
 key_terms:
   - sycophancy
@@ -90,7 +90,7 @@ The paper's evaluation suite (released as `meg-tong/sycophancy-eval` on GitHub a
 
 Probe sizes from the released datasets: feedback (~8,500 prompts), are_you_sure (~4,888 prompts), answer (~7,268 prompts), mimicry (~300 prompts). The probes are designed to be runnable independently; *Are You Sure?* is the one most often reported as a stand-alone number because it produces the cleanest single-rate metric ("fraction of correct answers retracted under pushback").
 
-### A concrete *Are You Sure?* trace
+### Example item: *Are You Sure?* trace
 
 The pedagogically clearest probe is *Are You Sure?* because the failure is binary and the social pressure is minimal — one short retraction prompt. A schematic of the failure:
 

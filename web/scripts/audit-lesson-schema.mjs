@@ -208,6 +208,131 @@ function countCheckYourselfH2s(sections) {
   return sections.filter((s) => s.slug.startsWith("check-yourself")).length;
 }
 
+// Locate the byte range of the `## Anchor: …` H2 — the body slice between
+// that H2's first line and the next H2 (exclusive). Returns null if no
+// Anchor H2 is present.
+function anchorBodyRange(body) {
+  const lines = body.split(/\r?\n/);
+  let start = -1;
+  let inFence = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    const m = /^##\s+(.+?)\s*$/.exec(line);
+    if (!m) continue;
+    if (slugify(m[1]).startsWith("anchor")) {
+      start = i;
+      continue;
+    }
+    if (start !== -1) {
+      return { startLine: start, endLine: i, lines };
+    }
+  }
+  if (start !== -1) return { startLine: start, endLine: lines.length, lines };
+  return null;
+}
+
+// Inside the Anchor section, audit the `### Example item` H3 requirement.
+// Accepts the canonical slug "example-item" or per-anchor variants like
+// "example-item-gsm8k". Multi-anchor lessons (D9, D25) accept either
+// (a) one H3 per anchor as siblings or (b) H4-nested example items under
+// `### Companion: …`. The audit's mechanical floor is: ≥1 H3 (or H4)
+// slugged `example-item*` and ≥1 fenced code block or markdown blockquote
+// inside the H3/H4's own range.
+function auditExampleItems(range, day) {
+  if (!range) return { violations: ["anchor body range not found"], warnings: [] };
+  const { startLine, endLine, lines } = range;
+  const violations = [];
+  const warnings = [];
+
+  // Walk H3 / H4 headers within the Anchor body, tracking fence state.
+  const heads = []; // [{ level, slug, title, lineIndex }]
+  let inFence = false;
+  for (let i = startLine + 1; i < endLine; i++) {
+    const line = lines[i];
+    if (/^```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    const m3 = /^###\s+(.+?)\s*$/.exec(line);
+    const m4 = /^####\s+(.+?)\s*$/.exec(line);
+    if (m3) heads.push({ level: 3, slug: slugify(m3[1]), title: m3[1], lineIndex: i });
+    else if (m4) heads.push({ level: 4, slug: slugify(m4[1]), title: m4[1], lineIndex: i });
+  }
+
+  const exampleHeads = heads.filter((h) => h.slug.startsWith("example-item"));
+  if (exampleHeads.length === 0) {
+    violations.push(
+      'missing "### Example item" H3 inside the Anchor section ' +
+        "(or per-anchor variant like \"### Example item — GSM8K\")",
+    );
+    return { violations, warnings };
+  }
+
+  // For each Example-item heading, verify its own range contains ≥1
+  // fenced code block or markdown blockquote (≥1 line beginning with `> `).
+  // Range = from this heading's line+1 to the next sibling-or-shallower
+  // heading or the end of the Anchor body.
+  const exampleHeadIndices = exampleHeads.map((h) => h.lineIndex);
+  for (let ei = 0; ei < exampleHeads.length; ei++) {
+    const head = exampleHeads[ei];
+    // Find the next H3 or H4 (sibling) line index after this head.
+    let nextHeadLine = endLine;
+    for (const other of heads) {
+      if (
+        other.lineIndex > head.lineIndex &&
+        other.lineIndex < nextHeadLine
+      ) {
+        nextHeadLine = other.lineIndex;
+      }
+    }
+    let blockOk = false;
+    let f = false;
+    for (let i = head.lineIndex + 1; i < nextHeadLine; i++) {
+      const line = lines[i];
+      if (/^```/.test(line)) {
+        // a fence opens a code block — that satisfies the rule on its own
+        f = !f;
+        blockOk = true;
+        continue;
+      }
+      if (!f && /^>\s+/.test(line)) {
+        blockOk = true;
+      }
+    }
+    if (!blockOk) {
+      violations.push(
+        `"${head.title}" has no fenced code block or markdown blockquote ` +
+          "in its body (≥1 required to show a concrete benchmark row)",
+      );
+    }
+  }
+
+  // Multi-anchor lessons (D9 — GSM8K + MATH + PRM800K; D25 — AIME +
+  // FrontierMath + o1 system card) must show ≥1 example per anchor.
+  // We approximate via Companion H3 count.
+  if (day === 9 || day === 25) {
+    const companionHeads = heads.filter(
+      (h) => h.level === 3 && h.slug.startsWith("companion"),
+    );
+    const expectedAnchors = 1 + companionHeads.length; // primary + companions
+    if (exampleHeads.length < expectedAnchors) {
+      warnings.push(
+        `multi-anchor lesson: found ${exampleHeads.length} "### Example item" ` +
+          `head(s) but ${expectedAnchors} anchor(s) (primary + ${companionHeads.length} companion(s)). ` +
+          "Each anchor / companion should have its own example.",
+      );
+    }
+  }
+
+  return { violations, warnings };
+}
+
 // Cross-reference D-N pointers (resolved against the 1..28 range).
 function findCrossReferenceDayPointers(body) {
   const out = new Set();
@@ -401,6 +526,12 @@ async function auditLesson(file) {
   if (countMermaidFences(body) === 0) {
     violations.push("no mermaid fence found (≥1 required)");
   }
+
+  // --- anchor: Example item H3 + ≥1 fenced/blockquote inside it
+  const aRange = anchorBodyRange(body);
+  const exReport = auditExampleItems(aRange, day);
+  for (const v of exReport.violations) violations.push(v);
+  for (const w of exReport.warnings) warnings.push(w);
 
   // --- glossary
   const glossaryItems = parseGlossary(body);

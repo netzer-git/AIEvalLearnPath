@@ -6,7 +6,7 @@ week: 1
 week_theme: Foundations of LLM evaluation
 anchor_benchmark: BIG-Bench Hard (BBH)
 harness: lm-evaluation-harness
-reading_time_minutes: 32
+reading_time_minutes: 23
 prerequisites: [1, 2]
 key_terms:
   - few-shot prompting
@@ -121,7 +121,9 @@ Headline numbers on BBH (Suzgun et al. 2022, Codex `code-davinci-002`, averaged 
 
 The +17.3 point gap on Codex is what the paper exists to document. CoT moved Codex from "below the average human" to "above the average human on 17 of 23 tasks." PaLM 540B (also reported in the paper) shows the same direction: with CoT it surpasses the average human on 10 of 23 tasks, reaching ≈65% averaged across BBH. The PaLM 540B answer-only baseline is reported per-task in the paper rather than as a single aggregate, so we don't quote it as a number; the qualitative pattern is the same — answer-only underperforms the human average on most tasks; CoT closes the gap.
 
-### A concrete CoT vs. direct contrast
+### Example item
+
+BBH ships every task in two prompt formats — `direct-prompts/` (answer-only few-shot) and `cot-prompts/` (CoT few-shot) — so the *prompt format itself* is part of the eval contract. The shared item is the same; the demonstrations and answer format differ. Below is the same `tracking_shuffled_objects_three_objects` test item rendered in both formats so you can see the contract end-to-end.
 
 The BBH task `tracking_shuffled_objects_three_objects` asks the model to track which of three objects each player ends up with after a sequence of pairwise swaps. Both prompt formats use $k = 3$ worked exemplars; only the exemplar content differs.
 

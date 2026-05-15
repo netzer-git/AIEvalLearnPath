@@ -6,7 +6,7 @@ week: 3
 week_theme: Alignment, safety, robustness
 anchor_benchmark: IFEval
 harness: lm-evaluation-harness
-reading_time_minutes: 33
+reading_time_minutes: 25
 prerequisites: [1, 3, 6]
 key_terms:
   - verifiable instruction
@@ -82,7 +82,11 @@ The contrast benchmarks land in the red box and pay the judge cost: **AlpacaEval
 
 **Citation.** Zhou, J., Lu, T., Mishra, S., Brahma, S., Basu, S., Luan, Y., Zhou, D., & Hou, L. (2023). *Instruction-Following Evaluation for Large Language Models.* arXiv:2311.07911. (Google Research / Yale.)
 
-The paper introduces ~500 prompts, each containing one or more instructions drawn from a taxonomy of **25 verifiable-instruction types across 9 categories**. A prompt typically combines two to four instructions:
+The paper introduces ~500 prompts, each containing one or more instructions drawn from a taxonomy of **25 verifiable-instruction types across 9 categories**.
+
+### Example item
+
+A prompt typically combines two to four instructions:
 
 > *"Write a 300+ word summary of the Wikipedia page about Saint Mary's College of California. Do not use any commas in your response. Highlight at least 3 sections in your answer with markdown, i.e. *highlighted section*."*
 

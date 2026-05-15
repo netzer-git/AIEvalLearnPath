@@ -81,6 +81,29 @@ Why TriviaQA for *this* lesson? Three reasons:
 2. **Answers have natural surface variation** — `Barack Obama` vs. `Obama` vs. `President Obama` vs. `Barack Hussein Obama II`. The dataset releases an *alias list* per question (Wikipedia redirects + manually curated) precisely because exact match against a single string would be unfair.
 3. **It contrasts with MMLU on [D-1](/lesson/1).** Same kind of "factual knowledge" probe, but the model now has to *produce* the answer, not pick it. The gap between a model's MMLU score and its TriviaQA closed-book score tells you something about generation vs. recognition.
 
+### Example item
+
+A single `rc.nocontext` row is the question plus its alias set; the model never sees the alias set, only the question. Schematically:
+
+```json
+{
+  "question_id": "tc_42",
+  "question": "Who painted the Mona Lisa?",
+  "answer": {
+    "value": "Leonardo da Vinci",
+    "aliases": [
+      "Leonardo da Vinci",
+      "da Vinci",
+      "Leonardo",
+      "Leonardo di ser Piero da Vinci"
+    ],
+    "normalized_aliases": ["leonardo da vinci", "da vinci", "leonardo"]
+  }
+}
+```
+
+The answer field's `aliases` list — Wikipedia redirects plus manually curated surface forms — is what makes exact match a defensible-but-still-strict scoring rule, discussed below.
+
 A canonical lm-evaluation-harness run:
 
 ```bash

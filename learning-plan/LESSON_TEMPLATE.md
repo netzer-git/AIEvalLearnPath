@@ -113,7 +113,13 @@ encouraged.
 7. `## Anchor: {Benchmark} ({Author et al. Year})` **(M)** — always
    benchmark-named. For multi-anchor lessons (D9, D25), the primary
    anchor uses this header and companion benchmarks live as
-   `### Companion: {Name}` sub-headings inside.
+   `### Companion: {Name}` sub-headings inside. **The Anchor H2
+   must contain at least one `### Example item` H3** (or per-anchor
+   variant like `### Example item — GSM8K`) whose body has a fenced
+   code block or markdown blockquote showing one concrete benchmark
+   row in the benchmark's actual data schema. See the "Anchor
+   section convention" section below for the full rule and the
+   safety-sensitive exception (GPQA / HarmBench / WMDP).
 8. `## ⏵ Check yourself — {short label}` **(M, ≥2 per lesson, ≤4)** —
    formative-check H2. Each contains a 1-question prompt and a
    `<details><summary>Show answer</summary>...</details>` block.
@@ -255,6 +261,15 @@ to first-appearance.
 {1-paragraph framing of why this benchmark is this lesson's anchor
 — what methodological move it locks in.}
 
+### Example item
+
+{1-sentence framing of the row format. Then a fenced code block or
+markdown blockquote showing one concrete benchmark entry in the
+benchmark's actual data schema — question / prompt / task spec +
+options or gold answer or test cases, whichever the benchmark
+uses. If the benchmark stores rows as JSON / records, show the
+field structure too.}
+
 ### Construction
 
 {How the dataset was built. Numbers: item count, splits, license.}
@@ -273,10 +288,39 @@ to first-appearance.
 {Mid-2026 SOTA, with the standard "numbers move" caveat.}
 ```
 
-Multi-anchor lessons (D9 GSM8K + MATH + PRM800K, D25 AIME + FrontierMath
-+ o1 system card) keep the **single primary anchor** in the H2 and
-fold companions under `### Companion: {Name}` sub-headings inside the
-same H2 block, so the audit sees one Anchor section.
+**The `### Example item` H3 is mandatory.** The audit script
+(`web/scripts/audit-lesson-schema.mjs`) asserts that every `## Anchor:`
+H2 contains at least one H3 whose slug is `example-item` (or a
+per-companion variant like `example-item-gsm8k`) and that the H3's
+body contains at least one fenced code block or markdown blockquote.
+The example exists for two pedagogical reasons:
+
+1. **Dual coding** (per the principles section). Verbal framing of a
+   benchmark + a concrete row of its data are two different encodings
+   of the same idea; readers retain both.
+2. **Schema legibility.** Reading "MMLU is 4-way MC over 57 subjects"
+   is not the same as seeing the actual prompt template, the option
+   formatting, the answer-letter convention. The example fixes the
+   reader's mental model of *what the benchmark literally is* before
+   the scoring-rule and mechanics sections operate on that schema.
+
+**Safety-sensitive benchmarks.** For benchmarks whose verbatim items
+carry contamination or dangerous-capability risk — GPQA Diamond (D7),
+HarmBench (D19), WMDP (D21) — use the **authors' own published
+illustrative item** from the paper or dataset card. Cite the figure /
+section the example is drawn from. Do not transcribe items from
+held-out evaluation splits.
+
+**Multi-anchor lessons** (D9 GSM8K + MATH + PRM800K, D25 AIME +
+FrontierMath + o1 system card) keep the **single primary anchor** in
+the H2 and fold companions under `### Companion: {Name}`
+sub-headings inside the same H2 block. The Example item convention
+applies per anchor: the primary anchor gets `### Example item` (or
+`### Example item — {Anchor}`); each companion gets either a sibling
+`### Example item — {Companion}` H3 *or* an H4 nested under its
+`### Companion:` heading. The audit accepts both shapes as long as
+each anchor + companion is represented by at least one fenced /
+blockquoted row.
 
 ---
 

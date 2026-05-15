@@ -6,7 +6,7 @@ week: 4
 week_theme: Frontier evaluation methods
 anchor_benchmark: WebArena
 harness: benchmark-native (WebArena); Inspect for GAIA tasks
-reading_time_minutes: 33
+reading_time_minutes: 32
 prerequisites: [10, 19]
 key_terms:
   - web agent
@@ -101,6 +101,33 @@ Three properties make WebArena the canonical anchor:
 1. **Self-hostable.** The websites ship as Docker images. A 2026 evaluator runs the entire benchmark on a single workstation; there is no API, no network non-determinism, no rate limit. Reproducibility is structural — the same task on the same website checkpoint produces the same state predicate every time.
 2. **Programmatic scoring.** Each task ships with a *functional correctness validator* — a small Python predicate that inspects the final environment state (database, URL, page content) and returns success/failure. A model that gets the cart right by a different route from the human reference still gets credit; a model that produces a confident-looking but wrong final answer gets none. There is no LLM judge.
 3. **Real-world category coverage.** The domains were chosen to span a large fraction of what knowledge workers actually do online — shop, admin, post, code-review, navigate, look up. The benchmark generalizes the long tail of "browse, read, click" task structures rather than testing a narrow capability.
+
+### Example item
+
+A WebArena task is a four-field record: an `intent` (natural-language goal), a `start_url` (the page the agent opens to), an `eval` block (the programmatic success predicate), and bookkeeping (`task_id`, `sites`, `require_login`). Schematically (one real task shape from `webarena/config_files/*.json`):
+
+```json
+{
+  "task_id": 78,
+  "sites": ["shopping"],
+  "start_url": "__SHOPPING__",
+  "intent": "Re-order the most recent order I placed.",
+  "require_login": true,
+  "eval": {
+    "eval_types": ["program_html"],
+    "reference_url": "__SHOPPING__/checkout/onepage/success/",
+    "program_html": [
+      {
+        "url": "__SHOPPING__/sales/order/history/",
+        "locator": "document.querySelectorAll('.order-status')[0].innerText",
+        "required_contents": {"must_include": ["Pending"]}
+      }
+    ]
+  }
+}
+```
+
+The `eval` block is what makes this an executable benchmark. After the agent issues `stop()`, the harness navigates to `reference_url` (or evaluates the `locator` script against the live DOM) and the `required_contents` predicate decides success/failure. No LLM judges the output — the post-condition is JavaScript run against the actual page state.
 
 The headline result from the paper's 2023 GPT-4 baseline: **14.41% task success rate**, vs. **78.24%** for human evaluators on the same 812 tasks. That ~5× gap — and the fact that humans are nowhere near 100% either, because some tasks are hard or under-specified — is the calibration baseline for reading any 2024–2026 frontier-agent number on WebArena.
 

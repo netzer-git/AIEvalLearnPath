@@ -6,7 +6,7 @@ week: 3
 week_theme: Alignment, safety, robustness
 anchor_benchmark: BBQ
 harness: lm-evaluation-harness
-reading_time_minutes: 27
+reading_time_minutes: 25
 prerequisites: [1, 5]
 key_terms:
   - ambiguous context
@@ -85,7 +85,7 @@ BBQ covers **9 social dimensions** chosen against attested U.S.-English social b
 
 The intersectional categories matter because a model can score well on each axis individually and still concentrate its bias at the intersection — a methodological point Parrish et al. inherit from earlier intersectional-bias literature.
 
-### The ambiguous-vs-disambiguated contrast, by example
+### Example item: ambiguous vs. disambiguated contrast
 
 A canonical BBQ item, paraphrased from the paper's category templates:
 

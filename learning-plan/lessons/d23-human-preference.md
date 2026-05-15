@@ -6,7 +6,7 @@ week: 4
 week_theme: Frontier evaluation methods
 anchor_benchmark: Chatbot Arena (LMSYS)
 harness: benchmark-native (LMSYS Arena)
-reading_time_minutes: 33
+reading_time_minutes: 32
 prerequisites: [5, 22]
 key_terms:
   - Chatbot Arena
@@ -75,6 +75,27 @@ flowchart LR
 ```
 
 The four-way label space is load-bearing. *A wins* and *B wins* are the standard pairwise outcomes; *tie* and *both bad* are needed because the prompt distribution includes items neither model handles well, and forcing a binary vote on those items would inject noise into the ratings. The Bradley-Terry fit folds ties into a half-credit outcome ($H = 0.5$); *both bad* is typically excluded from the rating computation. Model identities are revealed only after the vote — the *anonymous* property is what makes the rating signal a comparison of outputs rather than a comparison of brand recognition.
+
+### Example item
+
+A single Arena battle is the unit of data: one user prompt, two anonymized model responses, one vote label. A representative battle-log entry, shaped like a row from the public conv-log release (Zheng et al. 2023, `lmsys-chat-1m` schema):
+
+```json
+{
+  "question_id": "e3b41ad7",
+  "prompt": "Explain the difference between TCP and UDP in two sentences.",
+  "model_a": "vicuna-13b-v1.3",
+  "model_b": "gpt-3.5-turbo-0301",
+  "response_a": "TCP is connection-oriented and guarantees ordered, reliable delivery via handshakes and retransmissions; UDP is connectionless and fires datagrams without delivery guarantees, trading reliability for lower latency.",
+  "response_b": "TCP makes sure all packets arrive in order, while UDP just sends packets without checking.",
+  "winner": "model_a",
+  "judge": "arena_user",
+  "turn": 1,
+  "language": "English"
+}
+```
+
+The `winner` field is the four-way label collapsed to its rating-affecting form: `model_a`, `model_b`, or `tie` (with `tie (bothbad)` excluded from BT fitting). The identities are stored *only* in the battle log; the user saw `Model A` and `Model B` and voted blind.
 
 The sampler is also load-bearing. Random pairing across $M$ models gives $\binom{M}{2}$ pairs and quadratic vote requirements for tight CIs on every cell. The deployed sampler weights pair selection toward comparisons where the rating gap is small or the data is sparse — an *active sampling* policy that targets the highest-uncertainty cells of the pairwise win-rate matrix. The paper formalises this as minimising a $D$-optimal design objective; the practical effect is that newly added models converge to a stable rating in fewer votes than uniform sampling would require.
 

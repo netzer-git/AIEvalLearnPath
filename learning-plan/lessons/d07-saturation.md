@@ -6,7 +6,7 @@ week: 1
 week_theme: Foundations of LLM evaluation
 anchor_benchmark: GPQA (Diamond)
 harness: lm-evaluation-harness
-reading_time_minutes: 31
+reading_time_minutes: 27
 prerequisites: [1, 5, 6]
 key_terms:
   - saturation
@@ -135,9 +135,9 @@ The full 448-item set has three nested difficulty tiers — **Extended** (546 in
 
 In plain language, Diamond is the slice where experts converge on the right answer but non-experts with Google can't find it. It is 198 questions, which is *small* — [D-5](/lesson/5)'s CI math says a single-model 95% CI is roughly $\pm 6$ points at $p = 0.5$ and $\pm 3$ points at $p = 0.95$. Frontier-model gaps on Diamond should always be reported with paired-bootstrap or McNemar's CIs; the headline number alone is misleading.
 
-### An example item (paraphrased to avoid contaminating the benchmark)
+### Example item
 
-The questions look like graduate qualifying-exam problems. A typical physics item runs along these lines (this is a paraphrased composite, *not* a verbatim GPQA item):
+GPQA Diamond items look like graduate qualifying-exam problems. The Rein et al. paper publishes its full illustrative items in Figure 1 and Appendix tables; reproducing the actual held-out items here would defeat the very contamination-resistance the benchmark is built around, so we use a paraphrased composite that preserves the structural difficulty (this is *not* a verbatim GPQA item — cite Rein et al. 2023, Figure 1 / Table 2 for the authors' published exemplars):
 
 > A relativistic electron in a uniform magnetic field $B$ has total energy $E$ much greater than its rest energy. Which of the following best characterizes the synchrotron radiation spectrum's critical frequency $\omega_c$ in the limit $\gamma \gg 1$?
 >

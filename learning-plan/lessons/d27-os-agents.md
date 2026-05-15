@@ -6,7 +6,7 @@ week: 4
 week_theme: Frontier evaluation methods
 anchor_benchmark: OSWorld
 harness: Inspect
-reading_time_minutes: 32
+reading_time_minutes: 29
 prerequisites: [26]
 key_terms:
   - OS-agent action surface
@@ -110,6 +110,35 @@ The methodological move that makes OSWorld actually a benchmark, not a vibes-eva
 3. A **post-condition Python script** that inspects the resulting VM state and returns 0 or 1.
 
 The post-condition is the ground truth. It doesn't read the agent's chain-of-thought, doesn't grade UI smoothness, doesn't ask an LLM judge. It checks: did the files exist at the right path? Were the contents what they should be? Did the spreadsheet cell hold the right value? This is the same execution-grading pattern as HumanEval ([D-11](/lesson/11)), SWE-Bench ([D-12](/lesson/12)), and WebArena ([D-26](/lesson/26)) — applied to OS-level state instead of test cases or browser DOM. The downstream consequence: **OSWorld scores are scripts, not opinions**, and per-task reproducibility is high.
+
+### Example item
+
+OSWorld tasks live as YAML records under `evaluation_examples/`. A representative file-conversion task, abbreviated to the load-bearing fields:
+
+```yaml
+id: 0bb1c5f5-c889-4a92-9a73-0e9d2f7f9bce
+snapshot: chrome
+instruction: "Convert all .png files in ~/Downloads to .jpg and place them in ~/Pictures."
+source: "https://docs.gimp.org/2.10/en/gimp-tutorial-quickies-batch-mode.html"
+config:
+  - type: download
+    parameters:
+      files:
+        - url: https://.../sample1.png
+          path: /root/Downloads/sample1.png
+        - url: https://.../sample2.png
+          path: /root/Downloads/sample2.png
+evaluator:
+  func: exact_match
+  expected:
+    type: file_listing
+    info:
+      directory: /root/Pictures
+      extension: .jpg
+      count: 2
+```
+
+The agent receives only the `instruction` string and the VM at its post-setup state; the `evaluator` block is run after the agent issues `stop()` and decides the binary success label. A model that pipes ImageMagick from the terminal and a model that automates GIMP's GUI both pass the same task — the post-condition cares about the resulting `.jpg` files, not the route taken.
 
 ### Initial baselines and 2026 frontier
 

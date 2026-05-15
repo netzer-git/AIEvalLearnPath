@@ -6,7 +6,7 @@ week: 1
 week_theme: Foundations of LLM evaluation
 anchor_benchmark: HELM
 harness: HELM (own harness)
-reading_time_minutes: 32
+reading_time_minutes: 27
 prerequisites: [1, 2]
 key_terms:
   - Wilson interval
@@ -137,6 +137,42 @@ The headline empirical claim of the paper is that HELM improved benchmark covera
 The shift from "benchmark × accuracy" to "scenario × metric" is the structural argument. A model that scores 85 on MMLU has revealed *one number*. A model that has been run through HELM has revealed accuracy, calibration, robustness to typos, demographic-fairness gaps, social-bias scores, toxicity rate, and tokens-per-second on the same scenarios. The reader gets a vector of comparable measurements rather than a single comparable scalar. That is the same philosophy you will see again on [D-22](/lesson/22) (judge biases) and [D-24](/lesson/24) (RewardBench): the "headline number" is a compression that throws away signal.
 
 > **Calibration in HELM.** [D-2](/lesson/2) introduced calibration as a property of the *scoring rule* (acc vs. acc_norm and the reliability-diagram framing). HELM treats it as a first-class scenario-level *metric* — Expected Calibration Error reported alongside accuracy in the same table. The methodological commitment: calibration is not a separate workstream from accuracy but one of seven readings on the same instrument. The full calibration thread ([D-2](/lesson/2) → [D-15](/lesson/15) → [D-20](/lesson/20) → [D-24](/lesson/24)) returns to this view on TruthfulQA, sycophancy, and RewardBench respectively.
+
+### Example item
+
+A single HELM record is one *instance* run through one *(scenario, adapter, metric)* triple, persisted as JSON in `benchmark_output/runs/<suite>/<scenario_spec>/`. A representative record from a HELM Lite MMLU run (schema simplified from the `crfm-helm` `Instance` + `PerInstanceStats` definitions):
+
+```json
+{
+  "instance_id": "mmlu:high_school_biology_42",
+  "split": "test",
+  "input": {
+    "text": "In photosynthesis, the oxygen produced by plants comes from which molecule?"
+  },
+  "references": [
+    {"output": "Water (H2O)",         "tags": ["correct"]},
+    {"output": "Carbon dioxide (CO2)", "tags": []},
+    {"output": "Glucose (C6H12O6)",   "tags": []},
+    {"output": "ATP",                  "tags": []}
+  ],
+  "adapter": "multiple_choice_joint",
+  "num_train_trials": 1,
+  "prompt_truncated": false,
+  "model": "openai/gpt-4o-2024-05-13",
+  "per_instance_stats": {
+    "exact_match": 1.0,
+    "quasi_exact_match": 1.0,
+    "ece_10_bin": 0.043,
+    "max_prob": 0.927,
+    "toxic_frac": 0.0,
+    "num_perturbations_applied": 3,
+    "robustness_under_perturbations": 1.0,
+    "inference_runtime_seconds": 0.412
+  }
+}
+```
+
+The record's load-bearing property is that the *same instance* is scored against multiple metrics in a single run — `exact_match` for accuracy, `ece_10_bin` for calibration, `robustness_under_perturbations` for typo / capitalization tolerance, `toxic_frac` for harmful-content checks, `inference_runtime_seconds` for efficiency. Aggregating across the ~1,000 instances per scenario produces one row in the scenario × metric matrix; aggregating across ~16 scenarios produces a model's HELM column. There is no single accuracy number that captures the model's performance — the comparison shape is structurally multi-dimensional.
 
 ### A scenario in detail: HELM's MMLU run
 

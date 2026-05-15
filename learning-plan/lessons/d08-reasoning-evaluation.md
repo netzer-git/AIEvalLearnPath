@@ -6,7 +6,7 @@ week: 2
 week_theme: Capability benchmarks
 anchor_benchmark: ARC-Challenge
 harness: lm-evaluation-harness
-reading_time_minutes: 32
+reading_time_minutes: 23
 prerequisites: [1, 4]
 key_terms:
   - filter benchmark
@@ -86,20 +86,36 @@ This is a tighter operationalization of "reasoning required" than it looks. Both
 
 The Challenge set is, in effect, a **negative-filter benchmark**: items aren't selected because they are reasoning-heavy, they are selected because they survive a filter that removes items the shallow baselines can solve. That's a different design discipline from "ask experts to write hard questions" (GPQA, [D-7](/lesson/7)) or "construct novel task types" (ARC-AGI, [D-7](/lesson/7)'s contrast). Filter-based difficulty is cheaper to build but yields a benchmark whose difficulty is bounded by the strength of the filter — better baselines would yield a smaller, harder Challenge set. This is worth holding onto: ARC-Challenge difficulty is calibrated to *2018-era* IR and co-occurrence systems.
 
-### A worked example of why retrieval fails
+### Example item
 
-A representative ARC-Challenge item — paraphrased to avoid quoting the held-out test set verbatim — looks like this:
+A canonical ARC-Challenge item from the public AI2 release (Clark et al. 2018, mirrored on Hugging Face as `allenai/ai2_arc`):
 
-> **Worked example.** Why does a metal spoon left in hot soup eventually feel hot at the handle?
->
-> Which of the following best explains why a metal spoon left in a hot bowl of soup eventually feels hot at the handle, even though only the bowl end is in the soup?
+```
+George wants to warm his hands quickly by rubbing them. Which skin
+surface will produce the most heat?
+
+(A) dry palms
+(B) wet palms
+(C) palms covered with oil
+(D) palms covered with lotion
+
+Answer: A
+```
+
+A retrieval baseline searching the ARC Corpus on the keywords *hands, heat, rubbing* will surface sentences that mention all four surface treatments — dry skin, wet skin, oils, and lotions all appear in physics-of-friction text alongside *heat*. The retrieved sentences score similarly against all four options. A co-occurrence baseline does no better: the content words in each option co-occur with *heat* in everyday text at comparable rates. **The shallow baselines cannot tell which surface produces the most friction *for this scenario*.** Picking (A) requires recognizing that wet / oily / lotioned palms reduce friction and that friction is the heat-producing mechanism here. That is two-step reasoning over known facts — the failure mode the Challenge filter is designed to surface.
+
+### Why retrieval fails on Challenge items
+
+The spoon-in-soup pattern generalizes. A representative ARC-Challenge item along the same lines:
+
+> Why does a metal spoon left in a hot bowl of soup eventually feel hot at the handle, even though only the bowl end is in the soup?
 >
 > (A) The handle radiates heat from the surrounding air.
 > (B) Kinetic energy is transferred from the soup molecules to the spoon's metal atoms, which transfer it along the spoon by conduction.
 > (C) Convection currents carry heat through the spoon.
 > (D) The spoon emits infrared light from its hot end to its cold end.
 
-A retrieval baseline searching the ARC Corpus on the keywords *spoon, soup, heat* will surface sentences that mention all three — including correct definitions of conduction, convection, and radiation. The retrieved sentences score similarly against all four options because each option contains a real physics term. A co-occurrence baseline does no better: the words *kinetic energy*, *convection*, *radiates*, and *infrared* all co-occur with *heat* in physics text. **The shallow baselines cannot tell which term is the right one *for this scenario*.** Picking (B) requires recognizing that solids are involved (rules out convection), that no light source is implied (rules out radiation), and that direct contact is the transfer mode (selects conduction). That is two-step reasoning over known facts — the failure mode the Challenge filter is designed to surface.
+The options here all contain real physics terms. The shallow baselines retrieve correct definitions of conduction, convection, and radiation but cannot disambiguate which mechanism applies to *this* scenario. Picking (B) requires recognizing that solids are involved (rules out convection), that no light source is implied (rules out radiation), and that direct contact is the transfer mode (selects conduction). Two-step reasoning over known facts is what the Challenge filter selects for.
 
 ## ⏵ Check yourself — applying the filter
 

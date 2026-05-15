@@ -6,7 +6,7 @@ week: 2
 week_theme: Capability benchmarks
 anchor_benchmark: RULER
 harness: benchmark-native (NVIDIA/RULER)
-reading_time_minutes: 33
+reading_time_minutes: 28
 prerequisites: [1, 5]
 key_terms:
   - needle in a haystack (NIAH)
@@ -121,7 +121,7 @@ Why this taxonomy matters:
 - **Aggregation** asks the model to find the most common or most frequent words in the context. This is structurally different from retrieval — there is no single "needle" to find; the model has to maintain counts across the entire context.
 - **Question Answering** uses real SQuAD and HotpotQA items, padded with distractor passages drawn from the same corpus, so the long context is naturalistic rather than synthetic. This is the bridge between RULER's controllable synthetic regime and the noisier real-document regime that the foil benchmarks (below) target.
 
-### A concrete example: NIAH-with-distractors
+### Example item: NIAH-with-distractors
 
 The cleanest illustration is **MK-NIAH-2** (multi-key with distractors). The needle is a UUID-keyed value; the haystack is a long stream of *other* UUID-keyed values that look identical in form but are not the target. Schematically:
 

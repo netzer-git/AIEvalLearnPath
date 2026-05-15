@@ -6,7 +6,7 @@ week: 2
 week_theme: Capability benchmarks
 anchor_benchmark: MMMU
 harness: VLMEvalKit (benchmark-native MMMU runner mapped through it)
-reading_time_minutes: 31
+reading_time_minutes: 23
 prerequisites: [1, 5, 7]
 key_terms:
   - multimodal LLM
@@ -132,7 +132,7 @@ The 150/900/10,500 split is the standard convention. Most published numbers ("GP
 
 MMMU is mostly multiple-choice (the format scales) with a minority of short-answer items. The harness applies micro-average accuracy across items, then reports macro-averages by discipline and subject. The scoring back-end uses regex extraction of the answer letter from the model's free-form output — i.e., generative scoring, not log-likelihood ([D-1](/lesson/1)). This matters: a model that says "I think the answer is (B), because..." scores correct, but a model that says "B" without parens may or may not depending on the regex. Cross-paper comparability requires the same extraction code, which is why VLMEvalKit (below) exists.
 
-### An example item: why a vision-only model fails
+### Example item: why a vision-only model fails
 
 The construction makes the perception-vs-reasoning split tangible. A representative Tech & Engineering item (paraphrased composite, not a verbatim MMMU item):
 

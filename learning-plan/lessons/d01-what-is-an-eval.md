@@ -6,7 +6,7 @@ week: 1
 week_theme: Foundations of LLM evaluation
 anchor_benchmark: MMLU
 harness: lm-evaluation-harness
-reading_time_minutes: 32
+reading_time_minutes: 19
 prerequisites: []
 key_terms:
   - benchmark
@@ -97,7 +97,10 @@ Format:
 
 - 15,908 4-way multiple-choice questions across 57 subjects.
 - The test set is held out for evaluation; a dev set (5 exemplars per subject = 285 items) provides the few-shot examples; a separate validation set (~1,540 items) is used for hyperparameter selection.
-- A typical prompt (subject = high school physics) looks like:
+
+### Example item
+
+A typical 5-shot prompt (subject = high school physics) looks like:
 
 ```
 The following are multiple choice questions (with answers) about high school physics.

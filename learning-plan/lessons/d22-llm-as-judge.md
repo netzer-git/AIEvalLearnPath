@@ -6,7 +6,7 @@ week: 4
 week_theme: Frontier evaluation methods
 anchor_benchmark: WildBench
 harness: Inspect
-reading_time_minutes: 33
+reading_time_minutes: 35
 prerequisites: [3, 5]
 key_terms:
   - LLM-as-a-judge
@@ -113,9 +113,9 @@ WB-Reward-Mix averages across the three baselines. The length penalty (described
 
 MT-Bench's 80 items have been on the public web since 2023; the items themselves are now in pretraining and the saturation arc has been steep — frontier models cluster near the top of MT-Bench's 1–10 scale, compressing the dynamic range. WildBench's 1,024 items are real-user prompts at deployment scale; they are harder to curate-for, and the size + length-mitigation makes the eval less single-judge-confident. The same pedagogical relationship as MMLU → MMLU-Pro on [D-6](/lesson/6): the methodology is the same, the redesign restores headroom and adds explicit defenses against the most legible biases. (MT-Bench remains the right pedagogical anchor for *naming* the methodology; WildBench is the right anchor for *running* it in 2026. We cover MT-Bench next as the methodology's origin.)
 
-### Worked example
+### Example item
 
-A user-typed prompt: *"I have an old Python 2 codebase using `print` statements and `urllib2`. Convert this 30-line module to Python 3 and explain each change."*
+WildBench evaluates a model's response against either a pointwise scoring rubric (WB-Score) or a head-to-head comparison with a reference model (WB-Reward). A representative end-to-end trace, showing one real-user-shaped prompt + two model responses + the resulting scores:
 
 ```
 Model A response:  [60-line response — converted code + a numbered list of

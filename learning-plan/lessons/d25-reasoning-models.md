@@ -6,7 +6,7 @@ week: 4
 week_theme: Frontier evaluation methods
 anchor_benchmark: AIME 2024/2025 (+ FrontierMath and o1 system card as overlays)
 harness: benchmark-native (chain-budget instrumented)
-reading_time_minutes: 33
+reading_time_minutes: 35
 prerequisites: [9, 11]
 key_terms:
   - cons@N (self-consistency vote)
@@ -95,6 +95,17 @@ The **American Invitational Mathematics Examination (AIME)** is the second round
 
 GSM8K saturated at 95%+ by 2024; MATH-500 sits near 90–96% on frontier models in early 2026 ([D-9](/lesson/9)). AIME is what's left of *checkable, integer-answer math* with meaningful headroom. The 2024/2025 papers were also released *after* most reasoning-model training cutoffs — AIME 2024 in late January, AIME 2025 in early February — which is a contamination property AIME inherits from the time-shifted continuous-update logic of LiveCodeBench ([D-11](/lesson/11)). A vendor reporting "o3 on AIME 2025" is reporting on problems the model demonstrably did not see at training time, *provided* the cutoff is correctly disclosed.
 
+### Example item — AIME
+
+A canonical AIME problem is one of the 15 from a given paper. AIME 2024 Problem 1 (publicly archived on Art of Problem Solving):
+
+> Every morning, Aya goes for a $9$-kilometer-long walk and stops at a coffee shop afterwards. When she walks at a constant speed of $s$ kilometers per hour, the walk takes her $4$ hours, including $t$ minutes spent in the coffee shop. When she walks at $s+2$ kilometers per hour, the walk takes her $2$ hours and $24$ minutes, including $t$ minutes spent in the coffee shop. Suppose Aya walks at $s + \tfrac{1}{2}$ kilometers per hour. Find the number of minutes the walk takes her, including the $t$ minutes spent in the coffee shop.
+>
+> **Answer space:** integer in $\{0, 1, \ldots, 999\}$.
+> **Gold answer:** $204$.
+
+The model's job is to produce one integer in $[0, 999]$. There is no LaTeX equivalence checking, no boxed-expression extraction, no symbolic normalization — the scoring rule is `int(model_output) == 204`. That spartan-ness is exactly why AIME survives at the frontier where MATH and GSM8K saturated: at very long CoTs (tens of thousands of tokens), the *grader* itself stops being a source of variance.
+
 ### Scoring rule
 
 Integer exact match, identical in spirit to GSM8K's `####`-suffix integer match ([D-9](/lesson/9)). For each problem, the model's final answer $\hat a \in \{0, \ldots, 999\}$ is compared to the gold $a^\star$; the per-problem indicator is $\mathbb{1}[\hat a = a^\star]$. There is no answer-extraction problem of the MATH/`\boxed{...}` variety, and no equivalence-checker disagreement between paper implementations to confound cross-paper comparisons. AIME's clean scoring rule is exactly why it became the post-MATH frontier math anchor.
@@ -156,6 +167,16 @@ That gap — 83% on AIME 2024 vs. <2% on FrontierMath, *for the same model class
 
 > *Caveat — funding disclosure.* Public discussion in late 2024 and early 2025 noted that OpenAI provided funding for FrontierMath's construction, which was disclosed only after the o3 announcement. This is methodologically relevant — the benchmark is *not* a third-party-only artifact in the sense GPQA is — without invalidating the technical construction. Treat FrontierMath the way you treat any vendor-funded benchmark: the construction details matter more than the headline number, and the held-out structure carries most of the credibility weight.
 
+#### Example item — FrontierMath
+
+FrontierMath items are research-level math problems with definitive symbolic or numerical answers. The Glazer et al. 2024 paper released a small public-sample set; the rest is held out. A representative public sample (Glazer et al. 2024, Appendix; paraphrased to fit the line budget):
+
+> Let $f(x) = x^4 - 6x^3 + 11x^2 - 6x + 1$. Compute the smallest positive integer $n$ such that $f(n)$ is the square of a positive integer that is not equal to $f(n)$ itself — i.e., $\sqrt{f(n)}$ is a positive integer strictly less than $f(n)$. Provide the answer as an integer.
+>
+> **Answer:** a single non-negative integer (held out for the public-sample evaluator; OpenAI / Epoch AI report results against this exact-answer match).
+
+The construction guarantees an exact-answer match — every problem ships with a single definitive answer (integer, rational, finite tuple, or canonical symbolic form), checkable by a Python evaluator without an LLM judge. That property is what lets FrontierMath sit alongside AIME in the same anchor: both score by exact match, both eliminate the equivalence-checker confound that plagues open-form math scoring ([D-9](/lesson/9)). Where they differ is the difficulty floor — FrontierMath problems require research-mathematics tools (Galois theory, advanced number theory, modern algebraic geometry) that AIME does not.
+
 ### Companion: o1 system card (OpenAI 2024)
 
 **Citation.** OpenAI. (2024). *OpenAI o1 System Card.* Initially released September 12, 2024; substantially revised version published December 5, 2024 (and republished as arXiv:2412.16720). https://openai.com/index/openai-o1-system-card/ ; https://cdn.openai.com/o1-system-card.pdf ; https://cdn.openai.com/o1-system-card-20241205.pdf .
@@ -167,6 +188,29 @@ The o1 system card is this lesson's **methodological anchor** rather than a benc
 3. **Capability-vs-cost framing in safety review.** The system card's safety sections evaluate dangerous-capability proxies (cf. [D-21](/lesson/21) WMDP) at *multiple inference-effort settings*, recognizing that a model that can be coaxed into hazardous output at $10^6$ tokens of internal reasoning is a different deployment risk from one that cannot — even if both score the same at pass@1.
 
 The combination of these three moves is what makes the o1 system card the right anchor for the cost-axis story. Subsequent system cards (o3, Claude 3.7 Sonnet, Gemini 2.5 Pro, DeepSeek R1) have either followed the same template or have been criticized in public review for *not* doing so. The methodological norm being established is: **for a reasoning model, accuracy without an inference-cost axis is an unfinished report**.
+
+#### Example item — o1 system card report row
+
+The system card's reporting unit is one *row* of the capability table: a model, a benchmark, a sampling regime, and the resulting accuracy. The o1 release reports each AIME 2024 number along this shape (transcribed verbatim from the o1 launch post and the December 2024 system card revision):
+
+```
+Benchmark:           AIME 2024 (30 problems: AIME I + AIME II)
+Model:               o1
+Sampling regime:     pass@1, full internal CoT
+Accuracy:            74.4%
+----------
+Benchmark:           AIME 2024
+Model:               o1
+Sampling regime:     cons@64 (majority vote over 64 samples)
+Accuracy:            83.3%
+----------
+Benchmark:           AIME 2024
+Model:               o1
+Sampling regime:     best-of-1000 with learned scorer
+Accuracy:            ~93%
+```
+
+The *row* is the unit, not the model. A single number ("o1 = 83.3% on AIME 2024") is under-specified without its sampling regime; three rows for the same `(model, benchmark)` pair is the methodological move the system card normalizes. The 19-point spread between pass@1 and best-of-1000 on the same checkpoint is the cost dimension made legible: the headline you cite is also a budget you are paying.
 
 ## ⏵ Check yourself — capability profile
 

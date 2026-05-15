@@ -6,7 +6,7 @@ week: 1
 week_theme: Foundations of LLM evaluation
 anchor_benchmark: MMLU-Pro
 harness: lm-evaluation-harness
-reading_time_minutes: 28
+reading_time_minutes: 29
 prerequisites: [1, 5]
 key_terms:
   - test-set contamination
@@ -101,6 +101,31 @@ MMLU-Pro is the canonical "hardened MMLU" — a re-curated successor designed to
 - **Reasoning-heavy authoring** shifts items toward problems where the path-to-answer matters, not just the surface form.
 
 What MMLU-Pro does **not** do: it does not use a private held-out set, does not procedurally generate items, and does not refresh over time. It is a static public benchmark, which means the same Goodhart loop will eventually catch up to it. The paper's own framing is essentially "buy us a few years of headroom while the field figures out structurally contamination-resistant designs" — see ARC-AGI's private split (Chollet 2019; ARC-AGI-2 in Chollet et al. 2025) or LiveCodeBench's post-cutoff sampling (Jain et al. 2024, [D-11](/lesson/11)) for those structurally-resistant designs.
+
+### Example item
+
+MMLU-Pro keeps MMLU's four-way MC scaffolding but expands to **10 options per question**. A representative item from the released `TIGER-Lab/MMLU-Pro` Hugging Face dataset (discipline: Physics; format verbatim from the dataset card):
+
+```
+Q: A beam of light is normally incident on a piece of glass of refractive
+   index 1.5. About what percentage of the incident light is transmitted
+   through the glass?
+
+(A) 100%
+(B) 92%
+(C) 50%
+(D) 25%
+(E) 5%
+(F) 75%
+(G) 65%
+(H) 38%
+(I) 85%
+(J) 15%
+
+Answer: B
+```
+
+The 10-option format is the structural change. A vague memory that "about 4% of light reflects per air-glass interface" rules out A and E quickly but still leaves seven plausible options to discriminate. On MMLU (4 options) a model with a coarse prior over "high transmission" would coin-flip between B and the closest distractor; on MMLU-Pro (10 options) the same prior leaves the model an extra five options it must also rule out. Random-guess baseline drops from 25% to 10%, and — per Wang et al. — surface-feature heuristics carry less of the score, so the headline number depends more on the underlying knowledge.
 
 ## ⏵ Check yourself — 4-vs-10 mechanics
 

@@ -6,7 +6,7 @@ week: 3
 week_theme: Alignment, safety, robustness
 anchor_benchmark: Situational Awareness Dataset (SAD)
 harness: Inspect
-reading_time_minutes: 33
+reading_time_minutes: 27
 prerequisites: [6]
 key_terms:
   - situational awareness
@@ -106,7 +106,11 @@ The full SAD-7 covers all of these. This lesson foregrounds three categories —
 
 ### Facts — does the model know what kind of thing it is?
 
-The Facts category asks the model multiple-choice questions whose answers depend on knowing facts about itself: its name, training cutoff, training organization, modality support, deployment surface. Items look like:
+The Facts category asks the model multiple-choice questions whose answers depend on knowing facts about itself: its name, training cutoff, training organization, modality support, deployment surface.
+
+#### Example item — Facts MC
+
+Items look like:
 
 ```
 Q: Which of the following is true of you?

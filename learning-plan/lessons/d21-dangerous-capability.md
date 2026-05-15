@@ -121,15 +121,50 @@ This is the load-bearing methodological move. Without it, the benchmark could no
 
 (The lesson abstracts away from the actual question content for exactly the same reason. The illustrative examples below are paraphrased composites, not verbatim items.)
 
-### Illustrative item shapes (paraphrased)
+### Example item
 
-To make the proxy design concrete without reproducing actual WMDP items:
+WMDP items follow MMLU's four-way MC format. The Li et al. 2024 paper foregrounds the *proxy* construction by publishing illustrative item shapes per subset; the dataset card on Hugging Face (`cais/wmdp`) ships the released items themselves. The shapes below are paraphrased composites of the published illustrative items — the actual benchmark stems are public on Hugging Face but reproducing verbatim items in a freely indexed lesson page would defeat the held-out-pretraining-corpus posture the project has tried to preserve.
 
-- *(WMDP-Bio shape, paraphrased.)* "Which of the following protein families is most commonly cited in the literature as a virulence-related host-cell attachment factor in [a class of bacterium]?" Four options, three plausible distractors, one factually correct. The question rewards undergraduate-microbiology familiarity; it does not describe how to engineer a pathogen.
-- *(WMDP-Cyber shape, paraphrased.)* "Given a high-level description of a memory-corruption pattern, which control-flow concept best explains why a particular mitigation is bypassable?" The question rewards general security-engineering literacy; it does not contain runnable exploit code.
-- *(WMDP-Chem shape, paraphrased.)* "Which precursor class belongs to the same general reaction family as a named compound?" The question rewards organic-chemistry vocabulary; it contains no quantities, conditions, or routes.
+```
+[WMDP-Bio, paraphrased illustrative shape]
+Q: Which of the following protein families is most commonly cited
+   in the literature as a virulence-related host-cell attachment
+   factor for a specified class of bacterium?
 
-In all three, the *ability to answer correctly* is what's diagnostic. The question stem itself is content the model could equally have learned from a textbook.
+(A) [textbook-correct family for that class]
+(B) [plausible-but-wrong distractor #1]
+(C) [plausible-but-wrong distractor #2]
+(D) [plausible-but-wrong distractor #3]
+
+Gold: A   |   subset: wmdp_bio   |   harness slug: wmdp_bio
+```
+
+```
+[WMDP-Cyber, paraphrased illustrative shape]
+Q: Given a high-level description of a memory-corruption pattern,
+   which control-flow concept best explains why a particular
+   mitigation is bypassable?
+
+(A) [correct control-flow concept]
+(B) [related-but-wrong concept]
+(C) [related-but-wrong concept]
+(D) [related-but-wrong concept]
+
+Gold: A   |   subset: wmdp_cyber
+```
+
+```
+[WMDP-Chem, paraphrased illustrative shape]
+Q: Which precursor class belongs to the same general reaction
+   family as a named compound?
+
+(A) [correct reaction-family precursor class]
+(B) (C) (D) [distractors from adjacent organic-chemistry vocabulary]
+
+Gold: A   |   subset: wmdp_chem
+```
+
+In all three, the *ability to answer correctly* is what's diagnostic. The question stem itself is content the model could equally have learned from a textbook. The published items contain no synthesis recipes, no exploit code, no operational instructions — only the multiple-choice scaffolding that probes whether the precursor knowledge is *present* in the model's parameters. Cite Li et al. 2024 Section 3 / Appendix B for the authors' own illustrative items.
 
 ## ⏵ Check yourself — yellow band vs. red band
 

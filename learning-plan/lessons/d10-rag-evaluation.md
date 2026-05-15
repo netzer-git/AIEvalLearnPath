@@ -6,7 +6,7 @@ week: 2
 week_theme: Capability benchmarks
 anchor_benchmark: RGB
 harness: benchmark-native (RGB repo) + RAGAS
-reading_time_minutes: 33
+reading_time_minutes: 22
 prerequisites: [1, 3]
 key_terms:
   - RGB
@@ -87,6 +87,46 @@ The four testbeds — verbatim, paraphrased only where the paper's wording is aw
 4. **Counterfactual robustness.** The model is given retrieved context where the answer-bearing fact has been *deliberately edited* to be incorrect (e.g., a date is changed, a name is swapped). The model is *warned* via instructions that retrieved passages may contain errors, and is asked to flag and override them. Definition: the ability to identify and reject known factual errors in retrieved documents when given warnings. The metric is a combination of error-detection rate and corrected-answer accuracy.
 
 The paper's headline finding from the original 2023 evaluation is that frontier LLMs of the time were *acceptable* on noise robustness but *fragile* on the other three — abstention failure (negative rejection) and uncritical acceptance of edited facts (counterfactual robustness) were the most consistent failure modes. The order of magnitudes has shrunk on 2025–2026 frontier models, but the *ranking* of failure modes is stable: integration and counterfactual robustness remain the harder dimensions.
+
+### Example item
+
+An RGB row is a question paired with a curated set of retrieved passages, a testbed flag, a noise-ratio setting, and the gold answer. A representative noise-robustness instance (schema simplified from `chen700564/RGB`):
+
+```json
+{
+  "id": "rgb_en_noise_0142",
+  "testbed": "noise_robustness",
+  "noise_ratio": 0.6,
+  "language": "en",
+  "question": "What year did Apollo 11 land on the Moon?",
+  "retrieved_passages": [
+    {
+      "text": "Apollo 11 was the United States' first crewed Moon landing. Astronauts Neil Armstrong and Buzz Aldrin walked on the lunar surface on July 20, 1969, while Michael Collins remained in lunar orbit.",
+      "answer_bearing": true
+    },
+    {
+      "text": "The Saturn V launch vehicle that carried Apollo 11 was developed by NASA's Marshall Space Flight Center under Wernher von Braun.",
+      "answer_bearing": false
+    },
+    {
+      "text": "Project Apollo was the United States' third human spaceflight program, succeeding Mercury and Gemini.",
+      "answer_bearing": false
+    },
+    {
+      "text": "The Apollo Lunar Module was a two-stage spacecraft designed for landing on the Moon and returning to lunar orbit.",
+      "answer_bearing": false
+    },
+    {
+      "text": "The Apollo program ran from 1961 to 1972 and resulted in six successful crewed lunar landings.",
+      "answer_bearing": false
+    }
+  ],
+  "gold_answer": "1969",
+  "gold_aliases": ["1969", "July 20, 1969", "July 1969"]
+}
+```
+
+The `noise_ratio` field tells the harness how many non-answer-bearing distractors to mix with the single answer-bearing passage; the model sees the passages in shuffled order. At `noise_ratio = 0.6`, 4 of 5 passages are noisy but one carries the answer — the model must extract the date from the right paragraph. The negative-rejection testbed uses the same schema with `answer_bearing: false` on *all* retrieved passages, and the gold behavior flips from "extract 1969" to "abstain". The counterfactual-robustness testbed flips one passage to deliberately contradict known facts (e.g., changes "1969" to "1971"); gold behavior is to detect and override.
 
 ### A worked example: counterfactual robustness
 
