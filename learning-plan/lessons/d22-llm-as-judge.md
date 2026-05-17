@@ -425,9 +425,9 @@ The deeper point: **[D-22](/lesson/22)'s Goodhart mechanism is the one most dire
 **Q1.** WildBench (Lin et al. 2024) anchors this lesson. Which of the following is the **best** description of its construction?
 
 - A. 80 expert-authored multi-turn questions across 8 categories (writing, roleplay, extraction, reasoning, math, coding, STEM-knowledge, humanities), graded by GPT-4 in pointwise single-answer mode on a 1–10 scale.
-- B. ~1,024 real-user prompts from the WildChat corpus, scored by WB-Score (pointwise) and WB-Reward (pairwise vs. three baselines), with checklists from GPT-4-Turbo + Claude-3-Opus and a K-character length penalty converting marginal length-driven wins to ties.
+- B. ~12,000 graduate-level questions across 14 STEM and humanities disciplines with 10 answer choices each, evaluated under exact-match scoring on a held-out test partition.
 - C. 500 prompts mined from Chatbot Arena traffic via BERTopic + UMAP + HDBSCAN clustering, scored by GPT-4-Turbo pairwise against a fixed reference and aggregated under a Bradley-Terry model for the leaderboard ranking.
-- D. ~12,000 graduate-level questions across 14 STEM and humanities disciplines with 10 answer choices each, evaluated under exact-match scoring on a held-out test partition.
+- D. ~1,024 real-user prompts from the WildChat corpus, scored by WB-Score (pointwise) and WB-Reward (pairwise vs. three baselines), with checklists from GPT-4-Turbo + Claude-3-Opus and a K-character length penalty converting marginal length-driven wins to ties.
 
 **Q2.** Wang et al. (2023), *Large Language Models are not Fair Evaluators*, **compute** the swap rate of ChatGPT-as-judge across 80 paired queries to quantify position bias. Their headline empirical result was that:
 
@@ -439,8 +439,8 @@ The deeper point: **[D-22](/lesson/22)'s Goodhart mechanism is the one most dire
 **Q3.** A frontier lab announces a new chat assistant and reports a 12-point gain on MT-Bench using GPT-4-Turbo as the judge. Three weeks later they release a follow-up that uses *their own model* as the judge for an internal "improvement" eval and reports a further 8-point gain. From this lesson, the right reflex is to:
 
 - A. Trust both numbers, provided the harness, prompt template, judge sampling temperature, position-balancing scheme, and length-penalty parameter were held identical across the two reported runs and the random seed for judge sampling was fixed across both grader configurations.
-- B. Trust the first more — self-preference bias (Panickssery et al. 2024) predicts upward inflation when a lab uses its own model as judge, and a cross-family panel is the standard discriminator.
-- C. Trust the second number more — a model grading its own outputs has the most accurate access to the underlying generation distribution and its quality.
+- B. Trust the second number more — a model grading its own outputs has the most accurate access to the underlying generation distribution and its quality.
+- C. Trust the first more — self-preference bias (Panickssery et al. 2024) predicts upward inflation when a lab uses its own model as judge, and a cross-family panel is the standard discriminator.
 - D. Conclude both numbers are uninterpretable noise and discard them entirely until human-rater preference data is available as ground truth.
 
 **Q4.** Which of the following is the **best** statement of [D-22](/lesson/22)'s Goodhart mechanism, distinguishing it from [D-6](/lesson/6)/[D-15](/lesson/15)/[D-17](/lesson/17)?
@@ -467,9 +467,9 @@ The deeper point: **[D-22](/lesson/22)'s Goodhart mechanism is the one most dire
 <details>
 <summary>Answers</summary>
 
-1. **B** — WildBench: ~1,024 real-user tasks from WildChat, WB-Score (pointwise) + WB-Reward (pairwise vs. three baselines), GPT-4-Turbo + Claude-3-Opus checklist generation, K-character length-penalty mitigation. (A is MT-Bench; C is Arena-Hard-Auto; D is MMLU-Pro from [D-6](/lesson/6).)
+1. **D** — WildBench: ~1,024 real-user tasks from WildChat, WB-Score (pointwise) + WB-Reward (pairwise vs. three baselines), GPT-4-Turbo + Claude-3-Opus checklist generation, K-character length-penalty mitigation. (A is MT-Bench; C is Arena-Hard-Auto; B is MMLU-Pro from [D-6](/lesson/6).)
 2. **A** — Wang et al. 2023's headline experimental result is the position-bias demonstration: with ChatGPT as judge, swapping the order of responses changes the winner on a large fraction of pairs, and Vicuna-13B "beats" ChatGPT on 66/80 queries when placed in the favored slot. (B is the MT-Bench paper's headline result; C is Saito et al.'s area; D is Panickssery et al.'s area.)
-3. **B** — self-preference bias (Panickssery et al. 2024) is the direct mechanism: a judge from family $F$ scores responses from family $F$ higher than equivalent-quality responses from other families, and self-recognition capability correlates linearly with the bias strength. The second number is consistent with self-preference inflation, and a cross-family judge panel is the standard discriminator. The first number, with a cross-family judge, has structurally lower exposure to this specific bias (though not zero — verbosity, position, and bandwagon biases still apply).
+3. **C** — self-preference bias (Panickssery et al. 2024) is the direct mechanism: a judge from family $F$ scores responses from family $F$ higher than equivalent-quality responses from other families, and self-recognition capability correlates linearly with the bias strength. The second number is consistent with self-preference inflation, and a cross-family judge panel is the standard discriminator. The first number, with a cross-family judge, has structurally lower exposure to this specific bias (though not zero — verbosity, position, and bandwagon biases still apply).
 4. **D** — [D-22](/lesson/22)'s mechanism is *measurement instrument as target*. Cross-reference: [D-6](/lesson/6) = data leakage; [D-15](/lesson/15) = rubric incentive structure; [D-17](/lesson/17) = situational conditioning; [D-22](/lesson/22) = judge biases as gradient signal. The five Goodhart-foregrounded lessons are five distinct mechanisms.
 5. **B** — the K-penalty converts marginal length-driven wins to Tie, directly canceling verbosity-bias-driven small wins. WildBench reports both with-penalty and without-penalty numbers, so the verbosity-component gap is legible. The whole point is that the verbosity bias is *reported* rather than hidden in the headline.
 6. **B** — same-family single-judge with no position-balancing is exposed to all four canonical biases simultaneously; that combination is the standard 2026 flag for skepticism. The WildBench with-K vs. without-K gap is the verbosity component made legible (the lesson's load-bearing reporting habit). Arena-Hard-Auto provides the cross-check against human-preference rankings. The right read combines (b) and (c) and treats (a) as legacy.

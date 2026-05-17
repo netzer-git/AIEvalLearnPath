@@ -258,8 +258,8 @@ Sycophancy, in this frame, is a calibration failure where the social-pressure si
 
 **Q1.** Sharma et al.'s SycophancyEval is built around how many distinct probes, and which is the most commonly reported single-number metric for sycophancy?
 
-- A. Two probes (feedback and mimicry, dropping the answer and retraction probes as redundant); the headline single-number metric is the feedback agreement rate averaged across artefact types.
-- B. Four probes (feedback, *Are You Sure?*, answer, mimicry); single-number metric is the *Are You Sure?* retraction rate on correct answers.
+- A. Four probes (feedback, *Are You Sure?*, answer, mimicry); single-number metric is the *Are You Sure?* retraction rate on correct answers.
+- B. Two probes (feedback and mimicry, dropping the answer and retraction probes as redundant); the headline single-number metric is the feedback agreement rate averaged across artefact types.
 - C. Five probes, one per AI assistant evaluated in the paper (Claude 1.3, Claude 2, GPT-3.5, GPT-4, Llama-2 70B-Chat); single-number metric is the mean retraction rate across assistants.
 - D. Three probes (feedback, *Are You Sure?*, and mimicry, dropping the answer probe); single-number metric is the mimicry rate on misattributed quotations.
 
@@ -287,9 +287,9 @@ Sycophancy, in this frame, is a calibration failure where the social-pressure si
 **Q5.** What **best explains** why single-turn factuality evaluation (e.g. TruthfulQA on [D-15](/lesson/15)) systematically *underestimates* the deployment risk from sycophancy?
 
 - A. TruthfulQA does not include prompts on the subset of factual topics on which Sharma et al. observe the highest retraction rates, so its question pool systematically misses sycophancy-relevant content.
-- B. Sycophancy lives in second-and-later turns; single-turn benchmarks cannot observe retraction-under-pressure, so a model can score well in a vacuum and still cave in deployment.
+- B. Single-turn evaluation pipelines do not score completions through a learned preference model, so the sycophancy signal that lives in PM-mediated reward optimisation is not exercised end-to-end.
 - C. TruthfulQA is heavily contaminated in modern frontier-model training data, so reported scores reflect memorisation rather than genuine truthfulness or robustness to user pushback.
-- D. Single-turn evaluation pipelines do not score completions through a learned preference model, so the sycophancy signal that lives in PM-mediated reward optimisation is not exercised end-to-end.
+- D. Sycophancy lives in second-and-later turns; single-turn benchmarks cannot observe retraction-under-pressure, so a model can score well in a vacuum and still cave in deployment.
 
 **Q6.** A vendor's model card reports heavy RLHF training but no sycophancy numbers. From the Sharma et al. preference-model finding, which is the **most defensible reading** of this gap?
 
@@ -301,11 +301,11 @@ Sycophancy, in this frame, is a calibration failure where the social-pressure si
 <details>
 <summary>Answers</summary>
 
-1. **B** — SycophancyEval comprises four probes (feedback, *Are You Sure?*, answer, mimicry). The five in the paper refers to the five AI assistants tested (Claude 1.3, Claude 2.0, GPT-3.5-Turbo, GPT-4, Llama-2 70B-Chat), not five probes. *Are You Sure?* is the most commonly reported single-number metric because the failure is binary and produces a clean retraction rate.
+1. **A** — SycophancyEval comprises four probes (feedback, *Are You Sure?*, answer, mimicry). The five in the paper refers to the five AI assistants tested (Claude 1.3, Claude 2.0, GPT-3.5-Turbo, GPT-4, Llama-2 70B-Chat), not five probes. *Are You Sure?* is the most commonly reported single-number metric because the failure is binary and produces a clean retraction rate.
 2. **B** — the calibration framing from [D-2](/lesson/2). A bare expression of user disagreement carries little information about the underlying world-state, so the likelihood ratio is close to 1 and the posterior should move only slightly. Collapsing confidence implies the model is over-weighting social-pressure signal as if it were strong factual evidence — the diagnostic of miscalibration applied to multi-turn pushback.
 3. **B** — Sharma et al. report 95% on the Claude 2 PM. BoN sampling against this PM increases sycophancy because each sample's probability of selection is biased toward the sycophantic completions; this is the canonical Goodhart-on-alignment-training story that [D-24](/lesson/24) (RewardBench) reprises.
 4. **D** — jailbreak is a separate axis ([D-19](/lesson/19), HarmBench). A, B, C are the actual SycophancyEval probes; the fourth is "answer" sycophancy.
-5. **B** — sycophancy is a multi-turn phenomenon and TruthfulQA-style single-turn evaluation cannot observe it. This is the core safety-researcher's-note framing: most Week 3 safety benchmarks are single-turn, so the regime where sycophancy actually causes harm is not directly measured by them.
+5. **D** — sycophancy is a multi-turn phenomenon and TruthfulQA-style single-turn evaluation cannot observe it. This is the core safety-researcher's-note framing: most Week 3 safety benchmarks are single-turn, so the regime where sycophancy actually causes harm is not directly measured by them.
 6. **C** — Sharma et al. show that the optimisation target (the preference model) prefers sycophantic responses ~95% of the time, and that BoN against it increases sycophancy. The default expectation, in the absence of measurement and in the absence of explicit non-sycophantic-PM training, is that more RLHF means more sycophancy on at least some axes. The April 2025 GPT-4o incident is the production-scale demonstration: an update that overweighted thumbs-up/down preference signal produced a publicly-rolled-back sycophancy regression.
 
 </details>

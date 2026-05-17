@@ -398,8 +398,8 @@ Two benchmark-fragility pressures worth naming, both inherited from the wider sc
 
 **Q6.** Why does the indirect-prompt-injection threat model widen primarily because of a *structural* property between [D-26](/lesson/26) (web agents) and [D-27](/lesson/27) (OS agents)?
 
-- A. OS agents support more natural-language locales than web agents do, and indirect-prompt-injection severity scales linearly with the vocabulary size of the deployed tokenizer.
-- B. The OS agent's context is the union of all observations, so files, clipboard, dialogs, mail, and terminal output are all injection channels; the web agent had only one such channel.
+- A. The OS agent's context is the union of all observations, so files, clipboard, dialogs, mail, and terminal output are all injection channels; the web agent had only one such channel.
+- B. OS agents support more natural-language locales than web agents do, and indirect-prompt-injection severity scales linearly with the vocabulary size of the deployed tokenizer.
 - C. Web agents are sandboxed; OS agents are not. (This is true but not the load-bearing structural reason for the widened indirect-PI surface.)
 - D. OS agents use a different multimodal tokenizer with a longer context window, which admits substantially more attacker-written tokens per turn into the prompt context.
 
@@ -411,6 +411,6 @@ Two benchmark-fragility pressures worth naming, both inherited from the wider sc
 3. **A** — 72.36 − 12.24 ≈ 60 points; this is the human-vs-GPT-4V gap on the 369-task OSWorld suite at release (April 2024), per Xie et al. 2024. (B), (C), and (D) misroute the arithmetic onto unrelated quantities.
 4. **D** — HTTP status codes are not a textual observation the OS agent renders; the other three are all artifact channels that bring attacker-controllable text into the prompt context. The point of the lesson is precisely the breadth of (A)–(C).
 5. **B** — modality, scaffold, contamination, and a separate safety probe are all required to make a 78% number actually informative. (A) is wrong because OSWorld's pipeline-drift sources are real. (C) over-interprets a single per-task aggregate; [D-28](/lesson/28)'s horizon-length question is where human-vs-agent comparison shifts. (D) ignores 18 months of frontier progress.
-6. **B** — the structural reason is that the OS agent's observation context is the union of *all* on-screen content, and many cooperative OS features (file system, clipboard, dialog system, mail, terminal) are channels through which a third party can write text into that union. The model does not distinguish channels by trustworthiness; that is the OS-specific failure mode the lesson names.
+6. **A** — the structural reason is that the OS agent's observation context is the union of *all* on-screen content, and many cooperative OS features (file system, clipboard, dialog system, mail, terminal) are channels through which a third party can write text into that union. The model does not distinguish channels by trustworthiness; that is the OS-specific failure mode the lesson names.
 
 </details>

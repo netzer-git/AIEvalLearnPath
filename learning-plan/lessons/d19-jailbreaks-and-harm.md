@@ -377,9 +377,9 @@ The same answer [D-6](/lesson/6) gave applies: structural defenses (held-out att
 **Q5.** A frontier lab reports its model's HarmBench ASR fell from 24% to 6% after a new round of safety RLHF that explicitly used HarmBench-style attack prompts. Which is the **best** read of the 6%?
 
 - A. The model is now genuinely adversarially robust — 6% is essentially the true real-world ASR across all attacker populations.
-- B. The 6% reflects robustness on the static HarmBench distribution the lab trained on; the gap with a post-cutoff red-team ASR is the actionable signal.
+- B. The 24% was a measurement error caused by classifier drift between the two HarmBench evaluation runs.
 - C. The 6% is a contamination artifact from training-set leakage of HarmBench prompts and should be discarded entirely.
-- D. The 24% was a measurement error caused by classifier drift between the two HarmBench evaluation runs.
+- D. The 6% reflects robustness on the static HarmBench distribution the lab trained on; the gap with a post-cutoff red-team ASR is the actionable signal.
 
 **Q6.** Why does HarmBench pair "ASR on harmful prompts" with a separate over-refusal evaluation (e.g., XSTest, helpfulness-on-benign-prompts) in production safety pipelines?
 
@@ -395,7 +395,7 @@ The same answer [D-6](/lesson/6) gave applies: structural defenses (held-out att
 2. **B** — at $p = 0.08$ and $N = 200$: $\sqrt{0.08 \cdot 0.92 / 200} \cdot 1.96 \approx 0.038 = 3.8$ pp. The 3-pp drop is within the half-width on each side, so the difference isn't statistically meaningful without multi-seed runs and an interval. The [D-5](/lesson/5) reflex applies to ASR exactly as it does to accuracy.
 3. **C** — Stage 1a's resolved decision: HarmBench is the generalization (one harm dimension → seven; Perspective API → frozen open classifier; passive elicitation → active adversarial). RealToxicityPrompts' base-rate framing remains useful as a separate line item; it's not a jailbreak benchmark in the modern sense.
 4. **C** — GCG uses gradient access to the model to optimize a token-level adversarial suffix. PAIR (A) is black-box (attacker LLM, no gradients); AutoDAN (B) uses a genetic algorithm rather than gradients; Direct Request (D) is a non-optimization baseline.
-5. **B** — the canonical Goodhart-on-safety-evals story ([D-6](/lesson/6) reprise applied to safety): once the static attack distribution becomes a training target, ASR on it deflates without commensurate real-world-robustness gains. The frontier-safety actionable signal is the gap between the static ASR and a held-out / post-cutoff / transfer red-team ASR.
+5. **D** — the canonical Goodhart-on-safety-evals story ([D-6](/lesson/6) reprise applied to safety): once the static attack distribution becomes a training target, ASR on it deflates without commensurate real-world-robustness gains. The frontier-safety actionable signal is the gap between the static ASR and a held-out / post-cutoff / transfer red-team ASR.
 6. **B** — refuse-everything is the trivial solution to "minimize ASR." Over-refusal evals (XSTest, helpfulness benchmarks) bound it. Production safety scorecards always pair ASR with a helpfulness or over-refusal axis for this reason; the ASR number alone doesn't constrain the model away from the useless-but-safe corner of the space.
 
 </details>

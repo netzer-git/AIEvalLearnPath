@@ -295,9 +295,9 @@ The aggregate compresses a non-uniform per-task pattern into a single number. On
 **Q1.** A paper reports "BBH = 71.2" for a model checkpoint and gives no further methodology detail. Which is the **most defensible reading** of the single piece of methodology information an evaluation-literate reader should ask for first before treating that number as a measurement?
 
 - A. Which GPU type was used during the evaluation run.
-- B. Which of the four `bbh_*` prompting variants was used.
+- B. The decoding temperature and top-$p$ used to sample answers.
 - C. The model's parameter count and pre-training corpus size.
-- D. The decoding temperature and top-$p$ used to sample answers.
+- D. Which of the four `bbh_*` prompting variants was used.
 
 **Q2.** BIG-Bench Hard's 23 tasks were selected because:
 
@@ -323,9 +323,9 @@ The aggregate compresses a non-uniform per-task pattern into a single number. On
 **Q5.** Which of the following correctly describes the relationship between zero-shot CoT (`Let's think step by step.`) and few-shot CoT?
 
 - A. They are equivalent prompting techniques given different names by Wei et al. 2022 and Kojima et al. 2022 in the same NeurIPS proceedings.
-- B. Few-shot CoT prepends $k$ worked-reasoning exemplars; zero-shot CoT instead appends a trigger phrase, and is usually weaker.
+- B. Few-shot CoT only works on instruction-tuned chat models; zero-shot CoT is the only variant compatible with base pre-trained checkpoints.
 - C. Zero-shot CoT is strictly stronger on BBH because the trigger phrase generalizes across tasks while hand-written exemplars overfit.
-- D. Few-shot CoT only works on instruction-tuned chat models; zero-shot CoT is the only variant compatible with base pre-trained checkpoints.
+- D. Few-shot CoT prepends $k$ worked-reasoning exemplars; zero-shot CoT instead appends a trigger phrase, and is usually weaker.
 
 **Q6.** On BBH, you observe that on the 23-task average CoT beats answer-only by +17 points, but on a specific sub-task (e.g., `causal_judgement`) the two prompting strategies are within noise. What is the **right takeaway**?
 
@@ -337,11 +337,11 @@ The aggregate compresses a non-uniform per-task pattern into a single number. On
 <details>
 <summary>Answers</summary>
 
-1. **B** — the four BBH variants in `lm-evaluation-harness` can produce scores that span 30+ points on the same model. A reader who doesn't know which variant was used cannot interpret the headline number; the other three options are either irrelevant to BBH score (A, C) or second-order to variant choice (D).
+1. **D** — the four BBH variants in `lm-evaluation-harness` can produce scores that span 30+ points on the same model. A reader who doesn't know which variant was used cannot interpret the headline number; the other three options are either irrelevant to BBH score (A, C) or second-order to variant choice (B).
 2. **B** — see "Anchor: BIG-Bench Hard." The selection criterion is exactly the slice of BIG-Bench where answer-only few-shot underestimated frontier model capability against the human-rater baseline.
 3. **C** — the test set is identical across conditions; that's the whole point of the comparison. A and B are the format-induction and reasoning-elicitation mechanisms; D is the curation criterion. Computing the gap (73.9 − 56.6 = +17.3) is the headline magnitude the lesson tracks.
 4. **A** — CoT is a transparency *surface*, not a guaranteed *window*. Turpin et al. 2023 demonstrate models producing rationalizations that do not drive their final answer (the "unfaithful CoT" failure mode). [D-9](/lesson/9) returns to this with process supervision.
-5. **B** — Kojima et al. 2022 introduced zero-shot CoT as the trigger-phrase variant; Wei et al. 2022 introduced few-shot CoT with hand-written exemplars. Both work; the few-shot variant is generally stronger when the exemplars are good. C overstates zero-shot CoT; D is empirically false (few-shot CoT was originally demonstrated on base PaLM and Codex).
+5. **D** — Kojima et al. 2022 introduced zero-shot CoT as the trigger-phrase variant; Wei et al. 2022 introduced few-shot CoT with hand-written exemplars. Both work; the few-shot variant is generally stronger when the exemplars are good. C overstates zero-shot CoT; B is empirically false (few-shot CoT was originally demonstrated on base PaLM and Codex).
 6. **B** — BBH's per-task table tells a finer story than its aggregate. CoT unlocks multi-step-reasoning tasks (large gaps), is neutral on recognition tasks, and occasionally hurts. Reporting only the aggregate is what makes "BBH = 73.9" a less informative number than the underlying 23 numbers.
 
 </details>

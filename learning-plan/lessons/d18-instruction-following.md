@@ -307,14 +307,14 @@ IFEval cannot diagnose the post-jailbreak drop directly — its prompts are abou
 **Q1.** A prompt contains 4 verifiable instructions. The model satisfies each one *independently* with probability 0.8. Assuming independence, what are the model's expected instruction-level and prompt-level accuracies on this prompt?
 
 - A. Both 0.8, since instruction-level and prompt-level reduce to the same per-check average under independence.
-- B. Instruction-level 0.8; prompt-level $0.8^4 approx 0.41$.
+- B. Both $0.8 	imes 4 = 3.2$, since IFEval sums per-instruction success rates across the prompt before normalizing.
 - C. Instruction-level $0.8^4 approx 0.41$; prompt-level 0.8, since prompt-level averages whereas instruction-level conjoins.
-- D. Both $0.8 	imes 4 = 3.2$, since IFEval sums per-instruction success rates across the prompt before normalizing.
+- D. Instruction-level 0.8; prompt-level $0.8^4 approx 0.41$.
 
 **Q2.** What is the difference between IFEval's *strict* and *loose* accuracy?
 
-- A. Strict uses 0-shot prompting; loose uses 5-shot exemplars drawn from the IFEval validation split.
-- B. Strict applies the check to the raw response; loose applies it to several lightly-transformed versions and passes if any one satisfies it.
+- A. Strict applies the check to the raw response; loose applies it to several lightly-transformed versions and passes if any one satisfies it.
+- B. Strict uses 0-shot prompting; loose uses 5-shot exemplars drawn from the IFEval validation split.
 - C. Strict requires an exact-match against a reference response; loose accepts any response with BLEU above 0.5 against that reference.
 - D. Strict aggregates only the prompt-level metric across the 9 categories; loose aggregates only the instruction-level metric.
 
@@ -334,26 +334,26 @@ IFEval cannot diagnose the post-jailbreak drop directly — its prompts are abou
 
 **Q5.** A vendor reports IFEval prompt-strict = 0.85 for a new model that was post-trained with RL on rule-based rewards. The same vendor's previous model (without IFEval-targeted RL) scored 0.55. What is the **right reading**?
 
-- A. The new model is unambiguously better at instruction-following, since rule-based rewards are a direct measurement of the underlying capability and not a proxy.
-- B. The gain is real on this distribution but partly reflects optimization against the public check functions; cross-check on IFBench before reading it as capability.
+- A. The gain is real on this distribution but partly reflects optimization against the public check functions; cross-check on IFBench before reading it as capability.
+- B. The new model is unambiguously better at instruction-following, since rule-based rewards are a direct measurement of the underlying capability and not a proxy.
 - C. The gain is meaningless because IFEval was retired from the Open LLM Leaderboard v2 in March 2025 and is no longer a supported instruction-following benchmark.
 - D. The gain proves the new model is unsafe, since rule-based reward shaping is associated with deceptive alignment in the recent post-training literature.
 
 **Q6.** A 2025 reasoning model (extended-CoT post-training) scores **+8 points on AIME** and **−5 points on IFEval prompt-strict** versus its non-reasoning sibling. Which is the **most defensible reading** for a safety-leaning practitioner?
 
 - A. Nothing — AIME and IFEval probe disjoint capabilities, so no inference about safety can be drawn from gains and losses across the two.
-- B. Reasoning training traded explicit-constraint adherence for math; since refusal is itself an instruction, the IFEval regression is safety-relevant.
+- B. The model should be retrained from scratch with reasoning RL turned off, since explicit-constraint adherence is the dominant safety property.
 - C. The IFEval drop is a measurement artifact: reasoning models tend to write longer answers that fail loose-mode line-stripping by accident.
-- D. The model should be retrained from scratch with reasoning RL turned off, since explicit-constraint adherence is the dominant safety property.
+- D. Reasoning training traded explicit-constraint adherence for math; since refusal is itself an instruction, the IFEval regression is safety-relevant.
 
 <details>
 <summary>Answers</summary>
 
-1. **B** — instruction-level accuracy averages over instructions (4 instructions × 0.8 each averages to 0.8). Prompt-level requires *all* instructions to pass simultaneously, so under independence it's $0.8^4 approx 0.4096$. The instruction-level/prompt-level gap is the multiplicative-compounding lesson.
-2. **B** — loose applies the powerset of three response-level transformations (markdown emphasis stripping, first-line drop, last-line drop) and passes if any combination satisfies the check. Strict checks the raw response. The intent is to forgive cosmetic preambles like "Sure, here it is:" without forgiving genuine constraint violations.
+1. **D** — instruction-level accuracy averages over instructions (4 instructions × 0.8 each averages to 0.8). Prompt-level requires *all* instructions to pass simultaneously, so under independence it's $0.8^4 approx 0.4096$. The instruction-level/prompt-level gap is the multiplicative-compounding lesson.
+2. **A** — loose applies the powerset of three response-level transformations (markdown emphasis stripping, first-line drop, last-line drop) and passes if any combination satisfies the check. Strict checks the raw response. The intent is to forgive cosmetic preambles like "Sure, here it is:" without forgiving genuine constraint violations.
 3. **B** — the entire design move is replacing a judge with a deterministic check, which eliminates the judge biases by construction. (A is wrong on the facts — IFEval has ~500 prompts, fewer than MT-Bench-paired Arena tracks. C and D are factually wrong.)
 4. **C** — Factual Accuracy is not in the taxonomy and could not be (it's not programmatically verifiable from the response alone — it would require a judge or a fact-checker). The other three are real categories.
-5. **B** — public check functions are direct RL targets, so a large IFEval gain in a vendor that explicitly used rule-based rewards needs cross-checking on a held-out constraint set. IFBench (Pyatkin et al. 2025) is the canonical such cross-check; the contamination-resistant-successor pattern from [D-6](/lesson/6)/[D-7](/lesson/7)/[D-11](/lesson/11) applies. A overclaims; C is false (IFEval is on the retired Open LLM Leaderboard v2 but the benchmark itself is still in active use); D is unsupported by the data given.
-6. **B** — the reasoning-vs-instruction-following trade-off documented in *Scaling Reasoning, Losing Control* (Fu et al. 2025) and the broader 2025 literature. Instruction-following is a safety property because refusal is an instruction (the lesson's safety note), so a measurable regression on IFEval after reasoning training is a signal worth surfacing. [D-25](/lesson/25) returns to this with the cost-axis Pareto framing.
+5. **A** — public check functions are direct RL targets, so a large IFEval gain in a vendor that explicitly used rule-based rewards needs cross-checking on a held-out constraint set. IFBench (Pyatkin et al. 2025) is the canonical such cross-check; the contamination-resistant-successor pattern from [D-6](/lesson/6)/[D-7](/lesson/7)/[D-11](/lesson/11) applies. B overclaims; C is false (IFEval is on the retired Open LLM Leaderboard v2 but the benchmark itself is still in active use); D is unsupported by the data given.
+6. **D** — the reasoning-vs-instruction-following trade-off documented in *Scaling Reasoning, Losing Control* (Fu et al. 2025) and the broader 2025 literature. Instruction-following is a safety property because refusal is an instruction (the lesson's safety note), so a measurable regression on IFEval after reasoning training is a signal worth surfacing. [D-25](/lesson/25) returns to this with the cost-axis Pareto framing.
 
 </details>

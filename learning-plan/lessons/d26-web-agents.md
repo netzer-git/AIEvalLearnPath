@@ -368,9 +368,9 @@ Two structural caveats apply to every 2026 web-agent number, both of them scaffo
 **Q2.** Which is the **best** description of indirect prompt injection (IPI) as a threat model, contrasted with direct jailbreaks ([D-19](/lesson/19) / HarmBench)?
 
 - A. IPI and direct jailbreaks are the same threat under different names; HarmBench's standard pipeline already scores both attack channels with the same refusal rubric.
-- B. Direct jailbreaks come through the user's prompt; IPI enters through a tool boundary — the attacker writes content into a page or email the agent reads, and the model treats that data as instructions.
+- B. IPI applies only to multimodal agents that parse screenshots, while direct jailbreaks apply only to text-only chatbots without any tool integration.
 - C. IPI requires white-box gradient access to the model weights, while direct jailbreaks rely only on black-box prompt engineering through the chat interface.
-- D. IPI applies only to multimodal agents that parse screenshots, while direct jailbreaks apply only to text-only chatbots without any tool integration.
+- D. Direct jailbreaks come through the user's prompt; IPI enters through a tool boundary — the attacker writes content into a page or email the agent reads, and the model treats that data as instructions.
 
 **Q3.** AgentDojo (Debenedetti et al. 2024) measures, on each test case:
 
@@ -388,8 +388,8 @@ Two structural caveats apply to every 2026 web-agent number, both of them scaffo
 
 **Q5.** Which forward/backward connection is **most accurate**?
 
-- A. [D-26](/lesson/26) indirect-PI is unrelated to [D-10](/lesson/10) RAG counterfactual robustness, since RAG operates over retrieved passages and IPI over tool outputs in disjoint threat surfaces.
-- B. [D-10](/lesson/10) RGB-counterfactual is the controlled-lab precursor: the same primitive (perturb retrieved content) generalizes from warned benign edits to adversarial tool outputs with a tool-action consequence.
+- A. [D-10](/lesson/10) RGB-counterfactual is the controlled-lab precursor: the same primitive (perturb retrieved content) generalizes from warned benign edits to adversarial tool outputs with a tool-action consequence.
+- B. [D-26](/lesson/26) indirect-PI is unrelated to [D-10](/lesson/10) RAG counterfactual robustness, since RAG operates over retrieved passages and IPI over tool outputs in disjoint threat surfaces.
 - C. AgentDojo is a strict subset of HarmBench, since both benchmarks score targeted refusal against adversarial prompts authored by red-teamers.
 - D. WebArena replaces GAIA because GAIA's open-web environment makes the benchmark unsafe to run on production browsers without a sandbox layer.
 
@@ -404,10 +404,10 @@ Two structural caveats apply to every 2026 web-agent number, both of them scaffo
 <summary>Answers</summary>
 
 1. **B** — 812 tasks; 6 self-hostable websites (e-commerce shopping via OneStopShop / Magento, CMS admin via Magento admin, social forum via Reddit/Postmill clone, software development via GitLab, OpenStreetMap, and a Wikipedia mirror), plus utility tools. (A) is GAIA's count. (C) is InjecAgent. (D) is AgentDojo's user-task count.
-2. **B** — IPI's structural difference is the *channel*: the attacker writes into content the agent ingests, not into the user's prompt. The user is benign; the model is aligned; the harm enters through the data/instruction conflation. (See "What 'web agent' means" and "The frontier safety thread.")
+2. **D** — IPI's structural difference is the *channel*: the attacker writes into content the agent ingests, not into the user's prompt. The user is benign; the model is aligned; the harm enters through the data/instruction conflation. (See "What 'web agent' means" and "The frontier safety thread.")
 3. **C** — AgentDojo reports the `(utility, attack-success)` pair plus an injection-success rate on every test case. A model that becomes useless under attack has low utility; a model that's hijacked has high attack success; a deployable agent needs all three axes to look right.
 4. **B** — the dynamic, extensible Python-framework design is what earns AgentDojo the indirect-PI anchor over a static-test-set alternative; the framework is the answer to the contamination-shaped worry that any static attack distribution becomes a training target. (A) is closer to InjecAgent's static-set design.
-5. **B** — [D-10](/lesson/10)'s RGB-counterfactual is the controlled lab; [D-26](/lesson/26)'s AgentDojo is the adversarial generalization. The continuity is the construction primitive (perturb retrieved content, measure behavior) under three relaxations: source of perturbation (benign → adversarial), warning (yes → no), action consequence (none → tool action).
+5. **A** — [D-10](/lesson/10)'s RGB-counterfactual is the controlled lab; [D-26](/lesson/26)'s AgentDojo is the adversarial generalization. The continuity is the construction primitive (perturb retrieved content, measure behavior) under three relaxations: source of perturbation (benign → adversarial), warning (yes → no), action consequence (none → tool action).
 6. **C** is wrong (acc_norm doesn't apply); (D) is wrong (WebArena uses programmatic state predicates, not a judge); (A) is over-strong (WebArena is a fixed-task benchmark, not a deployment forecast). **B** is the right read: scaffold dependence + missing IPI number + benchmark-shape training. This is the [D-12](/lesson/12) / [D-17](/lesson/17) / [D-19](/lesson/19) reflex applied to web agents.
 
 </details>

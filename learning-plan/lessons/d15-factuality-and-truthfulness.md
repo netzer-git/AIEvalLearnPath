@@ -373,15 +373,15 @@ The thread continues at [D-20](/lesson/20) (sycophancy — does the model hold i
 
 **Q5.** A frontier lab claims its new model "improves TruthfulQA from 0.74 to 0.81" with no other reported numbers. From this lesson, the right reflex is to:
 
-- A. Trust the 7-point gain as direct evidence of improved truth-tracking on the curated misconception distribution the benchmark was originally designed around.
-- B. Demand the truthfulness × informativeness joint and an FActScore number, since a TruthfulQA gain alone is consistent with more aggressive refusal on contested items.
+- A. Demand the truthfulness × informativeness joint and an FActScore number, since a TruthfulQA gain alone is consistent with more aggressive refusal on contested items.
+- B. Trust the 7-point gain as direct evidence of improved truth-tracking on the curated misconception distribution the benchmark was originally designed around.
 - C. Conclude the model has been contaminated on TruthfulQA, since gains above 0.80 on MC2 historically correlate with the dataset's wide indexing on the open web.
 - D. Conclude the model is running HaluEval as a runtime filter to reject hallucinated outputs before they reach the TruthfulQA scoring pipeline.
 
 **Q6.** [D-6](/lesson/6) (contamination) and [D-15](/lesson/15) (TruthfulQA) both foreground Goodhart's Law. The **mechanism** is:
 
-- A. The same in both cases — the test items leak into the training distribution, so the headline score reflects training-set recall rather than the underlying capability the benchmark was authored to probe.
-- B. Different mechanisms. [D-6](/lesson/6) is data-leakage Goodhart — items in training make the score measure memorization. [D-15](/lesson/15) is incentive-structure Goodhart — the reference set rewards refusal-shaped strings.
+- A. Different mechanisms. [D-6](/lesson/6) is data-leakage Goodhart — items in training make the score measure memorization. [D-15](/lesson/15) is incentive-structure Goodhart — the reference set rewards refusal-shaped strings.
+- B. The same in both cases — the test items leak into the training distribution, so the headline score reflects training-set recall rather than the underlying capability the benchmark was authored to probe.
 - C. The same in both cases — the model saturates the benchmark, ceiling effects collapse the dynamic range, and further capability gains stop being visible above the noise floor of the per-item scoring.
 - D. Different — [D-6](/lesson/6) is about pretraining-set leakage and [D-15](/lesson/15) is about RLHF reward shaping, but both reduce to the same underlying training-signal corruption pathway Geifman & El-Yaniv 2017 formalize.
 
@@ -392,7 +392,7 @@ The thread continues at [D-20](/lesson/20) (sycophancy — does the model hold i
 2. **B** — the MC2 format eliminates the visible "I have no comment" exploit but moves the same incentive shape into the model's probability distribution over reference-answer strings. The leaderboard number doesn't show this.
 3. **C** — selective risk is the *conditional* error rate on items the model chose to answer. (A is coverage's complement; B is unconditional risk; D is from [D-2](/lesson/2).)
 4. **D** — FActScore uses long-form generations (e.g., biographies) and a knowledge-source-based atomic-fact verifier. It does *not* use the 817-question TruthfulQA dataset. A, B, and C are accurate.
-5. **B** — the calibration reprise + safety researcher's-note reading. A TruthfulQA gain alone is consistent with multiple underlying behaviours, and the right ask is the joint distribution and a non-TruthfulQA factuality number to disambiguate.
-6. **B** — the five Goodhart-foregrounded days are five mechanisms, not five instances of one. [D-6](/lesson/6) is data-leakage; [D-15](/lesson/15) is incentive-structure; [D-17](/lesson/17) (situational awareness), [D-22](/lesson/22) (judge bias), and [D-28](/lesson/28) (autonomy) name three further mechanisms.
+5. **A** — the calibration reprise + safety researcher's-note reading. A TruthfulQA gain alone is consistent with multiple underlying behaviours, and the right ask is the joint distribution and a non-TruthfulQA factuality number to disambiguate.
+6. **A** — the five Goodhart-foregrounded days are five mechanisms, not five instances of one. [D-6](/lesson/6) is data-leakage; [D-15](/lesson/15) is incentive-structure; [D-17](/lesson/17) (situational awareness), [D-22](/lesson/22) (judge bias), and [D-28](/lesson/28) (autonomy) name three further mechanisms.
 
 </details>

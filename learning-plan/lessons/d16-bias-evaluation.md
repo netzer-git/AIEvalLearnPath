@@ -279,14 +279,14 @@ As of early 2026, frontier instruction-tuned models score very well on BBQ accur
 **Q1.** Which is the **load-bearing** design move that distinguishes BBQ from earlier bias benchmarks like StereoSet and CrowS-Pairs?
 
 - A. BBQ uses pseudo-likelihood scoring on masked language models, comparing stereotype-aligned versus counter-stereotype completions per token.
-- B. BBQ pairs each template with both an ambiguous and a disambiguated context, isolating where bias enters.
+- B. BBQ replaces StereoSet and CrowS-Pairs by reproducing every item from both under a unified pseudo-likelihood rubric.
 - C. BBQ uses an LLM-as-judge pipeline to grade open-ended generations against a hand-curated rubric of stereotype phrasings.
-- D. BBQ replaces StereoSet and CrowS-Pairs by reproducing every item from both under a unified pseudo-likelihood rubric.
+- D. BBQ pairs each template with both an ambiguous and a disambiguated context, isolating where bias enters.
 
 **Q2.** **Compute** $s_{\text{DIS}}$ for a model that, on a BBQ category's disambiguated split, produces 1,200 stereotype-aligned errors and 200 counter-stereotype errors (with the rest of the items answered correctly or as "unknown"):
 
-- A. $0.857$
-- B. $+0.714$
+- A. $+0.714$
+- B. $0.857$
 - C. $+0.143$
 - D. $-0.714$
 
@@ -299,8 +299,8 @@ As of early 2026, frontier instruction-tuned models score very well on BBQ accur
 
 **Q4.** A model has $s_{\text{AMB}} \gg 0$ on the Religion category but $s_{\text{DIS}} \approx 0$ on the same category. What is the **most accurate diagnosis**?
 
-- A. The model is unbiased on this category overall; the two scores cancel out by construction whenever they take opposite signs.
-- B. The model integrates explicit context cleanly but fills information gaps with stereotypes — bias is at the priors layer, not evidence-integration.
+- A. The model integrates explicit context cleanly but fills information gaps with stereotypes — bias is at the priors layer, not evidence-integration.
+- B. The model is unbiased on this category overall; the two scores cancel out by construction whenever they take opposite signs.
 - C. The model is biased only in disambiguated contexts, where its evidence-integration layer is overpowered by absorbed stereotype priors.
 - D. The Religion category is too small at the per-template level to support reliable estimation of either bias score on this run.
 
@@ -314,18 +314,18 @@ As of early 2026, frontier instruction-tuned models score very well on BBQ accur
 **Q6.** Which is the **most defensible reading** of BBQ's score being described as "necessary but not sufficient" evidence of low bias for a deployed model?
 
 - A. Because BBQ only covers gender bias and is silent on race, religion, disability, and socio-economic dimensions of stereotype.
-- B. BBQ's templates are public, so a model can pass them while preserving the stereotype OOD; [D-17](/lesson/17) adds the risk of the model conditioning on "this is an evaluation."
+- B. Because BBQ accuracy on the ambiguous split saturates above 90% across all frontier instruction-tuned models, leaving no headroom to discriminate.
 - C. Because BBQ requires an LLM-judge backend that introduces its own demographic-distribution bias into every reported $s_{\text{AMB}}$ and $s_{\text{DIS}}$ score.
-- D. Because BBQ accuracy on the ambiguous split saturates above 90% across all frontier instruction-tuned models, leaving no headroom to discriminate.
+- D. BBQ's templates are public, so a model can pass them while preserving the stereotype OOD; [D-17](/lesson/17) adds the risk of the model conditioning on "this is an evaluation."
 
 <details>
 <summary>Answers</summary>
 
-1. **B** — the ambiguous-vs-disambiguated split is the entire methodological signature of BBQ. WinoBias varies coreference, StereoSet/CrowS-Pairs vary likelihood preferences; only BBQ varies the *information content of the same template* to isolate the layer at which bias acts.
-2. **B** — $s_{\text{DIS}} = 2(1200/1400) - 1 = 2(0.857) - 1 = +0.714$. The denominator is committed-answer count, not item count; $1400 = 1200 + 200$.
+1. **D** — the ambiguous-vs-disambiguated split is the entire methodological signature of BBQ. WinoBias varies coreference, StereoSet/CrowS-Pairs vary likelihood preferences; only BBQ varies the *information content of the same template* to isolate the layer at which bias acts.
+2. **A** — $s_{\text{DIS}} = 2(1200/1400) - 1 = 2(0.857) - 1 = +0.714$. The denominator is committed-answer count, not item count; $1400 = 1200 + 200$.
 3. **C** — the scaling is the entire reason a model that answers "unknown" reliably is rewarded. Without the $(1 - \mathrm{Acc})$ factor, an ambiguous-context score would penalize a model for the leaning of its rare slips identically to a model that commits constantly.
-4. **B** — high $s_{\text{AMB}}$ with low $s_{\text{DIS}}$ is the diagnostic signature for bias at the priors layer (filling gaps with stereotypes) without bias at the evidence-integration layer (overriding given context). The two-score design exists precisely to distinguish these.
+4. **A** — high $s_{\text{AMB}}$ with low $s_{\text{DIS}}$ is the diagnostic signature for bias at the priors layer (filling gaps with stereotypes) without bias at the evidence-integration layer (overriding given context). The two-score design exists precisely to distinguish these.
 5. **B** — at $n \approx 600$ near the typical bias-score regime, $\mathrm{SE}$ is roughly $\sqrt{0.5 \cdot 0.5/600} \approx 0.020$, giving a 95% CI on the order of ±4 points. A 0.5-point delta sits well inside the noise floor. This is exactly the small-effect-size, small-$n$ situation [D-5](/lesson/5)'s safety-eval section was written for.
-6. **B** — the public-templates failure mode (model pattern-matches BBQ contexts and responds "unknown" while preserving the stereotype OOD) plus the stronger SAD-style version where the model conditions its output on the inference that this prompt is an evaluation. Either dynamic means a passing BBQ score does not entail low deployment bias; the score is one input to a multi-axis bias picture, not the deliverable.
+6. **D** — the public-templates failure mode (model pattern-matches BBQ contexts and responds "unknown" while preserving the stereotype OOD) plus the stronger SAD-style version where the model conditions its output on the inference that this prompt is an evaluation. Either dynamic means a passing BBQ score does not entail low deployment bias; the score is one input to a multi-axis bias picture, not the deliverable.
 
 </details>

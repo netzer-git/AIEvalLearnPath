@@ -320,8 +320,8 @@ You are now equipped to read any capability-axis benchmark with the same structu
 
 **Q1.** **Compute** the model's effective context length under RULER's metric: a model with a 1M-token claimed window has mean RULER score $s_m(L) \geq 0.856$ for all $L \leq 64\text{K}$, and $s_m(L) < 0.856$ for all $L > 64\text{K}$.
 
-- A. 1M tokens, since RULER reports effective context as equal to the model's architectural context window cap.
-- B. 64K tokens, the longest length at which mean RULER score meets the 0.856 threshold.
+- A. 64K tokens, the longest length at which mean RULER score meets the 0.856 threshold.
+- B. 1M tokens, since RULER reports effective context as equal to the model's architectural context window cap.
 - C. The arithmetic mean of 64K and 1M, weighted by RULER's per-task accuracy curve.
 - D. Undefined, since RULER only reports effective context for models trained natively on long context.
 
@@ -334,24 +334,24 @@ You are now equipped to read any capability-axis benchmark with the same structu
 
 **Q3.** RULER's 13 tasks fall into which 4 categories?
 
-- A. Retrieval, Summarization, Translation, Code Generation.
-- B. Retrieval, Multi-hop Tracing, Aggregation, Question Answering.
+- A. Retrieval, Multi-hop Tracing, Aggregation, Question Answering.
+- B. Retrieval, Summarization, Translation, Code Generation.
 - C. NIAH-1, NIAH-2, NIAH-3, NIAH-4 (one task family per category).
 - D. Knowledge Recall, Logical Reasoning, Mathematical Reasoning, Safety Refusal.
 
 **Q4.** What is the **structural difference** between vanilla single-NIAH and RULER's MK-NIAH (multi-key NIAH)?
 
 - A. MK-NIAH uses Chinese-language haystacks and English-language needles to test cross-lingual retrieval.
-- B. MK-NIAH adds distractor needles bound to different keys, forcing discrimination rather than localization.
-- C. MK-NIAH places all needles at exactly depth 50% to isolate the lost-in-the-middle effect.
+- B. MK-NIAH places all needles at exactly depth 50% to isolate the lost-in-the-middle effect.
+- C. MK-NIAH adds distractor needles bound to different keys, forcing discrimination rather than localization.
 - D. MK-NIAH uses log-likelihood scoring at the needle position; vanilla NIAH uses free-form generative scoring.
 
 **Q5.** Which is the **most defensible reading** of RULER's relationship to the long-context evaluation landscape?
 
 - A. RULER replaces all prior long-context benchmarks; LongBench-v2, ∞-Bench, and BABILong have been formally deprecated by their authors and superseded.
-- B. RULER anchors the retrieval axis; LongBench-v2, ∞-Bench, and BABILong anchor orthogonal axes (real-document QA, 100K+ mixed domains, rule-tracking). A complete report cites at least two.
+- B. RULER is a closed-source NVIDIA benchmark; LongBench-v2, ∞-Bench, and BABILong are its open-source academic-community alternatives released alongside it.
 - C. RULER, LongBench-v2, ∞-Bench, and BABILong are all single-needle NIAH variants with identical task taxonomies and produce equivalent leaderboard rankings.
-- D. RULER is a closed-source NVIDIA benchmark; LongBench-v2, ∞-Bench, and BABILong are its open-source academic-community alternatives released alongside it.
+- D. RULER anchors the retrieval axis; LongBench-v2, ∞-Bench, and BABILong anchor orthogonal axes (real-document QA, 100K+ mixed domains, rule-tracking). A complete report cites at least two.
 
 **Q6.** A vendor announces a new model claiming a 2M-token context window. The model card reports 100% on vanilla NIAH at 2M but does not report RULER scores. From this lesson, the **right reflex** is to:
 
@@ -363,11 +363,11 @@ You are now equipped to read any capability-axis benchmark with the same structu
 <details>
 <summary>Answers</summary>
 
-1. **B** — effective context is $\max\{L : s_m(L) \geq \tau\}$ with $\tau = 0.856$. Above 64K the score is sub-threshold, so the effective length is 64K regardless of the architectural claim.
+1. **A** — effective context is $\max\{L : s_m(L) \geq \tau\}$ with $\tau = 0.856$. Above 64K the score is sub-threshold, so the effective length is 64K regardless of the architectural claim.
 2. **B** — perplexity is a token-level average; long-context capability is a task-level retrieval-and-reasoning question. A model can have low perplexity on a document and still fail to retrieve a specific embedded fact.
-3. **B** — Retrieval (8 NIAH variants), Multi-hop Tracing (variable tracking), Aggregation (CWE, FWE), Question Answering (SQuAD/HotpotQA-style). The taxonomy is the lesson's anchor table.
-4. **B** — distractor needles force discrimination, not just localization. Vanilla NIAH conflates the two; MK-NIAH separates them, which is why frontier models that ace vanilla NIAH still drop on MK-NIAH at the same length.
-5. **B** — long-context evaluation is multi-axis (retrieval, document understanding, rule-tracking, length regime). RULER anchors retrieval; the foils anchor the other axes. Equating "long-context eval" with RULER is the failure mode this lesson is built to prevent.
+3. **A** — Retrieval (8 NIAH variants), Multi-hop Tracing (variable tracking), Aggregation (CWE, FWE), Question Answering (SQuAD/HotpotQA-style). The taxonomy is the lesson's anchor table.
+4. **C** — distractor needles force discrimination, not just localization. Vanilla NIAH conflates the two; MK-NIAH separates them, which is why frontier models that ace vanilla NIAH still drop on MK-NIAH at the same length.
+5. **D** — long-context evaluation is multi-axis (retrieval, document understanding, rule-tracking, length regime). RULER anchors retrieval; the foils anchor the other axes. Equating "long-context eval" with RULER is the failure mode this lesson is built to prevent.
 6. **B** — vanilla NIAH became near-saturated by 2024; passing it is necessary but not sufficient. RULER's multi-task aggregate plus a threshold-based effective-length number is the standard ask. This is the claimed-vs-effective gap applied to the spec sheet.
 
 </details>

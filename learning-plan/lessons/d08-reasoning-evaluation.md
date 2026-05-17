@@ -280,9 +280,9 @@ The point of holding these four against each other is that **"reasoning eval" is
 **Q3.** You evaluate Llama-3.1-8B on ARC-Challenge with `lm-evaluation-harness` and see `acc = 0.543` and `acc_norm = 0.577`. Which is the right metric to report for an Open LLM Leaderboard-style comparison?
 
 - A. `acc`, because raw accuracy is the only meaningful metric on multiple-choice tasks under log-likelihood scoring.
-- B. `acc_norm`, because ARC option lengths vary and length-normalization removes that bias.
+- B. Neither — the harness should be run with `output_type: generate_until` and answer-letter regex extraction instead.
 - C. The mean of `acc` and `acc_norm`, because either metric alone is statistically unstable on small test sets.
-- D. Neither — the harness should be run with `output_type: generate_until` and answer-letter regex extraction instead.
+- D. `acc_norm`, because ARC option lengths vary and length-normalization removes that bias.
 
 **Q4.** ARC-Challenge has 1,172 test items. A frontier model scores 0.951. **Compute** the approximate 95% CI on its score under a binomial model, and identify what the result implies about ranking it against a model scoring 0.962:
 
@@ -310,7 +310,7 @@ The point of holding these four against each other is that **"reasoning eval" is
 
 1. **B** — the Challenge filter is "incorrect on *both* the IR and co-occurrence baselines." (A) is gatekept-difficulty (GPQA-style); (D) is also GPQA. The intersection of the two baselines failing is the actual operational rule.
 2. **A** — MMLU's failure mode is "doesn't know"; ARC-Challenge's is "knows but doesn't compose." The two scores can come apart, and the direction tells you which capability axis is weaker.
-3. **B** — `acc_norm` is the leaderboard convention for ARC, and the option-length variance on ARC items makes the unnormalized `acc` length-biased. (D) confuses the harness's `output_type` settings.
+3. **D** — `acc_norm` is the leaderboard convention for ARC, and the option-length variance on ARC items makes the unnormalized `acc` length-biased. (B) confuses the harness's `output_type` settings.
 4. **A** — $\sqrt{0.95 \cdot 0.05 / 1172} \approx 0.00637$, so $\pm 1.96 \times 0.00637 \approx \pm 0.0125$ (≈ $\pm 1.3$ pp). The 1.1-pp gap between 0.951 and 0.962 is at the edge of single-run distinguishability; paired McNemar ([D-5](/lesson/5)) on the same items is the right test.
 5. **A** — the filter rules out *2018-era* shallow solvers. A modern LM that beats those baselines need not be doing what the filter was designed to require. This is the [D-7](/lesson/7) saturation argument applied to construction methodology rather than headroom.
 6. **B** — the CoT gap's *size* reflects the benchmark's reasoning shape: short single-pass items (ARC) gain little from externalized scratchwork; multi-step arithmetic (GSM8K) gains a lot. [D-9](/lesson/9) develops this directly.

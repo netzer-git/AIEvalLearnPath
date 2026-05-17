@@ -298,9 +298,9 @@ A separate Meta benchmark also released in 2024 — *CRAG: Comprehensive RAG Ben
 **Q1.** Which RGB testbed measures the model's ability to *abstain* when retrieved passages contain no answer-bearing evidence?
 
 - A. Noise robustness.
-- B. Negative rejection.
+- B. Counterfactual robustness.
 - C. Information integration.
-- D. Counterfactual robustness.
+- D. Negative rejection.
 
 **Q2.** A RAG system answers "Apollo 11 landed in 1969" while the retrieved context says it landed in 1971 (a counterfactual edit). *Apply* the RAGAS faithfulness definition from the original paper: what is the faithfulness score on this trace, and why?
 
@@ -319,9 +319,9 @@ A separate Meta benchmark also released in 2024 — *CRAG: Comprehensive RAG Ben
 **Q4.** Which statement **best explains** the relationship between RGB and RAGAS?
 
 - A. RAGAS replaces RGB as the AAAI 2024 paper deprecates the four-testbed framing in favor of trace-level scoring.
-- B. RGB perturbs retrieval and measures behavior; RAGAS scores trace quality. The two are complementary.
+- B. RAGAS is a strict subset of RGB, covering only noise robustness and negative rejection but not the other two dimensions.
 - C. RGB and RAGAS measure the same retrieval-quality construct; pick whichever has stronger LLM judges.
-- D. RAGAS is a strict subset of RGB, covering only noise robustness and negative rejection but not the other two dimensions.
+- D. RGB perturbs retrieval and measures behavior; RAGAS scores trace quality. The two are complementary.
 
 **Q5.** Which is the **most defensible reading** of RGB-counterfactual robustness as a forward pointer to a later lesson in this curriculum?
 
@@ -340,10 +340,10 @@ A separate Meta benchmark also released in 2024 — *CRAG: Comprehensive RAG Ben
 <details>
 <summary>Answers</summary>
 
-1. **B** — negative rejection is the abstention test: every retrieved passage is on-topic-but-noisy (no answer-bearing passage), and the model should refuse to answer. Noise robustness mixes noisy and answer-bearing passages; counterfactual robustness involves edited (incorrect) answer-bearing passages.
+1. **D** — negative rejection is the abstention test: every retrieved passage is on-topic-but-noisy (no answer-bearing passage), and the model should refuse to answer. Noise robustness mixes noisy and answer-bearing passages; counterfactual robustness involves edited (incorrect) answer-bearing passages.
 2. **C** — RAGAS faithfulness asks whether each atomic claim in the answer is entailed by the retrieved context. A claim that contradicts the context is not entailed by it, so faithfulness is low — *even though the answer is factually correct*. This is the methodological mismatch between RAGAS faithfulness (which rewards deference to context) and RGB counterfactual robustness (which rewards overriding bad context). The answer would correctly score high on RGB-counterfactual and low on RAGAS-faithfulness; the disagreement is informative, not a bug.
 3. **B** — Chen et al. take model-known questions, generate the model's correct answer, then manually edit the corresponding span in the retrieved passage to be incorrect. The model is given an instruction warning that retrieved content may contain errors, and is scored on detection + corrected-answer accuracy.
-4. **B** — RGB is a behavioral benchmark over four dimensions; RAGAS is a trace-level scoring framework. They measure orthogonal things and are typically used together (RGB-style perturbations driving the inputs, RAGAS-style metrics scoring the outputs), modulo the counterfactual-robustness caveat in Q2.
+4. **D** — RGB is a behavioral benchmark over four dimensions; RAGAS is a trace-level scoring framework. They measure orthogonal things and are typically used together (RGB-style perturbations driving the inputs, RAGAS-style metrics scoring the outputs), modulo the counterfactual-robustness caveat in Q2.
 5. **B** — counterfactual robustness with benign edits and explicit warnings is the controlled lab version of [D-26](/lesson/26)'s adversarial threat: attacker-controlled retrieved content embedded in tool outputs without warnings. The evaluation primitive — perturb retrieved passages, measure model behavior — generalizes directly.
 6. **A** — the original paper defines three metrics: faithfulness, answer relevance, context relevance. The four-metric framing in modern blog posts — adding context precision and recall — comes from the `ragas` library, not the paper. Cite the paper for the three and the library for additions.
 

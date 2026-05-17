@@ -387,9 +387,9 @@ Three immediate consequences:
 **Q1.** RewardBench's headline metric is:
 
 - A. Cross-entropy of the RM's score distribution against a held-out reference reward sampled from a larger ensemble.
-- B. Pair-comparison accuracy: $r_\phi(x,y_c) > r_\phi(x,y_r)$ on each trio, unweighted-averaged across the four core categories; random baseline 50%.
+- B. Expected Calibration Error (ECE) over BT-confidence bins on a held-out preference set, reported as a single scalar.
 - C. KL divergence between the RM's induced preference distribution and a frozen gold reward model on a held-out set.
-- D. Expected Calibration Error (ECE) over BT-confidence bins on a held-out preference set, reported as a single scalar.
+- D. Pair-comparison accuracy: $r_\phi(x,y_c) > r_\phi(x,y_r)$ on each trio, unweighted-averaged across the four core categories; random baseline 50%.
 
 **Q2.** RewardBench's four core categories — and their approximate sizes — are:
 
@@ -400,24 +400,24 @@ Three immediate consequences:
 
 **Q3.** Best-of-$N$ sampling against a reward model $r_\phi$ exhibits the **reward-model overoptimization** phenomenon (Gao et al. 2023). The mechanism, in calibration terms, is:
 
-- A. BoN cannot exceed the policy's per-prompt maximum, so the procedure is bounded above and cannot exhibit overoptimization.
-- B. BoN is an order statistic over the RM's upper score tail; miscalibration there amplifies the proxy-vs-gold gap as $N$ grows.
+- A. BoN is an order statistic over the RM's upper score tail; miscalibration there amplifies the proxy-vs-gold gap as $N$ grows.
+- B. BoN cannot exceed the policy's per-prompt maximum, so the procedure is bounded above and cannot exhibit overoptimization.
 - C. The phenomenon is unrelated to RM calibration; it stems entirely from the policy's sampling temperature and KL-to-reference budget.
 - D. It only appears for DPO-style implicit-reward models, since the log-ratio reward is unbounded; classifier-trained RMs are immune.
 
 **Q4.** A reward model has 80% accuracy on RewardBench-Chat-Hard, with the high-confidence (BT-confidence > 0.9) bin showing 65% empirical accuracy. The reliability-diagram bar in that bin sits clearly **below** the diagonal. **Compute** the per-bin confidence–accuracy gap and pick the most accurate single-sentence reading:
 
 - A. The RM is well-calibrated globally; only the headline accuracy is deployment-relevant for an RLHF training stack.
-- B. The RM is overconfident on Chat-Hard high-confidence items; the bin gap $|0.9-0.65|=0.25$ is the BoN-toxic failure mode.
-- C. The RM is underconfident; raising the high-confidence bin via Platt or temperature scaling will land it on the diagonal.
+- B. The RM is underconfident; raising the high-confidence bin via Platt or temperature scaling will land it on the diagonal.
+- C. The RM is overconfident on Chat-Hard high-confidence items; the bin gap $|0.9-0.65|=0.25$ is the BoN-toxic failure mode.
 - D. This is a bin-partition artifact; without bootstrap CIs over equal-frequency bins the per-bin gap should be ignored entirely.
 
 **Q5.** Sharma et al. 2023 report that Anthropic's Claude 2 preference model prefers sycophantic responses over baseline truthful responses approximately 95% of the time. In the [D-24](/lesson/24) framing, the **most defensible reading** for RM evaluation is:
 
 - A. Sycophancy is a policy-level emergent property; RM evaluation has no access to the trained PM's internal preferences and so cannot detect it.
-- B. The PM is calibrated on rater preference but miscalibrated on truthfulness; optimizing against it imports the gap into the policy — the canonical Goodhart-on-RLHF case.
+- B. The 95% figure is a Claude-2-specific artifact of the constitutional-AI loop and does not generalize to standard RLHF preference-model stacks.
 - C. Sycophancy emerges only at frontier scale and so cannot be measured at the PM level for preference models below roughly 70B parameters.
-- D. The 95% figure is a Claude-2-specific artifact of the constitutional-AI loop and does not generalize to standard RLHF preference-model stacks.
+- D. The PM is calibrated on rater preference but miscalibrated on truthfulness; optimizing against it imports the gap into the policy — the canonical Goodhart-on-RLHF case.
 
 **Q6.** Why is **[D-24](/lesson/24) the closure** of the calibration thread ([D-2](/lesson/2) → [D-15](/lesson/15) → [D-20](/lesson/20) → [D-24](/lesson/24)) rather than a way-station to a later lesson?
 
@@ -429,11 +429,11 @@ Three immediate consequences:
 <details>
 <summary>Answers</summary>
 
-1. **B** — pair-comparison accuracy is the headline metric: per-trio binary correctness, averaged within and across the four categories. Random baseline is 50% because the test is a binary preference. C and D are plausible-sounding but wrong; A is a different family of metric entirely.
+1. **D** — pair-comparison accuracy is the headline metric: per-trio binary correctness, averaged within and across the four categories. Random baseline is 50% because the test is a binary preference. C and B are plausible-sounding but wrong; A is a different family of metric entirely.
 2. **B** — 2,625 trios in the four-category core (358 / 456 / 740 / 1,431). The released `allenai/reward-bench` HF dataset shows ~3,000 trios when subset variants are counted; the headline is on the four-category core. A, C, and D are confabulated splits.
-3. **B** — the order-statistics framing is the load-bearing mechanism. BoN selects on the RM's upper score tail; miscalibration in that tail (high RM score, low gold-property correlation) is exactly what gets amplified as $N$ grows. This is the closing of the calibration thread: [D-2](/lesson/2)'s "miscalibration is the gap between confidence and correctness" applied to a learned scorer that drives generative sampling. A is wrong (BoN is bounded but the proxy-vs-gold *gap* is not), C confuses cause and effect, D is empirically false.
-4. **B** — the diagnostic is the per-bin gap between confidence and accuracy, exactly the [D-2](/lesson/2) reliability-diagram framing applied to RM BT-confidence. A high-confidence bin sitting below the diagonal is overconfidence and is the BoN-toxic failure mode.
-5. **B** — the canonical Goodhart-on-RLHF case as the lesson frames it. The PM is calibrated on the wrong property; the policy inherits the miscalibration; downstream measurement (TruthfulQA, sycophancy probes) sees the result. Without explicit RM-evaluation probes that test the rater-preference vs. truthfulness gap, the failure is invisible before deployment. A misattributes; C and D understate the generality.
+3. **A** — the order-statistics framing is the load-bearing mechanism. BoN selects on the RM's upper score tail; miscalibration in that tail (high RM score, low gold-property correlation) is exactly what gets amplified as $N$ grows. This is the closing of the calibration thread: [D-2](/lesson/2)'s "miscalibration is the gap between confidence and correctness" applied to a learned scorer that drives generative sampling. B is wrong (BoN is bounded but the proxy-vs-gold *gap* is not), C confuses cause and effect, D is empirically false.
+4. **C** — the diagnostic is the per-bin gap between confidence and accuracy, exactly the [D-2](/lesson/2) reliability-diagram framing applied to RM BT-confidence. A high-confidence bin sitting below the diagonal is overconfidence and is the BoN-toxic failure mode.
+5. **D** — the canonical Goodhart-on-RLHF case as the lesson frames it. The PM is calibrated on the wrong property; the policy inherits the miscalibration; downstream measurement (TruthfulQA, sycophancy probes) sees the result. Without explicit RM-evaluation probes that test the rater-preference vs. truthfulness gap, the failure is invisible before deployment. A misattributes; C and B understate the generality.
 6. **B** — the thread is structural, not topical. Each prior reprise brought a new class of learned scorer under the same diagnostic; [D-24](/lesson/24) is the closing because the RM is the operationally-most-consequential scorer and no further class remains in the pipeline. A is a procedural answer; C contradicts the thread structure; D confuses recency with closure.
 
 </details>

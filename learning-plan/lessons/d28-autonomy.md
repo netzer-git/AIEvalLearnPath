@@ -447,14 +447,14 @@ Evaluation literacy is not a body of facts about specific benchmarks. It is the 
 **Q1.** Which is the **most defensible reading** of METR (Model Evaluation and Threat Research)'s institutional status?
 
 - A. The internal red-team-and-Preparedness division of OpenAI that authored the Preparedness Framework and runs CBRN evaluations under that policy.
-- B. A standalone 501(c)(3) non-profit, formerly ARC Evals, spun out and renamed in December 2023; runs pre-deployment autonomy evaluations for frontier labs.
+- B. The EleutherAI-affiliated engineering team that maintains the lm-evaluation-harness and the Open LLM Leaderboard reproducibility infrastructure.
 - C. A UK government agency operating under DSIT that owns the Inspect harness and conducts statutory pre-deployment third-party evaluation of frontier models.
-- D. The EleutherAI-affiliated engineering team that maintains the lm-evaluation-harness and the Open LLM Leaderboard reproducibility infrastructure.
+- D. A standalone 501(c)(3) non-profit, formerly ARC Evals, spun out and renamed in December 2023; runs pre-deployment autonomy evaluations for frontier labs.
 
 **Q2.** Which three published artefacts together constitute the METR autonomy suite as framed in this lesson?
 
-- A. ARC-AGI-1 (Chollet 2019), ARC-AGI-2 (Chollet et al. 2025), and the Humanity's Last Exam multi-discipline closed-book benchmark released in early 2025.
-- B. RE-Bench (Wijk et al. 2024), HCAST (Rein et al. 2025, 189 software tasks calibrated to ~563 human baselines), and Kwa et al. 2025's horizon-length result.
+- A. RE-Bench (Wijk et al. 2024), HCAST (Rein et al. 2025, 189 software tasks calibrated to ~563 human baselines), and Kwa et al. 2025's horizon-length result.
+- B. ARC-AGI-1 (Chollet 2019), ARC-AGI-2 (Chollet et al. 2025), and the Humanity's Last Exam multi-discipline closed-book benchmark released in early 2025.
 - C. WMDP-Bio, WMDP-Chem, and WMDP-Cyber from Li et al. 2024 — the three subset MC benchmarks for hazardous proxy knowledge that anchor [D-21](/lesson/21).
 - D. WebArena (Zhou et al. 2023), OSWorld (Xie et al. 2024), and AgentDojo (Debenedetti et al. 2024) — the three agent benchmarks that anchor [D-26](/lesson/26) and [D-27](/lesson/27).
 
@@ -467,8 +467,8 @@ Evaluation literacy is not a body of facts about specific benchmarks. It is the 
 
 **Q4.** [D-28](/lesson/28)'s Goodhart mechanism is *autonomy-measurement-as-selection-pressure*. Which is the **best** statement of how it differs from the four prior foregrounded mechanisms?
 
-- A. It is the same as [D-17](/lesson/17) (situational conditioning), only applied to long-horizon agentic loops rather than single-turn chat, with SAD's Stages-Oversight remaining the recommended deployment-realism instrument.
-- B. The four prior mechanisms have partial technical defenses; [D-28](/lesson/28)'s does not — any autonomy benchmark is itself a training signal for the property it tracks. Responses are organizational (NDA evaluation, held-out tasks, trend monitoring), not methodological.
+- A. The four prior mechanisms have partial technical defenses; [D-28](/lesson/28)'s does not — any autonomy benchmark is itself a training signal for the property it tracks. Responses are organizational (NDA evaluation, held-out tasks, trend monitoring), not methodological.
+- B. It is the same as [D-17](/lesson/17) (situational conditioning), only applied to long-horizon agentic loops rather than single-turn chat, with SAD's Stages-Oversight remaining the recommended deployment-realism instrument.
 - C. It is a generalisation of [D-6](/lesson/6) (data leakage) to multi-task suites, where the contamination unit is now a whole task family rather than a single MC item, and the standard fix is post-cutoff task resampling on a release-aligned schedule.
 - D. It applies only to multimodal vision-language models, because desktop GUI tool use is what enables agentic loops; pure text-only models are out-of-scope for METR's autonomy suite by construction.
 
@@ -482,18 +482,18 @@ Evaluation literacy is not a body of facts about specific benchmarks. It is the 
 **Q6.** *(Synthesis question.)* The calibration thread runs through which four lessons, and at which lesson does it close?
 
 - A. [D-1](/lesson/1) (MMLU letter-argmax) → [D-7](/lesson/7) (GPQA Diamond) → [D-14](/lesson/14) (RULER effective context) → [D-21](/lesson/21) (WMDP-Bio post-mitigation); closes at [D-21](/lesson/21), where the safety-inversion gradient first takes hold.
-- B. [D-2](/lesson/2) (HellaSwag, ECE / reliability diagrams) → [D-15](/lesson/15) (TruthfulQA, selective prediction) → [D-20](/lesson/20) (sycophancy as a calibration question) → [D-24](/lesson/24) (RewardBench); closes at [D-24](/lesson/24), with [D-28](/lesson/28) referencing but not extending it.
+- B. [D-11](/lesson/11) (HumanEval pass@k) → [D-12](/lesson/12) (SWE-Bench resolved-rate) → [D-26](/lesson/26) (WebArena task-success) → [D-27](/lesson/27) (OSWorld step-success); closes at [D-27](/lesson/27), where agent capability tops out.
 - C. [D-6](/lesson/6) (data leakage) → [D-15](/lesson/15) (TruthfulQA) → [D-17](/lesson/17) (SAD Stages-Oversight) → [D-22](/lesson/22) (WildBench judge biases); closes at [D-28](/lesson/28) as the curriculum's final foregrounded Goodhart mechanism.
-- D. [D-11](/lesson/11) (HumanEval pass@k) → [D-12](/lesson/12) (SWE-Bench resolved-rate) → [D-26](/lesson/26) (WebArena task-success) → [D-27](/lesson/27) (OSWorld step-success); closes at [D-27](/lesson/27), where agent capability tops out.
+- D. [D-2](/lesson/2) (HellaSwag, ECE / reliability diagrams) → [D-15](/lesson/15) (TruthfulQA, selective prediction) → [D-20](/lesson/20) (sycophancy as a calibration question) → [D-24](/lesson/24) (RewardBench); closes at [D-24](/lesson/24), with [D-28](/lesson/28) referencing but not extending it.
 
 <details>
 <summary>Answers</summary>
 
-1. **B** — METR is a standalone non-profit, formerly ARC Evals, spun out in December 2023 ([metr.org/blog/2023-12-04-metr-announcement](https://metr.org/blog/2023-12-04-metr-announcement/)). The other options are wrong: it is independent of OpenAI (A), it is a US non-profit not a UK government agency (the UK equivalent is AISI, C), and the lm-evaluation-harness is from EleutherAI (D).
-2. **B** — RE-Bench (depth: 7 ML-R&D environments, 8-hour expert baselines), HCAST (breadth: 189 tasks calibrated against 563 human baselines spanning ~1 min to 8+ hours), and Kwa et al. 2025 (the horizon-length analysis that fits the trend across the suite). A is the alternative-considered ARC-AGI thread; C is [D-21](/lesson/21); D is [D-26](/lesson/26)–[D-27](/lesson/27).
+1. **D** — METR is a standalone non-profit, formerly ARC Evals, spun out in December 2023 ([metr.org/blog/2023-12-04-metr-announcement](https://metr.org/blog/2023-12-04-metr-announcement/)). The other options are wrong: it is independent of OpenAI (A), it is a US non-profit not a UK government agency (the UK equivalent is AISI, C), and the lm-evaluation-harness is from EleutherAI (B).
+2. **A** — RE-Bench (depth: 7 ML-R&D environments, 8-hour expert baselines), HCAST (breadth: 189 tasks calibrated against 563 human baselines spanning ~1 min to 8+ hours), and Kwa et al. 2025 (the horizon-length analysis that fits the trend across the suite). B is the alternative-considered ARC-AGI thread; C is [D-21](/lesson/21); D is [D-26](/lesson/26)–[D-27](/lesson/27).
 3. **B** — the metric is fit by logistic regression of empirical success against log-task-length, with $L_p$ defined as the human-baseline length at which the agent's success probability equals $p$. The headline plot is $L_{50}$ across model-release dates.
-4. **B** — the lesson's central Goodhart claim. The four prior mechanisms have technical defenses (decontamination on [D-6](/lesson/6), atomic-fact decomposition on [D-15](/lesson/15), deployment-realistic prompts on [D-17](/lesson/17), judge ensembling on [D-22](/lesson/22)); [D-28](/lesson/28)'s mechanism is *the existence of measurement itself* leaking optimization pressure, which is why the responses are organizational rather than methodological.
+4. **A** — the lesson's central Goodhart claim. The four prior mechanisms have technical defenses (decontamination on [D-6](/lesson/6), atomic-fact decomposition on [D-15](/lesson/15), deployment-realistic prompts on [D-17](/lesson/17), judge ensembling on [D-22](/lesson/22)); [D-28](/lesson/28)'s mechanism is *the existence of measurement itself* leaking optimization pressure, which is why the responses are organizational rather than methodological.
 5. **C** — [D-21](/lesson/21) is the lesson that names this exact pattern. The 24% post-mitigation score is consistent with surface-form forgetting rather than substrate removal; the Sheshadri et al. 2024 robust-unlearning literature finds RMU-unlearned models often partially re-elicitable. The high Stages-Oversight number ([D-17](/lesson/17)) further raises the strategic-refusal hypothesis. Answer A misses the point (GPQA is a capability eval); B describes a different lesson ([D-14](/lesson/14) long-context); D is unrelated.
-6. **B** — [D-2](/lesson/2) → [D-15](/lesson/15) → [D-20](/lesson/20) → [D-24](/lesson/24) is the calibration thread as `overview.md` and the lessons themselves describe it. [D-24](/lesson/24) is where it closes (reward-model confidence is the last lift of the thread); [D-28](/lesson/28) references it but does not extend it. The other options chain unrelated lessons.
+6. **D** — [D-2](/lesson/2) → [D-15](/lesson/15) → [D-20](/lesson/20) → [D-24](/lesson/24) is the calibration thread as `overview.md` and the lessons themselves describe it. [D-24](/lesson/24) is where it closes (reward-model confidence is the last lift of the thread); [D-28](/lesson/28) references it but does not extend it. The other options chain unrelated lessons.
 
 </details>

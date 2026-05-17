@@ -329,8 +329,8 @@ The other foregrounded Goodhart days — [D-6](/lesson/6) (leakage, the canonica
 **Q2.** Why is the plug-in estimator $1 - (1 - c/n)^k$ biased for pass@k when $k > 1$?
 
 - A. It underestimates pass@k because $f(p) = 1 - (1-p)^k$ is convex in $p$, so the plug-in deflates by Jensen's inequality.
-- B. It overestimates pass@k because $f(p) = 1 - (1-p)^k$ is concave (Jensen's inequality).
-- C. It is only biased when $n < k$, since the hypergeometric estimator is undefined for $n < k$.
+- B. It is only biased when $n < k$, since the hypergeometric estimator is undefined for $n < k$.
+- C. It overestimates pass@k because $f(p) = 1 - (1-p)^k$ is concave (Jensen's inequality).
 - D. It is unbiased; Chen et al. 2021 use it as the canonical estimator in the human-eval reference repo.
 
 **Q3.** A practitioner reports "Model X achieves pass@100 = 0.85 on HumanEval." Which is the **most defensible** single piece of information to demand before treating this number as a measurement, beyond what's stated?
@@ -357,18 +357,18 @@ The other foregrounded Goodhart days — [D-6](/lesson/6) (leakage, the canonica
 **Q6.** Liu et al. (2023, EvalPlus / HumanEval+) and Riddell et al. (2024) are *both* critiques of HumanEval, but they target different legs of the (dataset, scoring rule, reporting convention) triple. Which best describes the distinction?
 
 - A. They are the same critique restated using slightly different vocabulary across the two papers.
-- B. EvalPlus targets the scoring rule and Riddell et al. target the dataset; the critiques are orthogonal.
+- B. EvalPlus measures pretraining contamination overlap, and Riddell et al. propose stronger test suites to address weak-oracle problems.
 - C. EvalPlus targets the dataset (overlap with pretraining corpora) while Riddell et al. target the scoring rule (test-suite weakness).
-- D. EvalPlus measures pretraining contamination overlap, and Riddell et al. propose stronger test suites to address weak-oracle problems.
+- D. EvalPlus targets the scoring rule and Riddell et al. target the dataset; the critiques are orthogonal.
 
 <details>
 <summary>Answers</summary>
 
 1. **D** — at $k = 1$ the unbiased estimator collapses to $c/n$ (since $\binom{n-c}{1}/\binom{n}{1} = (n-c)/n$), so all three expressions are algebraically identical: $40/200 = 0.20$. The pedagogical point is that pass@1 is the simplest case and the formulas all agree there; the divergence between estimators only matters at $k > 1$.
-2. **B** — by Jensen's inequality, for a concave $f$, $\mathbb{E}[f(\hat{p})] \leq f(\mathbb{E}[\hat{p}])$, so the plug-in overestimates the expectation. Chen et al. 2021 explicitly call this out and derive the hypergeometric correction.
+2. **C** — by Jensen's inequality, for a concave $f$, $\mathbb{E}[f(\hat{p})] \leq f(\mathbb{E}[\hat{p}])$, so the plug-in overestimates the expectation. Chen et al. 2021 explicitly call this out and derive the hypergeometric correction.
 3. **B** — the temperature-sensitivity point from "Sampling temperature: why you do not use the same temperature for every $k$." A pass@100 reported at temperature 0.2 is a different (and worse) measurement than one at temperature 0.8, so the most defensible single demand is the sampling temperature. This is the code-eval analog of "n-shot and prompt template" being load-bearing for MMLU.
 4. **A** — apply the unbiased estimator with $n = 5$, $c = 3$, $k = 2$: $\binom{n-c}{k}/\binom{n}{k} = \binom{2}{2}/\binom{5}{2} = 1/10$, so pass@2 $= 1 - 1/10 = 0.9$. (Distractor B is the *biased* plug-in $1 - (1 - c/n)^k = 0.84$ — close to the right answer, which is exactly the kind of small bias the unbiased estimator removes. Distractor C is pass@1, not pass@2. Distractor D miscomputes by using $\binom{c}{k}$ instead of $\binom{n-c}{k}$, a common direction-of-counting error.)
 5. **B** — post-cutoff release-date tagging is the load-bearing structural property. (A) is wrong: LiveCodeBench uses execution-based scoring, not a judge. (C) is wrong: problems are language-flexible but typically Python. (D) describes ARC-AGI's design, not LiveCodeBench's.
-6. **B** — the EvalPlus critique is that the *test suite* is a weak oracle (scoring rule); the Riddell et al. critique is that the *items* leaked into training (dataset). They are orthogonal; a HumanEval+ report on a contamination-free held-out item set would address both.
+6. **D** — the EvalPlus critique is that the *test suite* is a weak oracle (scoring rule); the Riddell et al. critique is that the *items* leaked into training (dataset). They are orthogonal; a HumanEval+ report on a contamination-free held-out item set would address both.
 
 </details>

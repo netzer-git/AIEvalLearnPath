@@ -362,9 +362,9 @@ Wherever you see a "v2" benchmark replacing a "v1" — Open LLM Leaderboard v1�
 **Q1.** Which is the most defensible reading of why contamination is the canonical Goodhart-collapse mechanism for static public benchmarks?
 
 - A. Saturation drags every benchmark's headline accuracy toward 100% over time, leaving no headroom for further capability gains and forcing the leaderboard into ties at the ceiling.
-- B. It becomes an optimization target, gets indexed online, and leaks into pretraining — so the score reflects memorization rather than generalization.
+- B. Researchers cherry-pick few-shot prompt templates per task, and the resulting multiple-comparisons effect across templates inflates the headline number with no training-data leakage required.
 - C. Reference answers in popular benchmarks are written by crowd workers with inconsistent rubrics, so different graders disagree about edge cases and any reported number carries a large grader-variance term.
-- D. Researchers cherry-pick few-shot prompt templates per task, and the resulting multiple-comparisons effect across templates inflates the headline number with no training-data leakage required.
+- D. It becomes an optimization target, gets indexed online, and leaks into pretraining — so the score reflects memorization rather than generalization.
 
 **Q2.** Which option best captures the structural difference MMLU-Pro introduces vs. MMLU?
 
@@ -397,18 +397,18 @@ Wherever you see a "v2" benchmark replacing a "v1" — Open LLM Leaderboard v1�
 **Q6.** A safety researcher reports that a frontier model's measured attack-success rate on HarmBench dropped from 30% (last quarter) to 12% (this quarter). The model card mentions that HarmBench prompts were used in red-team training. Why is the 12% number not necessarily evidence of improved safety?
 
 - A. HarmBench's 400-prompt test set is too small for the reported quarter-over-quarter difference to clear a Wilson confidence interval at the 95% level, so the change sits within sampling noise.
-- B. The test prompts were in training, so the drop partly reflects pattern-matching rather than transfer to novel attacks. Contamination deflates safety scores the same way it inflates capability scores.
+- B. HarmBench scoring requires an LLM judge, which has a documented refusal-classification bias toward false negatives that grows with judge-model scale and explains the apparent quarter-over-quarter drop.
 - C. HarmBench uses multiple-choice scoring across ten harm categories, so 12% sits at the random-baseline floor and any sub-15% number is statistically indistinguishable from random guessing on the format.
-- D. HarmBench scoring requires an LLM judge, which has a documented refusal-classification bias toward false negatives that grows with judge-model scale and explains the apparent quarter-over-quarter drop.
+- D. The test prompts were in training, so the drop partly reflects pattern-matching rather than transfer to novel attacks. Contamination deflates safety scores the same way it inflates capability scores.
 
 <details>
 <summary>Answers</summary>
 
-1. **B** — the contamination loop (benchmark → leaderboard target → web indexing → pretraining → inflated score) is the mechanism. See "Goodhart foregrounded." The other options describe real but distinct phenomena: A is saturation ([D-7](/lesson/7)), C is grader variance ([D-3](/lesson/3) / [D-22](/lesson/22)), D is the prompt-template multiple-comparisons artifact ([D-1](/lesson/1) / [D-4](/lesson/4)) — none is the *Goodhart* mechanism on a static public benchmark.
+1. **D** — the contamination loop (benchmark → leaderboard target → web indexing → pretraining → inflated score) is the mechanism. See "Goodhart foregrounded." The other options describe real but distinct phenomena: A is saturation ([D-7](/lesson/7)), C is grader variance ([D-3](/lesson/3) / [D-22](/lesson/22)), B is the prompt-template multiple-comparisons artifact ([D-1](/lesson/1) / [D-4](/lesson/4)) — none is the *Goodhart* mechanism on a static public benchmark.
 2. **B** — 4 → 10 answer choices is the headline mechanical change; it raises the random baseline from 25% to 10% and reduces cue-exploitation room. The other changes (reasoning-heavy items, 14-discipline grouping) are downstream of the questions and the curation, not of the format change.
 3. **A** — Min-K% averages the *bottom* K% of token log-probs. Memorized text lacks the genuinely-low-probability tokens that unseen text has. (B describes a fully Bayesian approach that's intractable; C is the canary exposure metric; D is n-gram overlap.)
 4. **C** — paraphrase contamination is the failure mode of n-gram overlap detection. A reworded textbook PDF would not share a 13-gram with the original test item but is still contamination. Min-K% Prob and exchangeability tests are the partial counters; that paraphrase contamination is the *load-bearing* failure of the n-gram method is exactly why the field developed those black-box alternatives.
 5. **B** — the Duan et al. result is the empirical version of the obvious information-theoretic point: one item's contribution to the loss landscape of a 10T-token training run is tiny, so distinguishing "trained on" from "not trained on" from likelihoods alone is statistically near impossible at frontier scale. Implication: pre-training decontamination is more reliable than post-hoc detection. (A misstates the LiRA assumptions; C reverses the direction of the scale dependence; D is not standard practice for frontier LLMs in 2026.)
-6. **B** — the safety-researcher's-note point. Contamination of safety prompts into training data deflates measured attack success without genuine robustness gains, the mirror image of capability-score inflation.
+6. **D** — the safety-researcher's-note point. Contamination of safety prompts into training data deflates measured attack success without genuine robustness gains, the mirror image of capability-score inflation.
 
 </details>

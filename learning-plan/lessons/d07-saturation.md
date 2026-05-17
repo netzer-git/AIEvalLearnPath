@@ -306,8 +306,8 @@ You are now equipped to read any capability-benchmark paper's methods section. W
 
 **Q2.** Which is the *defining* construction property of GPQA's "Google-proof" pipeline?
 
-- A. Items are written at graduate level across biology, physics, and chemistry.
-- B. Items are piloted by PhDs in *other* fields with internet access and 30+ minutes per question.
+- A. Items are piloted by PhDs in *other* fields with internet access and 30+ minutes per question.
+- B. Items are written at graduate level across biology, physics, and chemistry.
 - C. Items are filtered through a content-policy review and a per-item refusal-rate threshold.
 - D. Items are translated into multiple languages and back-translated for cross-lingual robustness.
 
@@ -335,18 +335,18 @@ You are now equipped to read any capability-benchmark paper's methods section. W
 **Q6.** A reviewer claims that "Model A scores 93.4% and Model B scores 95.1% on GPQA Diamond, so Model B is better." **Compute** the per-model 95% CI at $p \approx 0.94$ on $n = 198$ items and pick the option that correctly diagnoses the comparison.
 
 - A. The two models should be compared on MMLU-Pro and HELM scenario coverage with bootstrap CIs over scenarios.
-- B. At $p \approx 0.94$ on 198 items, per-model 95% CI is about $\pm 3$ points; a paired test (e.g., McNemar) is needed.
+- B. The reviewer must report `acc_norm` rather than `acc` and verify the gap with paired-bootstrap CIs over items.
 - C. GPQA Diamond's free-form rubric doesn't support log-likelihood scoring, so the comparison is invalid by construction.
-- D. The reviewer must report `acc_norm` rather than `acc` and verify the gap with paired-bootstrap CIs over items.
+- D. At $p \approx 0.94$ on 198 items, per-model 95% CI is about $\pm 3$ points; a paired test (e.g., McNemar) is needed.
 
 <details>
 <summary>Answers</summary>
 
 1. **C** — the headroom-vs-SE argument from "Why headroom shrinks faster than standard error."
-2. **B** — the non-expert + internet + 30-minute pilot is what makes GPQA *Google-proof* in the technical sense; graduate-level difficulty (A) is necessary but not sufficient.
+2. **A** — the non-expert + internet + 30-minute pilot is what makes GPQA *Google-proof* in the technical sense; graduate-level difficulty (B) is necessary but not sufficient.
 3. **B** — the Diamond filter requires both experts correct *and* non-expert agreement bounded; Main is looser.
 4. **D** — the Diamond set is fixed at 198 items. A, B, and C are all genuine co-drivers (real capability + contamination + Goodhart-style optimization toward exam-format problems).
 5. **B** — ARC-AGI's task-novelty design resists memorization and benchmark-targeted optimization in a way that gatekept difficulty alone (GPQA) does not. Both saturate eventually; ARC-AGI's clock runs slower.
-6. **B** — [D-5](/lesson/5)'s CI math gives $\sqrt{0.94 \cdot 0.06 / 198} \approx 0.017$, so a per-model 95% CI is roughly $\pm 3.4$ points. Independent CIs overlap; a paired test on the same items is needed to claim a real ranking. This is the saturation argument made concrete.
+6. **D** — [D-5](/lesson/5)'s CI math gives $\sqrt{0.94 \cdot 0.06 / 198} \approx 0.017$, so a per-model 95% CI is roughly $\pm 3.4$ points. Independent CIs overlap; a paired test on the same items is needed to claim a real ranking. This is the saturation argument made concrete.
 
 </details>

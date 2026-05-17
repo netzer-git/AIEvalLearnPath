@@ -319,8 +319,8 @@ The pedagogical point parallels [D-1](/lesson/1)'s *capability overhang* note: j
 
 **Q3.** **Compute** MMMU's total item count from the canonical dev / val / test split sizes. Which line below states the split correctly?
 
-- A. 1,000 / 5,000 / 5,500 split across dev / val / test, totalling 11,500 items.
-- B. 150 / 900 / 10,500 (dev / val / test) — totalling 11,550 items.
+- A. 150 / 900 / 10,500 (dev / val / test) — totalling 11,550 items.
+- B. 1,000 / 5,000 / 5,500 split across dev / val / test, totalling 11,500 items.
 - C. 198 (Diamond) / 250 (Main) — like GPQA, with no additional dev split.
 - D. There is no held-out test split; all 11,550 items are public on HuggingFace.
 
@@ -350,7 +350,7 @@ The pedagogical point parallels [D-1](/lesson/1)'s *capability overhang* note: j
 
 1. **C** — heterogeneous-image-type + domain-reasoning is MMMU's construction principle. (B) is wrong because MMMU is mostly but not exclusively MCQ (a minority are short-answer) and VQA also has MCQ variants; (A) and (D) misattribute properties that don't differentiate the two.
 2. **B** — ScienceQA's items skew K–12 and ~51% have no image at all; the multimodal slice is dominated by simpler diagrams. MMMU's reasoning load on heterogeneous images is the gap.
-3. **B** — the standard MMMU split. Most reported numbers are validation-split (the 900); the 10,500 test items are server-side held out.
+3. **A** — the standard MMMU split. Most reported numbers are validation-split (the 900); the 10,500 test items are server-side held out.
 4. **D** — MMMU-Pro retains MCQ scoring (in fact extends MCQ with 10 options). A/B/C are the three Pro changes per Yue et al. 2024.
 5. **B** — the 16.8–26.9 point Pro-vs-original gap is the published range across models. A 22-point drop is in-distribution, not a red flag.
 6. **C** — visual jailbreak attacks (FigStep, embedded text, steganographic) bypass safety alignment that was trained on text channels alone. The capability-vs-safety gap from [D-1](/lesson/1)'s safety-researcher note has a multimodal-specific extension: a third axis (visual-channel safety) that neither MMMU nor a text-only refusal score measures. [D-19](/lesson/19) HarmBench, [D-26](/lesson/26) indirect prompt injection, and [D-27](/lesson/27) OSWorld are where this gets concrete.

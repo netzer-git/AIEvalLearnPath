@@ -308,8 +308,8 @@ When those lessons say "calibration", they refer back to today's reliability-dia
 
 **Q1.** On a HellaSwag run, the same model reports `acc = 0.57` and `acc_norm = 0.76`. **What is the load-bearing mechanism** behind the 19-point gap?
 
-- A. The model was retrained with a different decoding objective between the two harness computations.
-- B. HellaSwag's options vary in length, so summed log-likelihoods penalize the longer correct ones.
+- A. HellaSwag's options vary in length, so summed log-likelihoods penalize the longer correct ones.
+- B. The model was retrained with a different decoding objective between the two harness computations.
 - C. `acc_norm` is computed on a different held-out split than `acc`, which inflates its number.
 - D. `acc_norm` includes the few-shot in-context examples in the score; `acc` excludes them.
 
@@ -351,7 +351,7 @@ When those lessons say "calibration", they refer back to today's reliability-dia
 <details>
 <summary>Answers</summary>
 
-1. **B** — HellaSwag's adversarially-generated endings vary in length, so unnormalized summed log-likelihoods are biased toward shorter options; the gold ending is often longer than the shortest distractor. `acc_norm` removes this length-confound.
+1. **A** — HellaSwag's adversarially-generated endings vary in length, so unnormalized summed log-likelihoods are biased toward shorter options; the gold ending is often longer than the shortest distractor. `acc_norm` removes this length-confound.
 2. **C** — byte length is tokenizer-agnostic. Two models that tokenize the same option differently still have the same byte-count denominator, so their normalized scores are comparable. (See EleutherAI's multiple-choice-normalization blog post.)
 3. **B** — confidence (0.95) exceeds accuracy (0.80) and the bar is below the diagonal: the model is overconfident, the dominant failure mode in Guo et al. 2017.
 4. **C** — ECE numbers are *not* directly comparable across regimes with different confidence floors (4-way MC has floor 0.25; free-form generation has none). A, B, D are all standard, established caveats / definitions.

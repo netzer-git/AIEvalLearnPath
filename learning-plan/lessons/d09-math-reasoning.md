@@ -341,21 +341,21 @@ The pedagogically clean lesson is that GSM8K isolates the *serial-computation* b
 **Q1.** Wei et al. (2022) reported that PaLM 540B scores roughly 18% with direct prompting and 57% with 8-shot chain-of-thought on GSM8K. Which of the following best explains *why* CoT produces such a large gap on this specific benchmark?
 
 - A. CoT prompts implicitly switch the model into a different system-message regime whose token distribution is closer to GSM8K's grade-school solution traces, raising the likelihood of the gold answer.
-- B. Multi-step arithmetic needs intermediate state, and generating CoT tokens uses the KV cache as scratch space that a single forward pass at the answer position cannot carry.
+- B. CoT bypasses an instruction-tuning safety layer that suppresses standalone numerical answers under direct prompting, letting the model emit final integers it would otherwise refuse.
 - C. CoT exemplars internally raise the decoding temperature for the answer span, which empirically helps on math by widening the search over plausible numerical completions.
-- D. CoT bypasses an instruction-tuning safety layer that suppresses standalone numerical answers under direct prompting, letting the model emit final integers it would otherwise refuse.
+- D. Multi-step arithmetic needs intermediate state, and generating CoT tokens uses the KV cache as scratch space that a single forward pass at the answer position cannot carry.
 
 **Q2.** A model produces the answer `\frac{2}{4}` to a MATH problem whose gold answer is `\boxed{\frac{1}{2}}`. A naive string-match scorer marks this incorrect. Which scorer behavior is the *standard* fix used in modern math evaluators?
 
 - A. Apply token-level BLEU between the predicted and gold LaTeX strings and accept any score above an empirically tuned threshold of 0.8.
-- B. Extract the last `\boxed{...}`, normalize the LaTeX, and compare via symbolic simplification or numeric tolerance.
-- C. Re-sample the model under self-consistency at higher temperature until at least one of the $k$ chains exact-matches the gold LaTeX byte-for-byte.
+- B. Re-sample the model under self-consistency at higher temperature until at least one of the $k$ chains exact-matches the gold LaTeX byte-for-byte.
+- C. Extract the last `\boxed{...}`, normalize the LaTeX, and compare via symbolic simplification or numeric tolerance.
 - D. Route every item to an LLM-as-judge such as GPT-4 with a calibrated equivalence rubric, averaging the verdict across two independent passes.
 
 **Q3.** A solution to a MATH problem has step scores under a process reward model of $[0.95, 0.91, 0.12, 0.94, 0.93]$ and a final answer that *matches* the gold answer. An outcome reward model scores it $0.97$. Under the standard PRM aggregation $\min_t r_t$, what is the PRM score for this solution, and which model is more likely to demote it in best-of-$N$ ranking?
 
-- A. PRM score $= 0.97$; ORM is more likely to demote it.
-- B. PRM score $= 0.12$; PRM is more likely to demote it.
+- A. PRM score $= 0.12$; PRM is more likely to demote it.
+- B. PRM score $= 0.97$; ORM is more likely to demote it.
 - C. PRM score $= 0.93$ (the median); PRM and ORM rank it equally.
 - D. PRM score $= 0.97$; PRM is more likely to demote it.
 
@@ -376,18 +376,18 @@ The pedagogically clean lesson is that GSM8K isolates the *serial-computation* b
 **Q6.** The "Safety researcher's note" frames PRM-style training as *also* a pressure on chain-of-thought transparency, not just a capability gain. Which of the following is the **most defensible reading** of that concern?
 
 - A. PRMs eventually saturate at the human annotator's accuracy ceiling and stop yielding best-of-$N$ improvements once the verifier's calibration matches the labeler's.
-- B. Optimizing for human-rated step legibility makes the model produce reasoning that *looks* legible regardless of whether it reflects the actual computation, so the proxy becomes the target.
+- B. Process supervision can only be applied to mathematical and code domains where step correctness is mechanically checkable, which limits transfer to open-ended reasoning tasks.
 - C. PRM training requires roughly an order of magnitude more annotators than ORM training, which creates a labor-supply bottleneck for scaling step-level reward datasets.
-- D. Process supervision can only be applied to mathematical and code domains where step correctness is mechanically checkable, which limits transfer to open-ended reasoning tasks.
+- D. Optimizing for human-rated step legibility makes the model produce reasoning that *looks* legible regardless of whether it reflects the actual computation, so the proxy becomes the target.
 
 <details>
 <summary>Answers</summary>
 
-1. **B** — the serial-computation argument. CoT works on GSM8K because each arithmetic step depends on the previous, and the model needs the intermediate tokens as scratch space; without them, the answer position can't carry the working state. A is wrong (no system-message change is implied by CoT exemplars), C is wrong (CoT is independent of temperature in the Wei et al. setup), D is unrelated.
-2. **B** — the standard two-stage pipeline (boxed-extraction + LaTeX normalization + symbolic/numeric equivalence). A and C are nonsensical for math equivalence; D works but is far slower and rarely the *standard* — it's an LLM-judge fallback when the symbolic checker fails.
-3. **B** — under $\min_t r_t$, the score is $\min(0.95, 0.91, 0.12, 0.94, 0.93) = 0.12$. ORM rates the solution highly (final answer matches), so ORM would *promote* it; PRM detects the broken step and demotes it. This is the canonical right-answer-wrong-reasoning case the Lightman et al. paper highlights.
+1. **D** — the serial-computation argument. CoT works on GSM8K because each arithmetic step depends on the previous, and the model needs the intermediate tokens as scratch space; without them, the answer position can't carry the working state. A is wrong (no system-message change is implied by CoT exemplars), C is wrong (CoT is independent of temperature in the Wei et al. setup), B is unrelated.
+2. **C** — the standard two-stage pipeline (boxed-extraction + LaTeX normalization + symbolic/numeric equivalence). A and B are nonsensical for math equivalence; D works but is far slower and rarely the *standard* — it's an LLM-judge fallback when the symbolic checker fails.
+3. **A** — under $\min_t r_t$, the score is $\min(0.95, 0.91, 0.12, 0.94, 0.93) = 0.12$. ORM rates the solution highly (final answer matches), so ORM would *promote* it; PRM detects the broken step and demotes it. This is the canonical right-answer-wrong-reasoning case the Lightman et al. paper highlights.
 4. **A** — the CI math: $\sqrt{0.97 \cdot 0.03 / 1319} \approx 0.0047$, so $\pm 0.9$ points at 95%. The label-noise floor on GSM8K is now larger than that gap, so above ~95% you are measuring the test set's errors, not the model's. This is [D-7](/lesson/7)'s saturation argument applied to GSM8K.
 5. **B** — the right-answer-wrong-reasoning failure mode is the structural reason ORM underperforms PRM at the hard-problem end. A is incorrect (the architectures are similar), C is incorrect (both are typically trained as supervised reward models), D conflates dataset size with the methodological claim.
-6. **B** — the proxy-becomes-target argument. Once "step legibility as judged by annotators" is the optimization target, the model can satisfy it without faithfulness — Turpin et al. 2023's central worry, applied to math reasoning specifically. A, C, D are unrelated to the faithfulness concern.
+6. **D** — the proxy-becomes-target argument. Once "step legibility as judged by annotators" is the optimization target, the model can satisfy it without faithfulness — Turpin et al. 2023's central worry, applied to math reasoning specifically. A, B, C are unrelated to the faithfulness concern.
 
 </details>

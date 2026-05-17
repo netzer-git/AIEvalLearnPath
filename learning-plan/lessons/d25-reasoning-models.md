@@ -411,15 +411,15 @@ This is the same Goodhart pattern as the [D-11](/lesson/11) contamination story 
 **Q2.** A model produces 5 sampled chains on an AIME problem. The final integers are $\{42, 42, 17, 42, 600\}$. The gold answer is $42$. What is the cons@5 score for this problem, and which property of cons@$N$ does this illustrate?
 
 - A. $0$, because cons@$N$ requires unanimous agreement across all $N$ chains for the per-problem indicator to fire
-- B. $1$, since the plurality vote $42$ (3/5) matches gold; cons@$N$ scores mode-concentration
+- B. Undefined, because cons@$N$ is only well-posed for even $N$ so that ties cannot occur in the plurality vote on integer answers
 - C. $3/5 = 0.6$, the fraction of chains whose final integer matches the gold; cons@$N$ averages this fraction across the test set
-- D. Undefined, because cons@$N$ is only well-posed for even $N$ so that ties cannot occur in the plurality vote on integer answers
+- D. $1$, since the plurality vote $42$ (3/5) matches gold; cons@$N$ scores mode-concentration
 
 **Q3.** A vendor reports "Model X: AIME 2024 = 89%". Which single follow-up question is most informative about whether the number is comparable to a competitor's "Model Y: AIME 2024 = 87%"?
 
 - A. Which GPU SKU, inference framework, and quantization profile were used to run the evaluation pipeline end-to-end
-- B. Which inference-time compute and aggregation (pass@1, cons@$N$, best-of-$k$) produced the 89%?
-- C. Whether Model X is released under open weights or only as a closed API endpoint behind a paywall
+- B. Whether Model X is released under open weights or only as a closed API endpoint behind a paywall
+- C. Which inference-time compute and aggregation (pass@1, cons@$N$, best-of-$k$) produced the 89%?
 - D. Whether the 89% averaged AIME I and AIME II separately or pooled all 30 problems into a single denominator without reweighting
 
 **Q4.** Which of the following best describes the **structural** Goodhart pattern that single-scalar accuracy reporting creates for reasoning-model leaderboards?
@@ -432,14 +432,14 @@ This is the same Goodhart pattern as the [D-11](/lesson/11) contamination story 
 **Q5.** FrontierMath (Glazer et al. 2024) and AIME 2024 sit at very different difficulty bands. Which best describes the methodological *complementarity* between them in this lesson's framing?
 
 - A. They are functionally interchangeable in a reasoning-model report — AIME 2024 or FrontierMath alone is sufficient to characterize math capability across all difficulty bands of interest
-- B. AIME is the near-saturation, integer-match discriminator; FrontierMath is the research-level held-out ceiling. Together they report a capability profile across difficulty bands rather than a single number.
+- B. AIME problems are scored by an LLM-as-judge over free-form derivations while FrontierMath uses exact symbolic match against the gold object; the difference between the two is purely about scoring infrastructure rather than underlying difficulty
 - C. FrontierMath is a curated subset of AIME problems re-tagged at higher difficulty levels by the Glazer et al. expert panel of 60+ research mathematicians
-- D. AIME problems are scored by an LLM-as-judge over free-form derivations while FrontierMath uses exact symbolic match against the gold object; the difference between the two is purely about scoring infrastructure rather than underlying difficulty
+- D. AIME is the near-saturation, integer-match discriminator; FrontierMath is the research-level held-out ceiling. Together they report a capability profile across difficulty bands rather than a single number.
 
 **Q6.** A reasoning model produces an accuracy-vs-log-tokens curve on AIME 2024 with three regimes: a low-compute floor where accuracy is near random, a log-linear midrange where each doubling of compute buys a roughly constant absolute-percentage-point gain, and a high-compute ceiling. Which of the following is the **most accurate** characterization of why each doubling in the midrange buys roughly the *same* absolute gain rather than a constant *relative* gain?
 
-- A. Because the model's effective parameter count under Kaplan et al.'s test-time scaling laws grows roughly logarithmically with inference budget, so doubling compute acts like adding a fixed parameter increment per step
-- B. Because the o1 system card reports accuracy approximately linear in $\log_2(\text{tokens})$ over the midrange; each doubling shifts $\log_2$ by 1, so a linear function of $\log_2$ adds a constant per doubling.
+- A. Because the o1 system card reports accuracy approximately linear in $\log_2(\text{tokens})$ over the midrange; each doubling shifts $\log_2$ by 1, so a linear function of $\log_2$ adds a constant per doubling.
+- B. Because the model's effective parameter count under Kaplan et al.'s test-time scaling laws grows roughly logarithmically with inference budget, so doubling compute acts like adding a fixed parameter increment per step
 - C. Because cons@$N$ is a linear unbiased estimator of pass@1 and the linearity of expectation propagates compute increments additively across doublings of the sample budget
 - D. Because OpenAI's API meters token costs in fixed-size billing blocks, so each doubling of compute corresponds to one additional block worth of accuracy improvement on AIME-class problems
 
@@ -447,10 +447,10 @@ This is the same Goodhart pattern as the [D-11](/lesson/11) contamination story 
 <summary>Answers</summary>
 
 1. **A** — apply the unbiased estimator with $n = 10$, $c = 4$, $k = 2$: $\binom{n-c}{k}/\binom{n}{k} = \binom{6}{2}/\binom{10}{2} = 15/45 = 1/3$, so pass@2 $= 1 - 1/3 = 2/3 \approx 0.667$. Distractor B is the *biased* plug-in $1 - (1 - c/n)^k = 0.64$ (close, but slightly lower than the unbiased estimate — the typical bias direction at small $n$). Distractor C is pass@1, not pass@2. Distractor D miscomputes by counting correct-pool subsets ($\binom{c}{k}$) instead of wrong-pool subsets ($\binom{n-c}{k}$) — the canonical direction-of-counting error [D-11](/lesson/11) flagged.
-2. **B** — cons@5 takes the plurality vote: $42$ wins with 3 chains vs. $17$ (1) and $600$ (1). The vote matches the gold answer, so the per-problem score is $1$. The illustrative point is that cons@$N$ rewards mode-concentration ("most chains agree on the same answer"), not coverage ("at least one chain is right" — that's pass@$k$). On AIME's integer answer space of size 1000, plurality voting concentrates strongly on correct answers when the model's distribution is well-calibrated.
-3. **B** — without an inference-time-compute disclosure and an aggregation method (pass@1 vs. cons@$N$ vs. best-of-$k$-reranker), the two numbers are not on the same axis. Per the lesson's central argument: reasoning-model accuracy reported without cost is structurally under-specified. (A and C are second-order; D is a small effect — AIME I and AIME II are calibrated to be of comparable difficulty within a year.)
+2. **D** — cons@5 takes the plurality vote: $42$ wins with 3 chains vs. $17$ (1) and $600$ (1). The vote matches the gold answer, so the per-problem score is $1$. The illustrative point is that cons@$N$ rewards mode-concentration ("most chains agree on the same answer"), not coverage ("at least one chain is right" — that's pass@$k$). On AIME's integer answer space of size 1000, plurality voting concentrates strongly on correct answers when the model's distribution is well-calibrated.
+3. **C** — without an inference-time-compute disclosure and an aggregation method (pass@1 vs. cons@$N$ vs. best-of-$k$-reranker), the two numbers are not on the same axis. Per the lesson's central argument: reasoning-model accuracy reported without cost is structurally under-specified. (A and B are second-order; D is a small effect — AIME I and AIME II are calibrated to be of comparable difficulty within a year.)
 4. **B** — the cost-axis Goodhart pattern. Inference compute is the unmeasured slack variable that absorbs the optimization pressure; the leaderboard number rises without per-fixed-budget capability changing. The structural fix — (accuracy, cost) pair reporting; METR HCAST's pre-declared budgets — is what the lesson argues for. (A is a separate Goodhart pattern at training time; C is empirically false; D is a fabricated relationship.)
-5. **B** — capability is a *profile across difficulty bands*, not a single number, and AIME + FrontierMath together cover meaningfully more of the relevant frontier than either alone. The contrast — saturation-near AIME vs. floor-near FrontierMath — is what makes the pair informative. (A misses the entire point; C is factually wrong — they're independent constructions; D mischaracterizes both scoring rules.)
-6. **B** — the empirical claim from the o1 system card's test-time-compute scaling curves. If $a(c) \approx \alpha \cdot \log_2(c) + \beta$ over the midrange, then $a(2c) - a(c) = \alpha$, a constant in absolute percentage points per doubling — *not* a constant ratio. The shape is task-specific; the floor and ceiling regimes break the log-linearity. (A confuses inference-time compute with parameter count; C is wrong — cons@$N$ is not a linear estimator; D is unrelated.)
+5. **D** — capability is a *profile across difficulty bands*, not a single number, and AIME + FrontierMath together cover meaningfully more of the relevant frontier than either alone. The contrast — saturation-near AIME vs. floor-near FrontierMath — is what makes the pair informative. (A misses the entire point; C is factually wrong — they're independent constructions; B mischaracterizes both scoring rules.)
+6. **A** — the empirical claim from the o1 system card's test-time-compute scaling curves. If $a(c) \approx \alpha \cdot \log_2(c) + \beta$ over the midrange, then $a(2c) - a(c) = \alpha$, a constant in absolute percentage points per doubling — *not* a constant ratio. The shape is task-specific; the floor and ceiling regimes break the log-linearity. (B confuses inference-time compute with parameter count; C is wrong — cons@$N$ is not a linear estimator; D is unrelated.)
 
 </details>
